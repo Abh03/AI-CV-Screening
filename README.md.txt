@@ -1,0 +1,1 @@
+Python · FastAPI · PostgreSQL · pgvector · LLM · Pydantic ·
