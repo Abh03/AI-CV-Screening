@@ -1,0 +1,125 @@
+# =========================
+
+# Environment & secrets
+
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+
+# Python
+
+# =========================
+
+**pycache**/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+
+# Testing / coverage
+
+# =========================
+
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
+
+# =========================
+
+# Type checking / linting
+
+# =========================
+
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+
+# IDE / editors
+
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+
+# OS generated files
+
+# =========================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+
+# Logs
+
+# =========================
+
+*.log
+logs/
+
+# =========================
+
+# Temporary files
+
+# =========================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# =========================
+
+# Build / distribution
+
+# =========================
+
+build/
+dist/
+*.egg-info/
+
+# =========================
+
+# Local data / generated files
+
+# =========================
+
+data/
+uploads/
+outputs/
+temp/
+
+# =========================
+
+# Model files
+
+# =========================
+
+*.onnx
+*.onnx.data
+models/
+
+# =========================
+
+# Docker local files
+
+# =========================
+
+docker/.env
+docker/*.log
