@@ -134,7 +134,7 @@ def evaluate_stage1_hard_filters(
         failed_reasons.append("Work authorization check failed.")
 
     # 2. Years of Experience Check
-    if candidate_yoe < min_yoe:
+    if float(candidate_yoe or 0) < float(min_yoe):
         failed_reasons.append(
             f"Insufficient YoE: candidate has {candidate_yoe} years, JD requires {min_yoe} years."
         )
