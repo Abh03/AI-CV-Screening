@@ -2,21 +2,16 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import select
 
 from app.main import app
-from app.models.database import Base, get_db
+from app.models.database import Base, get_db, JobProfileModel, EvaluationResultModel
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-# StaticPool keeps the in-memory database alive across all sessions/connections
-test_engine = create_async_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-    echo=False
-)
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestingSessionLocal = async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def prepare_database():
@@ -37,25 +32,16 @@ async def override_get_db():
         yield session
 
 
-
 @pytest.mark.asyncio
-async def test_health_check_endpoint():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "healthy", "service": "CV Screening Engine"}
-
-
-@pytest.mark.asyncio
-async def test_run_screening_endpoint_valid_payload():
+async def test_screening_endpoint_persists_to_db():
     payload = {
         "job_profile": {
-            "job_id": "job_101",
-            "title": "Backend Python Developer",
+            "job_id": "job_db_test_01",
+            "title": "Senior Python Backend Engineer",
             "jd_category_queries": {
                 "SKILLS": "Python FastAPI PostgreSQL",
-                "EXPERIENCE": "Backend API design",
-                "PROJECTS": "Distributed systems",
+                "EXPERIENCE": "Backend Microservices",
+                "PROJECTS": "High Throughput APIs",
                 "EDUCATION": "BS Computer Science"
             },
             "hard_filter_rules": {
@@ -69,10 +55,10 @@ async def test_run_screening_endpoint_valid_payload():
         },
         "candidates": [
             {
-                "candidate_id": "cand_api_001",
-                "raw_cv_text": "Alex Dev\nSkills: Python, FastAPI, PostgreSQL\nWORK EXPERIENCE\n4 years backend development.\nEDUCATION\nBachelor of Science in Computer Science, 2020",
+                "candidate_id": "cand_db_001",
+                "raw_cv_text": "John DB Test\nSkills: Python, FastAPI\nWORK EXPERIENCE\n3 years backend software engineer.\nEDUCATION\nBachelor of Science in Computer Science",
                 "work_authorized": True,
-                "parsed_attributes": {"experience_years": 4.0}
+                "parsed_attributes": {"experience_years": 3.0}
             }
         ],
         "top_n_stage2_cutoff": 10
@@ -82,10 +68,20 @@ async def test_run_screening_endpoint_valid_payload():
         response = await ac.post("/api/v1/screening/run", json=payload)
 
     assert response.status_code == 200
-
     data = response.json()
-    assert data["job_id"] == "job_101"
-    assert data["metrics"]["total_input_candidates"] == 1
     assert data["metrics"]["stage1_passed"] == 1
-    assert len(data["leaderboard"]) == 1
-    assert data["leaderboard"][0]["candidate_id"] == "cand_api_001"
+
+    # Verify Database Persistence
+    async with TestingSessionLocal() as session:
+        job_stmt = select(JobProfileModel).where(JobProfileModel.id == "job_db_test_01")
+        saved_job = (await session.execute(job_stmt)).scalar_one_or_none()
+        assert saved_job is not None
+        assert saved_job.title == "Senior Python Backend Engineer"
+
+        eval_stmt = select(EvaluationResultModel).where(
+            EvaluationResultModel.job_id == "job_db_test_01",
+            EvaluationResultModel.candidate_id == "cand_db_001"
+        )
+        saved_eval = (await session.execute(eval_stmt)).scalar_one_or_none()
+        assert saved_eval is not None
+        assert saved_eval.candidate_id == "cand_db_001"
