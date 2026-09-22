@@ -1,4 +1,4 @@
-from app.stage2_retrieval.reranker import rerank_chunks
+from app.stage2_retrieval.reranker import rerank_category_chunks
 
 
 def test_cross_encoder_reranking_precision():
@@ -27,7 +27,7 @@ def test_cross_encoder_reranking_precision():
     ]
 
     # Run Cross-Encoder Re-ranking
-    reranked = rerank_chunks(query_text=query_text, chunks=rrf_chunks, top_n=2)
+    reranked = rerank_category_chunks(category_query=query_text, chunks=rrf_chunks, top_n=2)
 
     assert len(reranked) == 2
     
@@ -38,5 +38,5 @@ def test_cross_encoder_reranking_precision():
 
 
 def test_empty_reranker_inputs():
-    assert rerank_chunks("", [{"text": "Sample text"}]) == []
-    assert rerank_chunks("Python Query", []) == []
+    assert rerank_category_chunks("", [{"text": "Sample text"}]) == []
+    assert rerank_category_chunks("Python Query", []) == []

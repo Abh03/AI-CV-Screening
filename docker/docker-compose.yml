@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -32,6 +34,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: cv_screening_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - DEFAULT_STAGE2_CUTOFF=30
+      - LLM_CONCURRENCY_LIMIT=5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   pgdata:

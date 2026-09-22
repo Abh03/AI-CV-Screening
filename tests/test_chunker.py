@@ -42,7 +42,7 @@ def test_context_aware_chunk_generation():
         "Python, FastAPI, PostgreSQL, Docker, Kubernetes\n"
     )
 
-    chunks = generate_cv_chunks(sample_cv, max_chunk_chars=150, overlap_chars=20)
+    chunks = generate_cv_chunks(sample_cv)
 
     assert len(chunks) >= 2
     assert chunks[0]["text"].startswith("[Section: EXPERIENCE]")

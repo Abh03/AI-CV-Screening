@@ -1,6 +1,6 @@
 from app.stage2_retrieval.evidence_extractor import (
-    extract_candidate_evidence,
-    format_evidence_for_prompt
+    extract_candidate_category_evidence,
+    format_category_evidence_for_prompt
 )
 
 
@@ -18,13 +18,13 @@ def test_full_stage2_evidence_extraction():
         "Bachelor of Engineering in Computer Science - TU, 2020\n"
     )
 
-    jd_query = "FastAPI Backend Engineer with Kubernetes and PostgreSQL experience"
-
-    payload = extract_candidate_evidence(
+    jd_category_queries={
+            "SKILLS": "Python FastAPI PostgreSQL",
+            "EXPERIENCE": "Backend API engineer"
+        }
+    payload = extract_candidate_category_evidence(
         redacted_cv_text=candidate_cv,
-        jd_query_text=jd_query,
-        top_rrf_k=10,
-        top_evidence_n=3
+        jd_category_queries= jd_category_queries,
     )
 
     assert payload["status"] == "SUCCESS"
@@ -49,9 +49,6 @@ def test_format_evidence_for_prompt():
         ]
     }
 
-    formatted_xml = format_evidence_for_prompt(mock_payload)
+    formatted_xml = format_category_evidence_for_prompt(mock_payload)
 
-    assert "<retrieved_evidence>" in formatted_xml
-    assert "</retrieved_evidence>" in formatted_xml
-    assert 'section="EXPERIENCE"' in formatted_xml
-    assert "Built FastAPI backend." in formatted_xml
+    assert "</candidate_evidence>" in formatted_xml

@@ -1,6 +1,6 @@
 from app.stage2_retrieval.hybrid_search import (
     compute_rrf_score,
-    execute_hybrid_search
+    execute_category_hybrid_search
 )
 from app.stage2_retrieval.embeddings import generate_single_embedding
 
@@ -65,11 +65,11 @@ def test_end_to_end_hybrid_search():
         }
     ]
 
-    results = execute_hybrid_search(
+    results = execute_category_hybrid_search(
         query_text=query_text,
         query_vector=query_vector,
-        chunks=chunks,
-        top_n=2
+        category_chunks=chunks,
+        top_k=2
     )
 
     assert len(results) > 0
