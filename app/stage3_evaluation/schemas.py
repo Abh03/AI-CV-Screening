@@ -1,6 +1,10 @@
 from enum import Enum
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from typing import List, Dict
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class StrictBaseModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class FlagType(str, Enum):
@@ -17,34 +21,34 @@ class Severity(str, Enum):
 
 
 class DecisionTier(str, Enum):
-    TIER_1 = "TIER_1"  # Strong Fit (Composite >= 75, no Critical/High flags)
-    TIER_2 = "TIER_2"  # Potential Fit (55 <= Composite < 75)
-    TIER_3 = "TIER_3"  # Not Recommended (Composite < 55 or mandatory skill fail)
+    TIER_1 = "TIER_1"
+    TIER_2 = "TIER_2"
+    TIER_3 = "TIER_3"
 
 
-class FlagDetail(BaseModel):
+class FlagDetail(StrictBaseModel):
     type: FlagType
     severity: Severity
     description: str
-    citations: List[str] = Field(default_factory=list)
+    citations: List[str]
 
 
-class CategoryAssessment(BaseModel):
+class CategoryAssessment(StrictBaseModel):
     score: float = Field(ge=0.0, le=100.0)
     rationale: str
-    citations: List[str] = Field(default_factory=list)
+    citations: List[str]
 
 
-class LLMEvaluationOutput(BaseModel):
+class LLMEvaluationOutput(StrictBaseModel):
     skills: CategoryAssessment
     experience: CategoryAssessment
     projects: CategoryAssessment
     education: CategoryAssessment
-    flags: List[FlagDetail] = Field(default_factory=list)
+    flags: List[FlagDetail]
     executive_summary: str
 
 
-class FinalCandidateEvaluation(BaseModel):
+class FinalCandidateEvaluation(StrictBaseModel):
     candidate_id: str
     composite_score: float
     tier: DecisionTier

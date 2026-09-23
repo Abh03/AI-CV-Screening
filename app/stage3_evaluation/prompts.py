@@ -14,6 +14,16 @@ GAP & FLAG CLASSIFICATION RULES:
 - EVIDENCED_CAREER_GAP: Explicit, verified gap > 6 months between documented employment dates.
 - MISSING_INFORMATION: Unstated degree graduation year or unlisted project details (neutral uncertainty, not a critical penalty).
 
+SCORING SCALE:
+For each category, scores MUST be integers or decimals from 0 to 100.
+
+Use this interpretation:
+- 90-100: Excellent / very strong match
+- 75-89: Strong match
+- 60-74: Moderate match
+- 40-59: Weak match
+- 0-39: Very poor match
+
 OUTPUT FORMAT:
 Respond strictly with valid JSON conforming to the required schema with keys:
 'skills', 'experience', 'projects', 'education', 'flags', 'executive_summary'."""
