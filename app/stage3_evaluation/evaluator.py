@@ -1,110 +1,131 @@
-from typing import Dict, Any, List, Set, Tuple
+import logging
+from typing import Dict, List, Set, Any
+from pydantic import ValidationError
+
 from app.stage3_evaluation.schemas import (
     LLMEvaluationOutput,
     FinalCandidateEvaluation,
     DecisionTier,
-    Severity,
-    FlagType
+    CategoryAssessment,
+    Severity
 )
+from app.stage3_evaluation.prompts import build_stage3_user_prompt, SYSTEM_PROMPT_STAGE3
+from app.stage3_evaluation.llm_client import llm_client
 
-DEFAULT_CATEGORY_WEIGHTS: Dict[str, float] = {
-    "EXPERIENCE": 0.40,
-    "SKILLS": 0.30,
-    "PROJECTS": 0.15,
-    "EDUCATION": 0.15
-}
+logger = logging.getLogger("cv_screening")
 
 
-def extract_valid_citation_tags(evidence_payload: Dict[str, Any]) -> Set[str]:
-    """Extracts all valid citation tags (e.g., {'SKILLS:1', 'EXPERIENCE:1'}) present in prompt payload."""
-    valid_tags: Set[str] = set()
-    evidence_map = evidence_payload.get("evidence_by_category", {})
-
-    for category, chunks in evidence_map.items():
-        for idx in range(1, len(chunks) + 1):
-            valid_tags.add(f"{category}:{idx}")
-
-    return valid_tags
-
-
-def verify_llm_citations(
-    llm_output: LLMEvaluationOutput,
-    valid_tags: Set[str]
-) -> Tuple[List[str], List[str]]:
-    """Verifies every citation returned by LLM against valid evidence tags."""
-    all_citations: Set[str] = set()
-
-    # Collect citations from category assessments
-    all_citations.update(llm_output.skills.citations)
-    all_citations.update(llm_output.experience.citations)
-    all_citations.update(llm_output.projects.citations)
-    all_citations.update(llm_output.education.citations)
-
-    # Collect citations from flags
-    for flag in llm_output.flags:
-        all_citations.update(flag.citations)
-
-    verified = [c for c in all_citations if c in valid_tags]
-    invalid = [c for c in all_citations if c not in valid_tags]
-
-    return verified, invalid
-
-
-def compute_deterministic_tier(
-    candidate_id: str,
-    llm_output: LLMEvaluationOutput,
-    evidence_payload: Dict[str, Any],
-    weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS
-) -> FinalCandidateEvaluation:
+def calculate_decision_tier(composite_score: float, has_critical_flags: bool) -> DecisionTier:
     """
-    Calculates final score and tier deterministically:
-    1. Verifies LLM citations.
-    2. Calculates composite score S_final from component scores.
-    3. Enforces deterministic tier rules and critical flag penalties in Python.
+    Tier 1: Strong Fit (Composite >= 75, no Critical/High flags)
+    Tier 2: Potential Fit (55 <= Composite < 75)
+    Tier 3: Not Recommended (Composite < 55 or mandatory critical flag)
     """
-    valid_tags = extract_valid_citation_tags(evidence_payload)
-    verified_cits, invalid_cits = verify_llm_citations(llm_output, valid_tags)
-
-    scores = {
-        "SKILLS": llm_output.skills.score,
-        "EXPERIENCE": llm_output.experience.score,
-        "PROJECTS": llm_output.projects.score,
-        "EDUCATION": llm_output.education.score
-    }
-
-    # Deterministic weighted composite calculation
-    composite_score = sum(
-        weights.get(cat, 0.25) * scores.get(cat, 0.0)
-        for cat in ["EXPERIENCE", "SKILLS", "PROJECTS", "EDUCATION"]
-    )
-    composite_score = round(composite_score, 2)
-
-    # Flag severity check
-    has_critical_or_high = any(
-        flag.severity in [Severity.CRITICAL, Severity.HIGH]
-        and flag.type != FlagType.MISSING_INFORMATION
-        for flag in llm_output.flags
-    )
-
-    # Hard Deterministic Tier Assignment Rules
-    if scores["SKILLS"] < 40.0 or composite_score < 55.0:
-        tier = DecisionTier.TIER_3
-    elif has_critical_or_high:
-        tier = DecisionTier.TIER_2 if composite_score >= 70.0 else DecisionTier.TIER_3
+    if has_critical_flags or composite_score < 55.0:
+        return DecisionTier.TIER_3
     elif composite_score >= 75.0:
-        tier = DecisionTier.TIER_1
-    elif composite_score >= 55.0:
-        tier = DecisionTier.TIER_2
+        return DecisionTier.TIER_1
     else:
-        tier = DecisionTier.TIER_3
+        return DecisionTier.TIER_2
 
+
+async def evaluate_candidate_stage3(
+    candidate_id: str,
+    jd_profile: Dict[str, Any],
+    evidence_payload: Dict[str, Any]
+) -> FinalCandidateEvaluation:
+    
+    # 1. Generate XML-formatted user prompt from JD profile and evidence payload
+    user_prompt = build_stage3_user_prompt(
+        candidate_id=candidate_id,
+        jd_profile=jd_profile,
+        evidence_payload=evidence_payload
+    )
+
+    try:
+        # Combine system prompt and user prompt for LLM
+        full_prompt = f"{SYSTEM_PROMPT_STAGE3}\n\n{user_prompt}"
+
+        raw_response = await llm_client.generate_evaluation(
+            prompt_text=full_prompt,
+            candidate_id=candidate_id
+        )
+
+        # 2. Validate raw LLM JSON output against schema
+        llm_output = LLMEvaluationOutput.model_validate(raw_response)
+
+        # 3. Extract Category Scores & Apply Established Weights (40 / 25 / 20 / 15)
+        category_scores = {
+            "skills": llm_output.skills.score,
+            "experience": llm_output.experience.score,
+            "projects": llm_output.projects.score,
+            "education": llm_output.education.score,
+        }
+        
+        composite_score = round(
+            (llm_output.skills.score * 0.40) +
+            (llm_output.experience.score * 0.25) +
+            (llm_output.projects.score * 0.20) +
+            (llm_output.education.score * 0.15),
+            2
+        )
+
+        # 4. Evaluate Candidate Flags for Critical / High Severity
+        has_critical_flags = any(
+            flag.severity in [Severity.CRITICAL, Severity.HIGH]
+            for flag in llm_output.flags
+        )
+
+        # 5. Citation Verification Logic (Checked against generated user_prompt XML context)
+        all_citations: List[str] = []
+        for category in [llm_output.skills, llm_output.experience, llm_output.projects, llm_output.education]:
+            all_citations.extend(category.citations)
+        for flag in llm_output.flags:
+            all_citations.extend(flag.citations)
+
+        # Verify whether cited tags/snippets exist within the formatted user prompt XML
+        verified_citations = [c for c in all_citations if c in user_prompt]
+        invalid_citations = [c for c in all_citations if c not in user_prompt]
+
+        # 6. Determine Decision Tier
+        tier = calculate_decision_tier(composite_score, has_critical_flags)
+
+        return FinalCandidateEvaluation(
+            candidate_id=candidate_id,
+            composite_score=composite_score,
+            tier=tier,
+            category_scores=category_scores,
+            llm_raw_output=llm_output,
+            verified_citations=list(set(verified_citations)),
+            invalid_citations=list(set(invalid_citations)),
+            has_critical_flags=has_critical_flags
+        )
+
+    except ValidationError as ve:
+        logger.error(f"Schema Validation Guardrail failed for {candidate_id}: {ve}")
+        return _fallback_evaluation(candidate_id, f"Schema validation error: {str(ve)}")
+    except Exception as e:
+        logger.error(f"Stage 3 evaluation failed for {candidate_id}: {e}")
+        return _fallback_evaluation(candidate_id, f"Provider error: {str(e)}")
+
+
+def _fallback_evaluation(candidate_id: str, error_msg: str) -> FinalCandidateEvaluation:
+    empty_category = CategoryAssessment(score=0.0, rationale="Evaluation failed.", citations=[])
+    fallback_llm = LLMEvaluationOutput(
+        skills=empty_category,
+        experience=empty_category,
+        projects=empty_category,
+        education=empty_category,
+        flags=[],
+        executive_summary=error_msg
+    )
     return FinalCandidateEvaluation(
         candidate_id=candidate_id,
-        composite_score=composite_score,
-        tier=tier,
-        category_scores=scores,
-        llm_raw_output=llm_output,
-        verified_citations=verified_cits,
-        invalid_citations=invalid_cits,
-        has_critical_flags=has_critical_or_high
+        composite_score=0.0,
+        tier=DecisionTier.TIER_3,
+        category_scores={"skills": 0.0, "experience": 0.0, "projects": 0.0, "education": 0.0},
+        llm_raw_output=fallback_llm,
+        verified_citations=[],
+        invalid_citations=[],
+        has_critical_flags=False  # System/API error is NOT a candidate red flag
     )

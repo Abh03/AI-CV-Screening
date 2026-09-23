@@ -1,136 +1,92 @@
 import json
-import asyncio
-from typing import List, Dict, Any, Optional
-from pydantic import ValidationError
+import logging
+from typing import Dict, Any, Optional
+from google import genai
+from google.genai import types
 
-from app.stage3_evaluation.schemas import (
-    LLMEvaluationOutput,
-    FinalCandidateEvaluation,
-    CategoryAssessment,
-    DecisionTier
-)
-from app.stage3_evaluation.prompts import (
-    SYSTEM_PROMPT_STAGE3,
-    build_stage3_user_prompt
-)
-from app.stage3_evaluation.evaluator import compute_deterministic_tier
+from app.config import settings
+from app.stage3_evaluation.schemas import LLMEvaluationOutput
+
+logger = logging.getLogger("cv_screening")
 
 
-class MockLLMProvider:
+class LLMClientWrapper:
     """
-    Default mock LLM provider for testing and offline development environments.
-    Simulates a structured JSON response from an OpenAI/vLLM completion model.
+    Unified LLM Client supporting Mock and Google AI Studio Gemini API providers.
     """
-    async def generate_structured_evaluation(
-        self,
-        system_prompt: str,
-        user_prompt: str
-    ) -> str:
-        await asyncio.sleep(0.05)  # Simulate network latency
-        
-        # Generates realistic mock JSON evaluation
-        mock_response = {
+
+    def __init__(self):
+        self.provider = settings.LLM_PROVIDER.lower()
+        self.gemini_client: Optional[genai.Client] = None
+
+        if self.provider == "gemini":
+            api_key = settings.GEMINI_API_KEY
+            if not api_key or api_key == "mock_key_for_now":
+                raise ValueError("GEMINI_API_KEY must be configured in .env when LLM_PROVIDER='gemini'")
+            self.gemini_client = genai.Client(api_key=api_key)
+            logger.info("Initialized Gemini LLM Client via Google AI Studio.")
+        else:
+            logger.info("Initialized Mock LLM Client.")
+
+    async def generate_evaluation(self, prompt_text: str, candidate_id: str) -> Dict[str, Any]:
+        """
+        Sends evaluation prompt to configured LLM provider and returns raw dict structured as LLMEvaluationOutput.
+        """
+        if self.provider == "gemini":
+            return await self._call_gemini(prompt_text, candidate_id)
+        else:
+            return self._call_mock(candidate_id)
+
+    async def _call_gemini(self, prompt_text: str, candidate_id: str) -> Dict[str, Any]:
+        try:
+            # Enforce structured JSON output using LLMEvaluationOutput schema
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=LLMEvaluationOutput,
+                temperature=0.1,  # Low temperature for deterministic scoring
+            )
+
+            response = self.gemini_client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt_text,
+                config=config,
+            )
+
+            if not response.text:
+                raise ValueError("Empty response received from Gemini API.")
+
+            return json.loads(response.text)
+
+        except Exception as e:
+            logger.error(f"Gemini API call failed for candidate {candidate_id}: {str(e)}")
+            raise e
+
+    def _call_mock(self, candidate_id: str) -> Dict[str, Any]:
+        """Returns mock evaluation matching LLMEvaluationOutput schema."""
+        return {
             "skills": {
-                "score": 85.0,
-                "rationale": "Demonstrates strong alignment with required technical stack.",
-                "citations": ["SKILLS:1"]
+                "score": 90.0,
+                "rationale": "Strong backend skill set covering Python, FastAPI, and PostgreSQL.",
+                "citations": ["Proficient in Python, FastAPI, PostgreSQL, Redis, and Docker."]
             },
             "experience": {
-                "score": 80.0,
-                "rationale": "Relevant backend engineering experience with microservices.",
-                "citations": ["EXPERIENCE:1"]
+                "score": 85.0,
+                "rationale": "5 years of experience building scalable API microservices.",
+                "citations": ["Backend Software Engineer (2019-2024): Built high-throughput microservices in FastAPI."]
             },
             "projects": {
-                "score": 75.0,
-                "rationale": "Project history aligns well with architectural requirements.",
-                "citations": ["PROJECTS:1"]
+                "score": 80.0,
+                "rationale": "Demonstrated hands-on projects involving high-throughput data processing.",
+                "citations": ["Built high-throughput microservices in FastAPI."]
             },
             "education": {
-                "score": 90.0,
-                "rationale": "Degree and academic background match specifications.",
-                "citations": ["EDUCATION:1"]
+                "score": 95.0,
+                "rationale": "B.S. degree in Computer Science meets required technical education level.",
+                "citations": ["B.S. in Computer Science, University of Technology (2019)."]
             },
             "flags": [],
-            "executive_summary": "Solid candidate demonstrating core requirements across all categories."
+            "executive_summary": "Candidate exceeds technical expectations with robust microservices experience and strong computer science foundation."
         }
-        return json.dumps(mock_response)
 
 
-async def evaluate_single_candidate_async(
-    candidate_payload: Dict[str, Any],
-    jd_profile: Dict[str, Any],
-    llm_provider: Optional[Any] = None,
-    max_retries: int = 2
-) -> FinalCandidateEvaluation:
-    """
-    Evaluates a single candidate through the LLM pipeline:
-    1. Builds structured XML user prompt.
-    2. Sends request to LLM with retry alogic.
-    3. Validates response against LLMEvaluationOutput schema.
-    4. Runs Python deterministic tier computation and citation verification.
-    """
-    candidate_id = candidate_payload.get("candidate_id", "UNKNOWN")
-    user_prompt = build_stage3_user_prompt(candidate_id, jd_profile, candidate_payload)
-    
-    if llm_provider is None:
-        llm_provider = MockLLMProvider()
-
-    raw_response = None
-    parsed_output = None
-
-    for attempt in range(max_retries + 1):
-        try:
-            raw_response = await llm_provider.generate_structured_evaluation(
-                system_prompt=SYSTEM_PROMPT_STAGE3,
-                user_prompt=user_prompt
-            )
-            data = json.loads(raw_response)
-            parsed_output = LLMEvaluationOutput(**data)
-            break
-        except (json.JSONDecodeError, ValidationError) as e:
-            if attempt == max_retries:
-                # Fallback schema output if LLM repeatedly fails JSON structure
-                parsed_output = LLMEvaluationOutput(
-                    skills=CategoryAssessment(score=0.0, rationale="LLM evaluation failed.", citations=[]),
-                    experience=CategoryAssessment(score=0.0, rationale="LLM evaluation failed.", citations=[]),
-                    projects=CategoryAssessment(score=0.0, rationale="LLM evaluation failed.", citations=[]),
-                    education=CategoryAssessment(score=0.0, rationale="LLM evaluation failed.", citations=[]),
-                    flags=[],
-                    executive_summary=f"Evaluation failed due to response parsing errors: {str(e)}"
-                )
-
-    return compute_deterministic_tier(
-        candidate_id=candidate_id,
-        llm_output=parsed_output,
-        evidence_payload=candidate_payload
-    )
-
-
-async def evaluate_candidate_batch_async(
-    candidate_payloads: List[Dict[str, Any]],
-    jd_profile: Dict[str, Any],
-    llm_provider: Optional[Any] = None,
-    concurrency_limit: int = 5
-) -> List[FinalCandidateEvaluation]:
-    """
-    Concurrently evaluates the top Stage 2 candidates using an asyncio semaphore limit.
-    Returns candidates sorted by final composite score.
-    """
-    semaphore = asyncio.Semaphore(concurrency_limit)
-
-    async def sema_eval(payload: Dict[str, Any]) -> FinalCandidateEvaluation:
-        async with semaphore:
-            return await evaluate_single_candidate_async(
-                candidate_payload=payload,
-                jd_profile=jd_profile,
-                llm_provider=llm_provider
-            )
-
-    tasks = [sema_eval(p) for p in candidate_payloads]
-    results = await asyncio.gather(*tasks)
-
-    # Sort final evaluations descending by composite score
-    results_list = list(results)
-    results_list.sort(key=lambda x: x.composite_score, reverse=True)
-
-    return results_list
+llm_client = LLMClientWrapper()
