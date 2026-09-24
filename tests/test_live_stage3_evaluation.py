@@ -3,7 +3,7 @@ import pytest
 
 from app.config import settings
 from app.stage3_evaluation.evaluator import evaluate_candidate_stage3
-from app.stage3_evaluation.schemas import FinalCandidateEvaluation, DecisionTier
+from app.stage3_evaluation.schemas import FinalCandidateEvaluation, DecisionTier, EvaluationStatus
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -83,11 +83,11 @@ async def test_live_stage3_evaluation():
 
 # Assertions on FinalCandidateEvaluation model
     assert isinstance(result, FinalCandidateEvaluation)
-    assert not result.llm_raw_output.executive_summary.startswith("Provider error")
-    assert not result.llm_raw_output.executive_summary.startswith("Schema validation error")
+    assert result.evaluation_status != EvaluationStatus.EVALUATION_FAILED
+    assert result.llm_raw_output is not None
     
     assert result.candidate_id == "cand_test_999"
-    assert result.tier in [DecisionTier.TIER_1, DecisionTier.TIER_2, DecisionTier.TIER_3]
+    assert result.tier in [DecisionTier.TIER_1, DecisionTier.TIER_2, DecisionTier.TIER_3, None]
     assert 0.0 <= result.composite_score <= 100.0
     assert "skills" in result.category_scores
     assert len(result.llm_raw_output.executive_summary) > 0

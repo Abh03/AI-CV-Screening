@@ -6,7 +6,7 @@ from app.stage3_evaluation.llm_client import (
     evaluate_candidate_batch_async,
     MockLLMProvider
 )
-from app.stage3_evaluation.schemas import DecisionTier
+from app.stage3_evaluation.schemas import DecisionTier, EvaluationStatus
 
 
 class FailingLLMProvider:
@@ -60,9 +60,11 @@ async def test_failing_llm_parsing_fallback():
     )
 
     assert result.candidate_id == "cand_fail"
-    assert result.composite_score == 0.0
-    assert result.tier == DecisionTier.TIER_3
-    assert "Evaluation failed" in result.llm_raw_output.executive_summary
+    assert result.composite_score is None
+    assert result.tier is None
+    assert result.evaluation_status == EvaluationStatus.EVALUATION_FAILED
+    assert result.llm_raw_output is None
+    assert result.error_code == "INVALID_LLM_OUTPUT"
 
 
 @pytest.mark.asyncio

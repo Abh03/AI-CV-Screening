@@ -1,196 +1,180 @@
 import re
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
-DEGREE_HIERARCHY: Dict[str, int] = {
-    "NONE": 0,
-    "SEE": 1, "SLC": 1, "SECONDARY": 1, "10TH": 1,
-    "+2": 2, "INTERMEDIATE": 2, "HIGHER SECONDARY": 2, "A-LEVELS": 2, "A LEVEL": 2, "12TH": 2,
-    "DIPLOMA": 3,
-    "BACHELOR": 4, "B.E": 4, "B.SC": 4, "BCA": 4, "BIT": 4, "BBA": 4, "BIM": 4, "B.TECH": 4, "B.S": 4, "BSC": 4, "BE": 4, "BTECH": 4,
-    "MASTER": 5, "M.E": 5, "M.SC": 5, "MCA": 5, "M.TECH": 5, "MBA": 5, "M.S": 5, "MSC": 5, "ME": 5, "MTECH": 5,
-    "PHD": 6, "DOCTORATE": 6
-}
+from app.stage1_rules.contracts import (
+    AttributeSource, AuthorizationStatus, CandidateFacts, DEGREE_HIERARCHY,
+    HardFilterRules, resolve_hard_filters,
+)
+from app.stage2_retrieval.chunker import SECTION_HEADER_PATTERN
 
+STAGE1_POLICY_VERSION = "stage1-v1.0.0"
 EDUCATION_CONTEXT_ANCHORS = re.compile(
     r"(?i)\b(?:university|college|campus|institute|gpa|cgpa|graduated|degree|faculty|board|school|passed|major|specialization)\b"
 )
-
 IN_PROGRESS_PATTERNS = re.compile(
-    r"(?i)\b(?:pursuing|ongoing|enrolled|expected|current|present|running)\b"
+    r"(?i)\b(?:pursuing|ongoing|enrolled|expected|current|present|running|incomplete|dropped\s+out|not\s+completed)\b"
 )
-
 EDUCATION_SECTION_PATTERN = re.compile(
-    r"(?i)(?:education|academic\s+background|academic\s+qualifications|qualifications)\b(.*?)(?=\n[A-Z\s]{4,}:|\Z)",
-    re.DOTALL
+    r"(?im)^[ \t]*(?:education|academic\s+background|academic\s+qualifications|educational\s+background|qualifications)[ \t]*(?::[ \t]*|$)"
+)
+DEGREE_PATTERN = re.compile(
+    r"(?i)(?<!\w)(bachelor(?:'s|s)?|master(?:'s|s)?|ph\.?d\.?|doctorate|high\s+school|"
+    r"higher\s+secondary|secondary|diploma|\+2|intermediate|a-levels|12th|10th|slc|see|"
+    r"b\.?tech\.?|b\.?sc\.?|b\.?e\.?|b\.?s\.?|bca|bit|bba|bim|"
+    r"m\.?tech\.?|m\.?sc\.?|m\.?e\.?|m\.?s\.?|mca|mba)(?!\w)"
 )
 
 
-def extract_education_zone(cv_text: str) -> Tuple[str, bool]:
-    """
-    Extracts the dedicated EDUCATION section.
-    Returns (extracted_text, is_scoped_section).
-    """
-    match = EDUCATION_SECTION_PATTERN.search(cv_text)
-    if match and len(match.group(1).strip()) > 20:
-        return match.group(1), True
-    return cv_text, False
+def extract_education_zone(cv_text: str) -> tuple[str, bool]:
+    """Stop at the next structural heading, including headings without a colon."""
+    zones = []
+    for start in EDUCATION_SECTION_PATTERN.finditer(cv_text):
+        next_heading = SECTION_HEADER_PATTERN.search(cv_text, start.end())
+        zones.append(cv_text[start.end():next_heading.start() if next_heading else len(cv_text)])
+    return ("\n\n".join(zones), True) if zones else (cv_text, False)
 
 
-def parse_degree_entries(cv_text: str) -> List[Dict[str, Any]]:
-    """
-    Parses candidate qualifications into structured entries:
-    [{ 'level_key': 'BACHELOR', 'level_rank': 4, 'matched_text': 'Bachelor of Science', 'is_in_progress': False, 'context_line': '...' }]
-    """
-    zone_text, is_scoped = extract_education_zone(cv_text)
-    lines = zone_text.splitlines()
-    entries = []
-
-    degree_regex = re.compile(
-        r"(?i)\b(bachelor(?:'s)?|master(?:'s)?|phd|doctorate|diploma|\+2|intermediate|slc|see|b\.?e\b|b\.?sc\b|bca|bit|bba|bim|b\.?tech\b|m\.?e\b|m\.?sc\b|mca|m\.?tech\b|mba|m\.?s\b)\b"
-    )
-
-    for i, line in enumerate(lines):
-        line_clean = line.strip()
-        if not line_clean:
+def _degree_matches(line):
+    for match in DEGREE_PATTERN.finditer(line):
+        term = match.group(1)
+        cleaned = term.upper().replace(".", "").replace("'S", "")
+        if cleaned in {"BACHELORS", "MASTERS"}:
+            cleaned = cleaned[:-1]
+        # Avoid ordinary words and job titles being interpreted as qualifications.
+        if cleaned in {"BE", "ME", "SEE", "BIT"} and term.islower() and "." not in term:
             continue
+        if cleaned == "MASTER" and re.search(r"(?i)\bscrum\s*$", line[:match.start()]):
+            continue
+        if cleaned == "DIPLOMA" and re.search(r"(?i)\bhigh\s+school\s*$", line[:match.start()]):
+            continue
+        key = next((key for key in DEGREE_HIERARCHY if key.replace(".", "") == cleaned), None)
+        if key:
+            yield key, DEGREE_HIERARCHY[key]
 
-        match = degree_regex.search(line_clean)
-        if match:
-            matched_term = match.group(1).upper().replace(".", "")
-            
-            # Map canonical degree level rank
-            rank = 0
-            found_key = "NONE"
-            for key, level_rank in DEGREE_HIERARCHY.items():
-                clean_key = key.replace(".", "")
-                if clean_key == matched_term or (len(clean_key) > 2 and clean_key in matched_term):
-                    if level_rank > rank:
-                        rank = level_rank
-                        found_key = key
 
-            if rank == 0:
-                continue
-
-            # Context window validation if falling back to full profile
-            if not is_scoped:
-                context_window = " ".join(lines[max(0, i - 1): min(len(lines), i + 2)])
-                if not EDUCATION_CONTEXT_ANCHORS.search(context_window):
-                    continue  # Ignore unanchored terms like 'Scrum Master' outside Education zone
-
-            is_in_progress = bool(IN_PROGRESS_PATTERNS.search(line_clean))
-
+def parse_degree_entries(cv_text: str) -> list[dict[str, Any]]:
+    zone, scoped = extract_education_zone(cv_text)
+    lines = zone.splitlines()
+    entries = []
+    for index, line in enumerate(lines):
+        matches = list(dict.fromkeys(_degree_matches(line)))
+        if not matches:
+            continue
+        # A qualification may have its field or completion status on following lines.
+        context = [line.strip()]
+        if index and not list(_degree_matches(lines[index - 1])) and IN_PROGRESS_PATTERNS.search(lines[index - 1]):
+            context.insert(0, lines[index - 1].strip())
+        for following in lines[index + 1:index + 4]:
+            if not following.strip() or list(_degree_matches(following)) or SECTION_HEADER_PATTERN.fullmatch(following):
+                break
+            context.append(following.strip())
+        full_context = " ".join(context)
+        if not scoped and not EDUCATION_CONTEXT_ANCHORS.search(full_context):
+            continue
+        for key, rank in matches:
             entries.append({
-                "level_key": found_key,
-                "level_rank": rank,
-                "matched_text": line_clean,
-                "is_in_progress": is_in_progress,
-                "full_context": line_clean
+                "level_key": key, "level_rank": rank, "matched_text": line.strip(),
+                "is_in_progress": bool(IN_PROGRESS_PATTERNS.search(full_context)),
+                "is_ambiguous": len({rank for _, rank in matches}) > 1,
+                "full_context": full_context,
             })
-
     return entries
 
 
-def check_field_alignment(entry_text: str, req_fields: List[str], req_field_aliases: List[str]) -> bool:
-    """Checks if a degree line matches the required field or field aliases."""
-    if not req_fields and not req_field_aliases:
-        return True  # Any field accepted if non specified
+def check_field_alignment(entry_text: str, req_fields: list[str], req_field_aliases: list[str]) -> bool:
+    terms = req_fields + req_field_aliases
+    return not terms or any(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", entry_text, re.I) for term in terms)
 
-    search_text = entry_text.lower()
-    all_field_terms = [f.lower() for f in req_fields + req_field_aliases]
 
-    for term in all_field_terms:
-        if not term:
-            continue
-        pattern = r"\b" + re.escape(term) + r"\b"
-        if re.search(pattern, search_text):
-            return True
-
-    return False
+def _has_explicit_field(entry):
+    # A generic award ('Bachelor of Science') or an institution ('University of X')
+    # is not a documented conflicting field. Keep ambiguous cases for review.
+    line = re.split(r"(?i)\s[-|;]\s|\b(?:university|college|institute)\b", entry["matched_text"])[0]
+    match = re.search(r"(?i)\b(?:of|in|major|specialization)\s+(.+)", line)
+    if not match:
+        return False
+    field = re.sub(r"[\d\W]+", " ", match.group(1)).strip().lower()
+    return field not in {"", "science", "arts", "engineering"}
 
 
 def evaluate_stage1_hard_filters(
-    candidate_yoe: float,
+    candidate_yoe: float | None,
     candidate_cv_text: str,
-    work_authorized: bool,
-    jd_profile: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    Evaluates hard non-negotiable Stage 1 filters.
-    Returns status ('PASS', 'FAIL', 'REVIEW'), reasons, and evaluation metrics.
-    """
-    min_yoe = jd_profile.get("min_years_experience", 0.0)
-    degree_req = jd_profile.get("degree_requirement") or {}
+    work_authorized: AuthorizationStatus | bool | None,
+    jd_profile: dict[str, Any] | HardFilterRules,
+    *,
+    experience_source: AttributeSource = AttributeSource.UNKNOWN,
+    authorization_source: AttributeSource = AttributeSource.UNKNOWN,
+) -> dict[str, Any]:
+    """Invalid input raises validation errors; uncertainty is REVIEW, not a rejection."""
+    rules = jd_profile if isinstance(jd_profile, HardFilterRules) else resolve_hard_filters(jd_profile)
+    facts = CandidateFacts(experience_years=candidate_yoe, experience_source=experience_source,
+                           work_authorized=work_authorized, authorization_source=authorization_source)
+    checks = []
 
-    req_level_str = degree_req.get("level", "NONE").upper()
-    req_level_rank = DEGREE_HIERARCHY.get(req_level_str, 0)
-    req_fields = degree_req.get("fields", [])
-    req_field_aliases = degree_req.get("field_aliases", [])
+    def record(rule, status, code, message):
+        checks.append({"rule": rule, "status": status, "code": code, "message": message})
 
-    failed_reasons = []
-    review_notes = []
-
-    # 1. Work Authorization Check
-    if not work_authorized:
-        failed_reasons.append("Work authorization check failed.")
-
-    # 2. Years of Experience Check
-    if float(candidate_yoe or 0) < float(min_yoe):
-        failed_reasons.append(
-            f"Insufficient YoE: candidate has {candidate_yoe} years, JD requires {min_yoe} years."
-        )
-
-    # 3. Multi-Degree Evaluation
-    parsed_degrees = parse_degree_entries(candidate_cv_text)
-
-    has_passing_degree = False
-    has_in_progress_matching_degree = False
-    has_level_match_wrong_field = False
-
-    if req_level_rank > 0:
-        if not parsed_degrees:
-            failed_reasons.append(f"No education entry matching required level '{req_level_str}' found.")
-        else:
-            for entry in parsed_degrees:
-                level_matches = entry["level_rank"] >= req_level_rank
-                field_matches = check_field_alignment(entry["full_context"], req_fields, req_field_aliases)
-
-                if level_matches and field_matches:
-                    if not entry["is_in_progress"]:
-                        has_passing_degree = True
-                        break
-                    else:
-                        has_in_progress_matching_degree = True
-                elif level_matches and not field_matches:
-                    has_level_match_wrong_field = True
-
-            if not has_passing_degree:
-                if has_in_progress_matching_degree:
-                    review_notes.append("Candidate holds required degree level and field, but status is IN-PROGRESS.")
-                elif has_level_match_wrong_field:
-                    failed_reasons.append(
-                        f"Education field mismatch: holds required level '{req_level_str}', but field does not match required fields {req_fields}."
-                    )
-                else:
-                    failed_reasons.append(
-                        f"Education level mismatch: highest detected level is below required '{req_level_str}'."
-                    )
-
-    # Determine Decision Status
-    if failed_reasons:
-        status = "FAIL"
-    elif review_notes:
-        status = "REVIEW"
+    if not rules.require_work_authorization:
+        record("authorization", "PASS", "AUTHORIZATION_NOT_REQUIRED", "JD does not require an authorization filter.")
+    elif facts.work_authorized == AuthorizationStatus.UNKNOWN:
+        record("authorization", "REVIEW", "AUTHORIZATION_UNKNOWN", "Work authorization is unknown.")
+    elif facts.authorization_source != AttributeSource.RECRUITER_VERIFIED:
+        record("authorization", "REVIEW", "AUTHORIZATION_UNVERIFIED", "Work authorization requires recruiter verification.")
+    elif facts.work_authorized == AuthorizationStatus.INELIGIBLE:
+        record("authorization", "FAIL", "AUTHORIZATION_INELIGIBLE", "Work authorization check failed.")
     else:
-        status = "PASS"
+        record("authorization", "PASS", "AUTHORIZATION_ELIGIBLE", "Verified work authorization meets the requirement.")
 
+    if rules.min_years_experience == 0:
+        record("experience", "PASS", "EXPERIENCE_NOT_REQUIRED", "JD has no minimum experience requirement.")
+    elif facts.experience_years is None:
+        record("experience", "REVIEW", "EXPERIENCE_UNKNOWN", "Years of experience are unknown.")
+    elif facts.experience_source != AttributeSource.RECRUITER_VERIFIED:
+        record("experience", "REVIEW", "EXPERIENCE_UNVERIFIED", "Experience requires recruiter verification.")
+    elif facts.experience_years < rules.min_years_experience:
+        record("experience", "FAIL", "INSUFFICIENT_EXPERIENCE",
+               f"Insufficient YoE: candidate has {facts.experience_years} years, JD requires {rules.min_years_experience} years.")
+    else:
+        record("experience", "PASS", "EXPERIENCE_MET", "Verified experience meets the minimum.")
+
+    entries = parse_degree_entries(candidate_cv_text)
+    requirement = rules.degree_requirement
+    rank = DEGREE_HIERARCHY[requirement.level] if requirement else 0
+    if not rank:
+        record("education", "PASS", "EDUCATION_NOT_REQUIRED", "JD has no degree requirement.")
+    elif not entries:
+        record("education", "REVIEW", "EDUCATION_UNKNOWN", "No unambiguous education entry was found.")
+    else:
+        qualifying = [entry for entry in entries if entry["level_rank"] >= rank and not entry["is_ambiguous"]]
+        matching = [entry for entry in qualifying if check_field_alignment(
+            entry["full_context"], requirement.fields, requirement.field_aliases)]
+        if any(not entry["is_in_progress"] for entry in matching):
+            record("education", "PASS", "EDUCATION_MET", "Degree level and field meet the requirement.")
+        elif matching:
+            record("education", "REVIEW", "EDUCATION_IN_PROGRESS", "Required degree level and field found, but status is IN-PROGRESS or incomplete.")
+        elif any(entry["is_ambiguous"] for entry in entries):
+            record("education", "REVIEW", "EDUCATION_AMBIGUOUS", "Degree level and field cannot be reliably associated.")
+        elif qualifying:
+            # Missing field information is not evidence of a conflicting field.
+            has_explicit_fields = all(_has_explicit_field(entry) for entry in qualifying)
+            if has_explicit_fields:
+                record("education", "FAIL", "EDUCATION_FIELD_MISMATCH", "Education field mismatch: required field not found in documented qualifications.")
+            else:
+                record("education", "REVIEW", "EDUCATION_FIELD_UNKNOWN", "Required degree field cannot be determined.")
+        else:
+            record("education", "FAIL", "EDUCATION_LEVEL_MISMATCH", "Education level mismatch: detected level is below the requirement.")
+
+    failed = [check["message"] for check in checks if check["status"] == "FAIL"]
+    review = [check["message"] for check in checks if check["status"] == "REVIEW"]
     return {
-        "status": status,
-        "failed_reasons": failed_reasons,
-        "review_notes": review_notes,
-        "metrics": {
-            "candidate_yoe": candidate_yoe,
-            "min_required_yoe": min_yoe,
-            "work_authorized": work_authorized,
-            "parsed_degrees": parsed_degrees
-        }
+        "status": "FAIL" if failed else "REVIEW" if review else "PASS",
+        "policy_version": STAGE1_POLICY_VERSION,
+        "checks": checks, "failed_reasons": failed, "review_notes": review,
+        "metrics": {"candidate_yoe": facts.experience_years, "min_required_yoe": rules.min_years_experience,
+                    "work_authorized": facts.work_authorized.value,
+                    "require_work_authorization": rules.require_work_authorization,
+                    "experience_source": facts.experience_source.value,
+                    "authorization_source": facts.authorization_source.value,
+                    "parsed_degrees": entries},
     }

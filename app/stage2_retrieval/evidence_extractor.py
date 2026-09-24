@@ -16,7 +16,8 @@ def extract_candidate_category_evidence(
     candidate_id: str,
     redacted_cv_text: str,
     jd_category_queries: Dict[str, str],
-    weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS
+    weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS,
+    source_pages: list[dict] | None = None
 ) -> Dict[str, Any]:
     """
     Processes a single candidate CV:
@@ -28,9 +29,18 @@ def extract_candidate_category_evidence(
     if not redacted_cv_text:
         return {"candidate_id": candidate_id, "composite_score": 0.0, "evidence_by_category": {}, "status": "EMPTY_CV"}
 
-    chunks = generate_cv_chunks(redacted_cv_text)
+    chunks = generate_cv_chunks(redacted_cv_text, source_pages=source_pages)
     if not chunks:
         return {"candidate_id": candidate_id, "composite_score": 0.0, "evidence_by_category": {}, "status": "NO_CHUNKS"}
+
+    # Stable content-derived identities until database document/chunk IDs arrive.
+    from app.stage3_evaluation.evidence import stable_identity
+    document_id = "redacted:" + stable_identity(candidate_id, redacted_cv_text)
+    for chunk in chunks:
+        chunk["candidate_id"] = candidate_id
+        chunk["document_id"] = document_id
+        chunk["chunk_id"] = "chunk:" + stable_identity(document_id, chunk["global_chunk_id"], chunk["text"])
+        chunk.setdefault("source_location", {"section": chunk["section"], "chunk_index": chunk["chunk_index"]})
 
     # Generate Embeddings
     embeddings = generate_embeddings([c["text"] for c in chunks])
@@ -113,20 +123,9 @@ def format_category_evidence_for_prompt(candidate_payload: Dict[str, Any]) -> st
     """
     Formats category-isolated evidence chunks into XML structure for Stage 3 LLM prompts.
     """
-    evidence_map = candidate_payload.get("evidence_by_category", {})
-    lines = [f'<candidate_evidence candidate_id="{candidate_payload.get("candidate_id")}">']
-
-    for category in ["SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION"]:
-        chunks = evidence_map.get(category, [])
-        lines.append(f'  <category name="{category}">')
-        if not chunks:
-            lines.append("    <snippet>No relevant evidence extracted.</snippet>")
-        else:
-            for idx, c in enumerate(chunks, start=1):
-                score = c.get("rerank_score", 0.0)
-                text = c.get("text", "")
-                lines.append(f'    <snippet index="{idx}" relevance="{score}">\n      {text}\n    </snippet>')
-        lines.append("  </category>")
-
-    lines.append("</candidate_evidence>")
-    return "\n".join(lines)
+    from xml.etree import ElementTree as ET
+    from app.stage3_evaluation.prompts import build_stage3_user_prompt
+    prompt = build_stage3_user_prompt(candidate_payload.get("candidate_id", "UNKNOWN"), {}, candidate_payload)
+    evidence = ET.fromstring(prompt).find("candidate_evidence")
+    evidence.set("candidate_id", candidate_payload.get("candidate_id", "UNKNOWN"))
+    return ET.tostring(evidence, encoding="unicode")

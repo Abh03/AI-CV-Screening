@@ -22,6 +22,8 @@ def test_mba_trap_resolution():
         candidate_yoe=3.0,
         candidate_cv_text=cv_text,
         work_authorized=True,
+        experience_source="recruiter_verified",
+        authorization_source="recruiter_verified",
         jd_profile=jd_profile
     )
 
@@ -51,6 +53,8 @@ def test_scrum_master_false_positive_prevention():
         candidate_yoe=4.0,
         candidate_cv_text=cv_text,
         work_authorized=True,
+        experience_source="recruiter_verified",
+        authorization_source="recruiter_verified",
         jd_profile=jd_profile
     )
 
@@ -77,6 +81,8 @@ def test_in_progress_degree_triggers_review():
         candidate_yoe=1.0,
         candidate_cv_text=cv_text,
         work_authorized=True,
+        experience_source="recruiter_verified",
+        authorization_source="recruiter_verified",
         jd_profile=jd_profile
     )
 
@@ -104,6 +110,8 @@ def test_wrong_field_degree_fails():
         candidate_yoe=2.0,
         candidate_cv_text=cv_text,
         work_authorized=True,
+        experience_source="recruiter_verified",
+        authorization_source="recruiter_verified",
         jd_profile=jd_profile
     )
 

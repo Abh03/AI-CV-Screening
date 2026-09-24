@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Literal
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +25,12 @@ class Settings(BaseSettings):
     
     # Security & Encryption
     ENCRYPTION_SECRET_KEY: Optional[str] = None
+    PDF_MAX_BYTES: int = Field(default=10 * 1024 * 1024, ge=1)
+    PDF_MAX_PAGES: int = Field(default=20, ge=1)
+    PDF_MAX_PAGE_PIXELS: int = Field(default=4_000_000, ge=1)
+    PDF_OCR_TIMEOUT_SECONDS: int = Field(default=15, ge=1)
+    PDF_OCR_MAX_PAGES: int = Field(default=5, ge=0)
+    PDF_OCR_LANGUAGE: Literal["eng"] = "eng"
     
     # Pipeline Defaults & Concurrency Limits
     DEFAULT_STAGE2_CUTOFF: int = 30

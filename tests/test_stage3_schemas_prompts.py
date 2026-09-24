@@ -4,7 +4,7 @@ from app.stage3_evaluation.schemas import (
     FlagDetail,
     FlagType,
     Severity,
-    DecisionTier
+    EvaluationStatus, DecisionTier
 )
 from app.stage3_evaluation.prompts import build_stage3_user_prompt
 from app.stage3_evaluation.evaluator import compute_deterministic_tier
@@ -66,10 +66,10 @@ def test_deterministic_tier_calculation_and_citation_verifier():
 
     result = compute_deterministic_tier("cand_201", mock_llm_output, mock_evidence)
 
-    # Phase 1 preserves current weights; Phase 2 will adopt the approved policy.
-    # Composite = 0.40*85 + 0.25*80 + 0.20*70 + 0.15*90 = 81.5
-    assert result.composite_score == 81.50
-    assert result.tier == DecisionTier.TIER_1
+    # Composite = 0.40*85 + 0.30*80 + 0.20*70 + 0.10*90 = 81
+    assert result.composite_score == 81.0
+    assert result.tier is None
+    assert result.evaluation_status == EvaluationStatus.REVIEW_REQUIRED
 
     # Citation Verification
     assert "SKILLS:1" in result.verified_citations
@@ -86,7 +86,7 @@ def test_current_high_flag_and_low_composite_tiers():
         }
     }
 
-    # Current composite is below 55; no independent low-skill gate exists.
+    # Composite is 56 under approved weights; no independent low-skill gate exists.
     llm_out_low_skill = LLMEvaluationOutput(
         skills=CategoryAssessment(score=35.0, rationale="Lacks required Python", citations=[]),
         experience=CategoryAssessment(score=90.0, rationale="High YOE", citations=[]),
@@ -97,7 +97,9 @@ def test_current_high_flag_and_low_composite_tiers():
     )
 
     res_low_skill = compute_deterministic_tier("cand_202", llm_out_low_skill, mock_evidence)
-    assert res_low_skill.tier == DecisionTier.TIER_3
+    assert res_low_skill.composite_score == 56
+    assert res_low_skill.tier is None  # Unsupported scores now require review.
+    assert res_low_skill.evaluation_status == EvaluationStatus.REVIEW_REQUIRED
 
     # Critical Flag -> Demoted from TIER_1 to TIER_2 or TIER_3
     llm_out_flag = LLMEvaluationOutput(
@@ -117,4 +119,5 @@ def test_current_high_flag_and_low_composite_tiers():
     )
 
     res_flag = compute_deterministic_tier("cand_203", llm_out_flag, mock_evidence)
-    assert res_flag.tier == DecisionTier.TIER_3  # Current behavior; flag policy changes in Phase 2
+    assert res_flag.tier is None
+    assert res_flag.evaluation_status == EvaluationStatus.REVIEW_REQUIRED

@@ -179,7 +179,31 @@ def chunk_section_structurally(
     return chunks
 
 
-def generate_cv_chunks(redacted_cv_text: str) -> List[Dict[str, Any]]:
+def generate_cv_chunks(redacted_cv_text: str, source_pages: list[dict] | None = None) -> List[Dict[str, Any]]:
+    if source_pages is not None:
+        chunks = []
+        current_section = "EXPERIENCE"
+        for page in source_pages:
+            for block in page["blocks"]:
+                heading = SECTION_HEADER_PATTERN.fullmatch(block["text"].strip())
+                if heading:
+                    current_section = normalize_header_to_canonical(heading.group(1))
+                    continue
+                parsed = parse_cv_sections(block["text"])
+                for section, content in parsed.items():
+                    if section != "SUMMARY" or not chunks:
+                        current_section = section
+                    for chunk in chunk_section_structurally(current_section, content):
+                        chunk["global_chunk_id"] = len(chunks)
+                        chunk["chunk_id"] = f"chk_{len(chunks)}"
+                        chunk["source_location"] = {
+                            "page_number": page["page_number"],
+                            "block_index": block["block_number"],
+                            "bbox": block["bbox"], "section": current_section,
+                            "chunk_index": chunk["chunk_index"],
+                        }
+                        chunks.append(chunk)
+        return chunks
     sections = parse_cv_sections(redacted_cv_text)
     all_chunks = []
     global_id = 0

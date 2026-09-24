@@ -39,7 +39,7 @@ assert not llm_client._initialized
 async def test_default_evaluation_uses_configured_client(monkeypatch):
     calls = []
 
-    async def generate(prompt_text, candidate_id):
+    async def generate(*, system_prompt, user_prompt, candidate_id):
         calls.append(candidate_id)
         return LLMClientWrapper._call_mock(candidate_id)
 

@@ -26,7 +26,8 @@ NEPAL_GEO_TERMS = re.compile(
 
 # Masks graduation year ONLY when qualified by education keywords (BS, B.E., Degree, Passed, etc.)
 GRADUATION_YEAR_PATTERN = re.compile(
-    r"(?i)\b(?:graduated|graduation|degree|batch\s+of|completed|class\s+of|bachelor|master|b\.?e\.?|b\.?sc|bca|bit|slc|see|\+2)\b[^\n\.\;]{0,40}\b(19\d{2}|20[01]\d)\b"
+    r"(?i)(?:\b(?:graduated|graduation|degree|batch\s+of|completed|class\s+of|bachelor(?:'s)?|master(?:'s)?|phd|doctorate|bca|bit|slc|see|\+2|b\.?e\b\.?|b\.?sc\b\.?)\b[^\n;]{0,60}?\b(19\d{2}|20[01]\d)\b)|"
+    r"(?:\b(19\d{2}|20[01]\d)\b[^\n;]{0,40}?\b(?:graduated|graduation|degree|batch\s+of|completed|class\s+of|bachelor(?:'s)?|master(?:'s)?|phd|doctorate|bca|bit|slc|see|\+2|b\.?e\b\.?|b\.?sc\b\.?))"
 )
 
 SECTION_SPLIT_PATTERN = re.compile(
@@ -62,19 +63,18 @@ def mask_header_zone(header_text: str) -> str:
     masked = NEPAL_GEO_TERMS.sub("[REDACTED_LOCATION]", masked)
 
     # Scoped NLP entity pass over header zone only
-    doc = nlp(masked)
-    replacements: list[tuple[int, int, str]] = []
-
-    for ent in doc.ents:
-        if ent.label_ == "PERSON":
-            replacements.append((ent.start_char, ent.end_char, "[REDACTED_NAME]"))
-        elif ent.label_ in ("GPE", "LOC", "FAC"):
-            replacements.append((ent.start_char, ent.end_char, "[REDACTED_LOCATION]"))
-
-    for start, end, label in sorted(replacements, key=lambda x: x[0], reverse=True):
-        masked = masked[:start] + label + masked[end:]
-
-    return masked
+    lines = []
+    for line in masked.splitlines(keepends=True):
+        replacements: list[tuple[int, int, str]] = []
+        for ent in nlp(line).ents:
+            if ent.label_ == "PERSON":
+                replacements.append((ent.start_char, ent.end_char, "[REDACTED_NAME]"))
+            elif ent.label_ in ("GPE", "LOC", "FAC"):
+                replacements.append((ent.start_char, ent.end_char, "[REDACTED_LOCATION]"))
+        for start, end, label in sorted(replacements, key=lambda x: x[0], reverse=True):
+            line = line[:start] + label + line[end:]
+        lines.append(line)
+    return "".join(lines)
 
 
 def mask_body_zone(body_text: str) -> str:
@@ -90,7 +90,7 @@ def mask_body_zone(body_text: str) -> str:
     # Context-bound graduation year redaction
     def redact_edu_match(m: re.Match) -> str:
         full_match = m.group(0)
-        year_str = m.group(1)
+        year_str = m.group(1) or m.group(2)
         return full_match.replace(year_str, "[PREVIOUS_ERA_YEAR]")
 
     masked = GRADUATION_YEAR_PATTERN.sub(redact_edu_match, masked)

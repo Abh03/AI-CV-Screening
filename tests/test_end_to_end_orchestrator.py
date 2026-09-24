@@ -28,6 +28,7 @@ async def test_full_pipeline_end_to_end_execution():
         # Candidate 1: Strong candidate (Passes Stage 1, High Stage 2/3 Score)
         {
             "candidate_id": "cand_001",
+            "recruiter_overrides": {"work_authorized": "eligible"},
             "raw_cv_text": (
                 "John Doe\nEmail: john@example.com\nPhone: +1-555-0199\n\n"
                 "WORK EXPERIENCE\n"
@@ -41,12 +42,14 @@ async def test_full_pipeline_end_to_end_execution():
             ),
             "parsed_attributes": {
                 "experience_years": 5.0,
+                "experience_source": "recruiter_verified",
                 "degree": "BACHELOR"
             }
         },
         # Candidate 2: Underqualified (Fails Stage 1 Hard Filters)
         {
             "candidate_id": "cand_002",
+            "recruiter_overrides": {"work_authorized": "eligible"},
             "raw_cv_text": (
                 "Jane Smith\nEmail: jane@example.com\n\n"
                 "WORK EXPERIENCE\n"
@@ -55,6 +58,7 @@ async def test_full_pipeline_end_to_end_execution():
             ),
             "parsed_attributes": {
                 "experience_years": 1.0,
+                "experience_source": "recruiter_verified",
                 "degree": "HIGH_SCHOOL"
             }
         }

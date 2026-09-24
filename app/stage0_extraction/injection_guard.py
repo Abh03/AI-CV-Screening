@@ -10,7 +10,7 @@ INJECTION_OVERRIDE_PATTERNS = [
 
 # Structural delimiter collision patterns
 DELIMITER_INJECTION_PATTERN = re.compile(
-    r"(?i)<\s*/?\s*(?:candidate_data|system_prompt|system|instruction|context)\s*>"
+    r"(?i)<\s*/?\s*(?:candidate_data|candidate_evidence|evaluation_request|snippet|category|job_description|system_prompt|system|instruction|context)(?:\s[^<>]*)?\s*>"
 )
 
 # Invisible / zero-width characters used to hide injection payloads
@@ -57,10 +57,5 @@ def encapsulate_candidate_data(redacted_text: str) -> str:
     if not redacted_text:
         return "<candidate_data>\n</candidate_data>"
 
-    # Sanitize literal delimiters so candidates cannot break the XML envelope
-    safe_content = (
-        redacted_text.replace("</candidate_data>", "&lt;/candidate_data&gt;")
-                     .replace("<candidate_data>", "&lt;candidate_data&gt;")
-    )
-
-    return f"<candidate_data>\n{safe_content.strip()}\n</candidate_data>"
+    from xml.sax.saxutils import escape
+    return f"<candidate_data>\n{escape(redacted_text.strip())}\n</candidate_data>"

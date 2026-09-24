@@ -7,6 +7,9 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.config import settings
 from app.models.database import Base, get_db
+from app.stage0_extraction import pipeline as pdf_pipeline
+import base64
+import fitz
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -75,8 +78,9 @@ async def test_run_screening_endpoint_valid_payload():
             {
                 "candidate_id": "cand_api_001",
                 "raw_cv_text": "Alex Dev\nSkills: Python, FastAPI, PostgreSQL\nWORK EXPERIENCE\n4 years backend development.\nEDUCATION\nBachelor of Science in Computer Science, 2020",
-                "work_authorized": True,
-                "parsed_attributes": {"experience_years": 4.0}
+                "work_authorized": "eligible",
+                "authorization_source": "recruiter_verified",
+                "parsed_attributes": {"experience_years": 4.0, "experience_source": "recruiter_verified"}
             }
         ],
         "top_n_stage2_cutoff": 10
@@ -93,3 +97,106 @@ async def test_run_screening_endpoint_valid_payload():
     assert data["metrics"]["stage1_passed"] == 1
     assert len(data["leaderboard"]) == 1
     assert data["leaderboard"][0]["candidate_id"] == "cand_api_001"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mutation", [
+    {"rules": {"min_years_experince": 5}},
+    {"rules": {"degree_requirement": {"level": "unknown-degree"}}},
+    {"rules": {"require_work_authorization": "false"}},
+    {"attrs": {"experience_years": -1}},
+    {"attrs": {"experience_years": "5"}},
+    {"attrs": {"experience_years": float("nan")}},
+    {"attrs": {"experience_years": float("inf")}},
+    {"candidate": {"work_authorized": "false"}},
+    {"candidate": {"authorization_source": "self_certified"}},
+])
+async def test_invalid_stage1_inputs_return_422(mutation):
+    import json
+    payload = {"job_profile": {"job_id": "invalid", "title": "Engineer", "jd_category_queries": {}},
+               "candidates": [{"candidate_id": "a", "raw_cv_text": "Test"}]}
+    if "rules" in mutation:
+        payload["job_profile"]["hard_filter_rules"] = mutation["rules"]
+    if "attrs" in mutation:
+        payload["candidates"][0]["parsed_attributes"] = mutation["attrs"]
+    if "candidate" in mutation:
+        payload["candidates"][0].update(mutation["candidate"])
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/screening/run", content=json.dumps(payload),
+                                     headers={"Content-Type": "application/json"})
+    assert response.status_code == 422
+    assert all("input" not in error and "ctx" not in error for error in response.json()["detail"])
+
+
+@pytest.mark.asyncio
+async def test_unknown_authorization_returns_review_through_api():
+    payload = {"job_profile": {"job_id": "review", "title": "Engineer", "jd_category_queries": {}},
+               "candidates": [{"candidate_id": "a", "raw_cv_text": "Test"}]}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/screening/run", json=payload)
+    assert response.status_code == 200
+    result = response.json()
+    assert result["leaderboard"] == result["rejected_candidates"] == []
+    assert result["metrics"]["stage1_review_required"] == 1
+    assert result["review_candidates"][0]["filter_details"]["checks"][0]["code"] == "AUTHORIZATION_UNKNOWN"
+
+
+@pytest.mark.asyncio
+async def test_pdf_api_passes_only_redacted_provenance_to_screening(monkeypatch, caplog):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((40, 40), "Jane Doe")
+    page.insert_text((40, 80), "EXPERIENCE")
+    page.insert_text((40, 110), "software engineer with experience in python and java systems")
+    pdf = doc.tobytes()
+    doc.close()
+    monkeypatch.setattr(pdf_pipeline, "assess_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
+    observed = {}
+
+    async def fake_screening(**kwargs):
+        observed.update(kwargs)
+        return {"metrics": {"total_input_candidates": 1, "stage0_processed": 1,
+                            "stage1_passed": 0, "stage1_rejected": 0, "stage1_review_required": 1,
+                            "stage2_shortlisted": 0, "stage3_evaluated": 0, "stage3_succeeded": 0,
+                            "stage3_review_required": 0, "stage3_failed": 0},
+                "leaderboard": [], "rejected_candidates": [], "review_candidates": [], "failed_candidates": []}
+
+    monkeypatch.setattr("app.api.endpoints.run_end_to_end_screening_pipeline", fake_screening)
+    payload = {"job_profile": {"job_id": "pdf_job", "title": "Engineer", "jd_category_queries": {}},
+               "candidate_id": "pdf_candidate", "pdf_base64": base64.b64encode(pdf).decode()}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/screening/run-pdf", json=payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    assert "Jane Doe" not in observed["raw_candidates"][0]["raw_cv_text"]
+    assert "Jane Doe" not in caplog.text
+    assert observed["stage0_views"]["pdf_candidate"].pages[0]["blocks"][0]["bbox"]
+
+
+@pytest.mark.asyncio
+async def test_pdf_api_rejects_malformed_document():
+    payload = {"job_profile": {"job_id": "pdf_bad", "title": "Engineer", "jd_category_queries": {}},
+               "candidate_id": "bad", "pdf_base64": base64.b64encode(b"invalid").decode()}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/screening/run-pdf", json=payload)
+    assert response.json() == {"status": "failure", "code": "INVALID_PDF", "candidate_id": "bad"}
+
+
+@pytest.mark.asyncio
+async def test_binary_pdf_upload_has_structured_outcomes(monkeypatch):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((40, 40), "Jane Doe")
+    page.insert_text((40, 80), "EXPERIENCE")
+    page.insert_text((40, 110), "software engineer with experience in python and java systems")
+    pdf = doc.tobytes()
+    doc.close()
+    monkeypatch.setattr(pdf_pipeline, "assess_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        good = await client.post("/api/v1/screening/ingest-pdf", content=pdf,
+                                 headers={"Content-Type": "application/pdf"})
+        bad = await client.post("/api/v1/screening/ingest-pdf", content=b"bad",
+                                headers={"Content-Type": "application/pdf"})
+    assert good.json()["status"] == "success"
+    assert "Jane Doe" not in str(good.json())
+    assert bad.json()["code"] == "INVALID_PDF"

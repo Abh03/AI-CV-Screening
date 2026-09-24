@@ -27,7 +27,7 @@ def sort_page_blocks(blocks: list[tuple]) -> list[dict]:
     max_x = max(b["x1"] for b in text_blocks)
     mid_x = (min_x + max_x) / 2.0
 
-    header_blocks = []
+    full_width_blocks = []
     left_column_blocks = []
     right_column_blocks = []
 
@@ -37,18 +37,26 @@ def sort_page_blocks(blocks: list[tuple]) -> list[dict]:
         is_full_width = (block["x0"] < mid_x - 40) and (block["x1"] > mid_x + 40)
 
         if is_full_width:
-            header_blocks.append(block)
+            full_width_blocks.append(block)
         elif block["x1"] <= mid_x + 40:
             left_column_blocks.append(block)
         else:
             right_column_blocks.append(block)
 
-    # Sort each region: headers top-down, left column top-down, then right column top-down
-    header_blocks.sort(key=lambda b: b["y0"])
+    # Full-width headings divide column runs; footers follow their body.
+    full_width_blocks.sort(key=lambda b: (b["y0"], b["x0"]))
     left_column_blocks.sort(key=lambda b: b["y0"])
     right_column_blocks.sort(key=lambda b: b["y0"])
-
-    return header_blocks + left_column_blocks + right_column_blocks
+    result = []
+    previous_y = float("-inf")
+    for divider in full_width_blocks + [None]:
+        next_y = divider["y0"] if divider else float("inf")
+        result.extend(b for b in left_column_blocks if previous_y <= b["y0"] < next_y)
+        result.extend(b for b in right_column_blocks if previous_y <= b["y0"] < next_y)
+        if divider:
+            result.append(divider)
+        previous_y = next_y
+    return result
 
 
 def extract_pdf_text_layout_aware(pdf_source: str | bytes | BinaryIO) -> list[dict]:
@@ -71,6 +79,8 @@ def extract_pdf_text_layout_aware(pdf_source: str | bytes | BinaryIO) -> list[di
             # Retrieve bounding-box block tuples
             raw_blocks = page.get_text("blocks")
             ordered_blocks = sort_page_blocks(raw_blocks)
+            for block_num, block in enumerate(ordered_blocks):
+                block["block_number"] = block_num
 
             page_text = "\n\n".join(b["text"] for b in ordered_blocks)
 
