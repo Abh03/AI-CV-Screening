@@ -23,32 +23,33 @@ def test_full_stage2_evidence_extraction():
             "EXPERIENCE": "Backend API engineer"
         }
     payload = extract_candidate_category_evidence(
+        candidate_id="cand_evidence",
         redacted_cv_text=candidate_cv,
         jd_category_queries= jd_category_queries,
     )
 
     assert payload["status"] == "SUCCESS"
-    assert payload["total_chunks_processed"] > 0
-    assert len(payload["evidence_chunks"]) <= 3
+    chunks = [chunk for group in payload["evidence_by_category"].values() for chunk in group]
+    assert chunks
+    assert all(len(group) <= 2 for group in payload["evidence_by_category"].values())
+    assert all("rerank_score" in chunk for chunk in chunks)
+    assert any("FastAPI" in chunk["text"] for chunk in chunks)
 
-    # Top chunk should capture experience/skills mentioning FastAPI/Kubernetes/PostgreSQL
-    top_chunk = payload["evidence_chunks"][0]
-    assert "rerank_score" in top_chunk
-    assert any(term in top_chunk["text"] for term in ["FastAPI", "Kubernetes", "PostgreSQL"])
 
 
 def test_format_evidence_for_prompt():
     mock_payload = {
         "status": "SUCCESS",
-        "evidence_chunks": [
+        "evidence_by_category": {"EXPERIENCE": [
             {
                 "section": "EXPERIENCE",
                 "text": "[Section: EXPERIENCE] Built FastAPI backend.",
                 "rerank_score": 0.895
             }
-        ]
+        ]}
     }
 
     formatted_xml = format_category_evidence_for_prompt(mock_payload)
 
     assert "</candidate_evidence>" in formatted_xml
+    assert "Built FastAPI backend." in formatted_xml

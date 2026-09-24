@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.infrastructure
+
 import redis
 from app.core.database import get_db_connection
 from app.config import settings

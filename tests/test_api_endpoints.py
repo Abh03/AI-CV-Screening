@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
+from app.config import settings
 from app.models.database import Base, get_db
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -43,7 +44,10 @@ async def test_health_check_endpoint():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy", "service": "CV Screening Engine"}
+    assert response.json() == {
+        "status": "healthy", "service": settings.PROJECT_NAME,
+        "version": settings.VERSION, "environment": settings.ENVIRONMENT,
+    }
 
 
 @pytest.mark.asyncio

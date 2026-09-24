@@ -1,18 +1,17 @@
-import psycopg2
-from psycopg2.pool import ThreadedConnectionPool
+"""Synchronous diagnostics only; application persistence uses async SQLAlchemy."""
 from contextlib import contextmanager
+import psycopg2
+from sqlalchemy.engine import make_url
 from app.config import settings
 
-# Pool maintains between 1 and 20 reusable connections
-db_pool = ThreadedConnectionPool(
-    minconn=1,
-    maxconn=20,
-    dsn=settings.DATABASE_URL
-)
 
 @contextmanager
 def get_db_connection():
-    conn = db_pool.getconn()
+    url = make_url(settings.DATABASE_URL)
+    if url.get_backend_name() != "postgresql":
+        raise ValueError("PostgreSQL is required for infrastructure diagnostics")
+    dsn = url.set(drivername="postgresql").render_as_string(hide_password=False)
+    conn = psycopg2.connect(dsn)
     try:
         yield conn
         conn.commit()
@@ -20,4 +19,4 @@ def get_db_connection():
         conn.rollback()
         raise
     finally:
-        db_pool.putconn(conn)
+        conn.close()
