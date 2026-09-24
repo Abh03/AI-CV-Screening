@@ -104,78 +104,45 @@ def chunk_section_structurally(
     min_chunk_chars: int = 150,
     max_chunk_chars: int = 600
 ) -> List[Dict[str, Any]]:
+    if min_chunk_chars < 1 or max_chunk_chars <= len(f"[Section: {section_name}] ") or min_chunk_chars > max_chunk_chars:
+        raise ValueError("Invalid chunk size bounds")
     category = CATEGORY_MAP.get(section_name, "EXPERIENCE")
     raw_blocks = split_text_into_structural_blocks(content)
     if not raw_blocks:
         return []
-
-    chunks = []
-    accumulated_text = ""
-    chunk_idx = 0
-
+    prefix = f"[Section: {section_name}] "
+    capacity = max_chunk_chars - len(prefix)
+    pieces = []
     for block in raw_blocks:
-        if not accumulated_text:
-            accumulated_text = block
-        elif len(accumulated_text) + len(block) + 1 <= min_chunk_chars:
-            accumulated_text += f" {block}"
-        elif len(accumulated_text) + len(block) + 1 <= max_chunk_chars:
-            accumulated_text += f" {block}"
-            chunks.append({
-                "section": section_name,
-                "category": category,
-                "chunk_index": chunk_idx,
-                "text": f"[Section: {section_name}] {accumulated_text.strip()}",
-                "char_length": len(accumulated_text.strip())
-            })
-            chunk_idx += 1
-            accumulated_text = ""
+        # Split even an unbroken token; source block metadata remains on every piece.
+        while len(block) > capacity:
+            boundary = block.rfind(" ", 0, capacity + 1)
+            if boundary <= 0:
+                boundary = capacity
+            pieces.append(block[:boundary].strip())
+            block = block[boundary:].strip()
+        if block:
+            pieces.append(block)
+    chunks = []
+    pending = ""
+    for piece in pieces:
+        joined = f"{pending} {piece}".strip() if pending else piece
+        if len(joined) > capacity:
+            chunks.append({"section": section_name, "category": category,
+                           "chunk_index": len(chunks), "text": prefix + pending,
+                           "char_length": len(pending)})
+            pending = piece
         else:
-            chunks.append({
-                "section": section_name,
-                "category": category,
-                "chunk_index": chunk_idx,
-                "text": f"[Section: {section_name}] {accumulated_text.strip()}",
-                "char_length": len(accumulated_text.strip())
-            })
-            chunk_idx += 1
-            accumulated_text = block
-
-    if accumulated_text:
-        # Sentence-fallback split if final remaining block is oversized
-        if len(accumulated_text) > max_chunk_chars:
-            sentences = re.split(r"(?<=[.!?])\s+", accumulated_text)
-            sub_chunk = ""
-            for sent in sentences:
-                if len(sub_chunk) + len(sent) + 1 <= max_chunk_chars:
-                    sub_chunk += f" {sent}"
-                else:
-                    if sub_chunk:
-                        chunks.append({
-                            "section": section_name,
-                            "category": category,
-                            "chunk_index": chunk_idx,
-                            "text": f"[Section: {section_name}] {sub_chunk.strip()}",
-                            "char_length": len(sub_chunk.strip())
-                        })
-                        chunk_idx += 1
-                    sub_chunk = sent
-            if sub_chunk:
-                chunks.append({
-                    "section": section_name,
-                    "category": category,
-                    "chunk_index": chunk_idx,
-                    "text": f"[Section: {section_name}] {sub_chunk.strip()}",
-                    "char_length": len(sub_chunk.strip())
-                })
-        else:
-            chunks.append({
-                "section": section_name,
-                "category": category,
-                "chunk_index": chunk_idx,
-                "text": f"[Section: {section_name}] {accumulated_text.strip()}",
-                "char_length": len(accumulated_text.strip())
-            })
-
+            pending = joined
+            if len(pending) >= min_chunk_chars:
+                chunks.append({"section": section_name, "category": category,
+                               "chunk_index": len(chunks), "text": prefix + pending,
+                               "char_length": len(pending)})
+                pending = ""
+    if pending:
+        chunks.append({"section": section_name, "category": category,
+                       "chunk_index": len(chunks), "text": prefix + pending,
+                       "char_length": len(pending)})
     return chunks
 
 
@@ -190,8 +157,9 @@ def generate_cv_chunks(redacted_cv_text: str, source_pages: list[dict] | None = 
                     current_section = normalize_header_to_canonical(heading.group(1))
                     continue
                 parsed = parse_cv_sections(block["text"])
+                has_embedded_header = SECTION_HEADER_PATTERN.search(block["text"]) is not None
                 for section, content in parsed.items():
-                    if section != "SUMMARY" or not chunks:
+                    if has_embedded_header:
                         current_section = section
                     for chunk in chunk_section_structurally(current_section, content):
                         chunk["global_chunk_id"] = len(chunks)

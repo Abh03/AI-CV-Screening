@@ -15,6 +15,16 @@ if config.config_file_name:
 target_metadata = Base.metadata
 
 
+def include_object(obj, name, type_, reflected, compare_to):
+    # PostgreSQL generated FTS data is defined in its migration. SQLite-based
+    # unit tests share the portable ORM metadata and cannot materialize it.
+    if reflected and type_ == "column" and name == "tsv_content" and obj.table.name == "source_chunks":
+        return False
+    if reflected and type_ == "index" and name == "ix_source_chunks_fts":
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     url = settings.DATABASE_URL
@@ -30,7 +40,8 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(connection=connection, target_metadata=target_metadata,
+                      include_object=include_object)
 
     with context.begin_transaction():
         context.run_migrations()

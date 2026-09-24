@@ -1,8 +1,7 @@
 # Automated CV Screening Engine
 
-PDF-focused FastAPI screening pipeline. Phases 1-4 restore the runnable baseline, a versioned scoring/outcome contract,
-evidence-reference verification, and validated Stage 1 filters. Production retrieval, ingestion, and workers
-remain subsequent phases.
+PDF-focused FastAPI screening pipeline with versioned scoring, evidence verification,
+PostgreSQL retrieval, and PDF ingestion.
 
 ## Local configuration
 
@@ -19,19 +18,42 @@ validated on first evaluation.
 
 With PostgreSQL available, run `python -m alembic upgrade head`, then
 `python -m uvicorn app.main:app`. The health route is `/health`.
-This baseline exposes text-input screening; secure PDF ingestion is planned.
+Set `STAGE2_BACKEND=postgres` for persistent retrieval. Production requires this
+setting. `STAGE2_BACKEND=memory` retains the reference backend for local tests.
+Docker Compose runs Alembic before starting the web service. The standalone
+`sql/*.sql` files are historical notes and do not provision the database.
+
+Stage 2 stores redacted CV chunks as searchable text and 384-dimensional vectors.
+Treat the PostgreSQL database as sensitive candidate data: restrict access and
+apply the same retention controls as other screening records. Raw PDF bytes and
+unredacted extracted text are not written to retrieval tables. Document identity
+includes candidate ID, redacted content and source locations, redaction version,
+and chunking version. Chunk embeddings are reused for the same model version;
+JD embeddings are reused per job, category, query text, and model version.
+Changing model or processing versions creates new cache entries. Search remains
+scoped to one candidate, one document version, and one category. Only Skills and
+Projects fall back to Experience when their own category is absent; Experience
+and Education have no fallback. Both SQL branches feed the existing RRF and
+CrossEncoder path. The category metadata table records this policy.
+
+Candidate/category filters are selective, so vector search uses exact ordering
+over that scope. The B-tree scope index and GIN FTS index are checked in the
+PostgreSQL integration test. CrossEncoder score averaging and zero clipping are
+retained from the reference path; cutoff calibration at volume remains necessary
+before using Stage 2 scores as a decision rule.
 
 ## Verification
 
 - `python -m pytest tests --collect-only -q`: collect all tests without service connections.
 - `python -m pytest tests -q`: ordinary tests use Mock; live provider and infrastructure tests are skipped.
 - `python -m pytest tests/test_phase1.py --run-infrastructure -q`: explicitly test running PostgreSQL/pgvector and Redis.
+- `python -m pytest tests/test_postgres_retrieval.py --run-infrastructure -q`: create a fresh PostgreSQL database, run all migrations, and exercise scoped retrieval and embedding caches.
 - `python -m pytest tests/test_live_stage3_evaluation.py --run-live-llm -q`: explicitly allow configured live LLM calls and associated costs.
 - `python -m alembic upgrade head --sql`: inspect migration SQL without connecting.
 
 Use `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` to prevent model downloads when
 cached models are available. API persistence tests use isolated SQLite databases;
-they do not establish PostgreSQL retrieval readiness.
+use the PostgreSQL integration test to verify retrieval readiness.
 
 ## Stage 3 scoring and outcomes
 
@@ -111,12 +133,12 @@ from the same tag misused in another. Results include `evidence_verification`
 with the registry snapshot, checks, reasons, and injection signals; the existing
 JSON audit column persists it. There is no additional Phase 3 migration.
 
-Current Stage 2 chunk/document IDs are deterministic content-derived identifiers.
+The memory Stage 2 chunk/document IDs are deterministic content-derived identifiers.
 For older text-only payloads, snapshot IDs are derived from candidate, source
-category, location, and text. These are not claims of database persistence. PDF
-page/block metadata is retained when supplied; missing coordinates stay null
-until the later ingestion/persistence phases. Experience fallback into Skills or
-Projects retains its original source category.
+category, location, and text. These are not claims of database persistence. The
+PostgreSQL backend persists page/block metadata when supplied; missing coordinates
+remain null for text-only input. Experience fallback into Skills or Projects
+retains its original source category.
 
 Gemini receives a dedicated system_instruction; Groq/OpenRouter receive separate
 system and user messages. User data cannot create XML elements or override the
@@ -216,9 +238,9 @@ and returns only redacted page/block text with source locations.
 Raw PDF bytes and extracted text are processed in memory and discarded after
 the request. Only redacted blocks enter retrieval and LLM evaluation. OCR uses
 English (`eng`) and runs only on pages that fail the text integrity check,
-with page count, image pixel, and per-page time limits. Redacted text is used
-in memory for retrieval; it is not stored for PostgreSQL full-text search.
-Persistent FTS needs a separately approved searchable representation.
+with page count, image pixel, and per-page time limits. With
+`STAGE2_BACKEND=postgres`, redacted text is stored in source chunks and indexed
+for PostgreSQL full-text search.
 
 Set `ENCRYPTION_SECRET_KEY` to a valid Fernet key before starting in
 production. Production startup rejects a missing or invalid key. For example,

@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     
     # Pipeline Defaults & Concurrency Limits
     DEFAULT_STAGE2_CUTOFF: int = 30
+    STAGE2_BACKEND: Literal["memory", "postgres"] = "memory"
     LLM_CONCURRENCY_LIMIT: int = 5
     
     # LLM API Keys & Provider Config

@@ -49,6 +49,22 @@ def test_context_aware_chunk_generation():
     assert "global_chunk_id" in chunks[0]
 
 
+def test_oversized_source_block_keeps_bounds_and_location():
+    from app.stage2_retrieval.chunker import chunk_section_structurally
+
+    pieces = chunk_section_structurally("EXPERIENCE", "Python " * 400)
+    assert len(pieces) > 1
+    assert all(len(piece["text"]) <= 600 for piece in pieces)
+    assert [piece["chunk_index"] for piece in pieces] == list(range(len(pieces)))
+    pages = [{"page_number": 2, "blocks": [
+        {"block_number": 3, "bbox": [1, 2, 3, 4], "text": "TECHNICAL SKILLS"},
+        {"block_number": 4, "bbox": [1, 5, 3, 8], "text": "Python " * 400}]}]
+    chunks = generate_cv_chunks("", source_pages=pages)
+    assert chunks and all(chunk["category"] == "SKILLS" for chunk in chunks)
+    assert all(chunk["source_location"]["page_number"] == 2 and
+               chunk["source_location"]["block_index"] == 4 for chunk in chunks)
+
+
 def test_embedding_generation_vector_dimension():
     sample_texts = [
         "[Section: SKILLS] Python, FastAPI, Docker",

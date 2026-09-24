@@ -104,6 +104,49 @@ def extract_candidate_category_evidence(
     }
 
 
+async def extract_candidate_category_evidence_postgres(
+    candidate_id: str, redacted_cv_text: str, jd_category_queries: Dict[str, str],
+    job_id: str, weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS,
+    source_pages: list[dict] | None = None
+) -> Dict[str, Any]:
+    """Persist redacted chunks and retrieve both branches in PostgreSQL."""
+    from app.models.database import AsyncSessionLocal
+    from app.stage2_retrieval.repository import PostgresRetrievalRepository
+
+    if not redacted_cv_text:
+        return {"candidate_id": candidate_id, "composite_score": 0.0,
+                "evidence_by_category": {}, "status": "EMPTY_CV"}
+    chunks = generate_cv_chunks(redacted_cv_text, source_pages=source_pages)
+    if not chunks:
+        return {"candidate_id": candidate_id, "composite_score": 0.0,
+                "evidence_by_category": {}, "status": "NO_CHUNKS"}
+    evidence_by_category = {}
+    category_scores = {}
+    async with AsyncSessionLocal() as session:
+        repo = PostgresRetrievalRepository(session)
+        document_id = await repo.prepare_document(candidate_id, redacted_cv_text,
+                                                  chunks, source_pages)
+        for category in ["SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION"]:
+            query = jd_category_queries.get(category, "")
+            if not query:
+                evidence_by_category[category] = []
+                category_scores[category] = 0.0
+                continue
+            query_vector = await repo.query_vector(job_id, category, query)
+            hits = await repo.search(candidate_id, document_id, category, query,
+                                     query_vector, fallback_to_experience=category in ("SKILLS", "PROJECTS"))
+            ranked = rerank_category_chunks(query, hits, top_n=2)
+            evidence_by_category[category] = ranked
+            category_scores[category] = (max(0.0, sum(c["rerank_score"] for c in ranked) / len(ranked))
+                                         if ranked else 0.0)
+        await session.commit()
+    score = sum(weights.get(category, 0.25) * category_scores[category]
+                for category in ["EXPERIENCE", "SKILLS", "PROJECTS", "EDUCATION"])
+    return {"candidate_id": candidate_id, "composite_score": round(score, 4),
+            "category_scores": category_scores, "evidence_by_category": evidence_by_category,
+            "status": "SUCCESS"}
+
+
 def rank_and_filter_candidate_batch(
     candidate_payloads: List[Dict[str, Any]],
     top_n_llm: int = 40

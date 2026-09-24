@@ -7,6 +7,8 @@ from app.api.schemas import ScreeningRequestSchema, ScreeningResponseSchema, PDF
 from app.config import settings
 from app.stage0_extraction.pipeline import ingest_pdf
 from app.models.database import get_db, JobProfileModel, EvaluationResultModel
+from app.models.database import ScreeningRunModel
+from uuid import uuid4
 from app.orchestrator import run_end_to_end_screening_pipeline
 
 router = APIRouter(prefix="/api/v1/screening", tags=["CV Screening"])
@@ -119,6 +121,9 @@ async def _run_screening(payload: ScreeningRequestSchema, db: AsyncSession, stag
             llm_raw_output=eval_item
         )
         db.add(eval_record)
+
+    db.add(ScreeningRunModel(id=str(uuid4()), job_id=job_id,
+                             status="COMPLETED", metrics=pipeline_result["metrics"]))
 
     await db.commit()
 

@@ -4,8 +4,10 @@ from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
 from app.stage1_rules.contracts import CandidateInput, resolve_hard_filters
 from app.stage2_retrieval.evidence_extractor import (
     extract_candidate_category_evidence,
+    extract_candidate_category_evidence_postgres,
     rank_and_filter_candidate_batch
 )
+from app.config import settings
 from app.stage3_evaluation.llm_client import evaluate_candidate_batch_async
 from app.stage3_evaluation.schemas import FinalCandidateEvaluation, EvaluationStatus
 from app.stage3_evaluation.scoring import evaluation_sort_key
@@ -122,15 +124,23 @@ async def run_end_to_end_screening_pipeline(
         }
 
     # Stage 2: Category-Aware Evidence Extraction & Candidate Batch Ranking
+    if settings.ENVIRONMENT.lower() == "production" and settings.STAGE2_BACKEND != "postgres":
+        raise RuntimeError("Production Stage 2 requires STAGE2_BACKEND=postgres")
     stage2_payloads = []
     for survivor in stage1_survivors:
-        evidence_payload = extract_candidate_category_evidence(
+        extractor = (extract_candidate_category_evidence_postgres
+                     if settings.STAGE2_BACKEND == "postgres" else extract_candidate_category_evidence)
+        kwargs = dict(
             candidate_id=survivor["candidate_id"],
             redacted_cv_text=survivor["redacted_cv_text"],
             jd_category_queries=jd_category_queries,
             source_pages=(stage0_views or {}).get(survivor["candidate_id"]).pages
             if survivor["candidate_id"] in (stage0_views or {}) else None
         )
+        if settings.STAGE2_BACKEND == "postgres":
+            evidence_payload = await extractor(**kwargs, job_id=effective_jd["job_id"])
+        else:
+            evidence_payload = extractor(**kwargs)
         stage2_payloads.append(evidence_payload)
 
     # Global Batch Cutoff: Rank all Stage 1 survivors by S_cand and slice top candidates

@@ -1,2 +1,2 @@
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Alembic revision c4b8e6a2f901 creates pgvector during upgrade.
+-- This file is retained as a migration note and is not an initdb script.

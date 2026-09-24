@@ -3,6 +3,8 @@ from sentence_transformers import SentenceTransformer
 
 # Load compact local embedding model (384-dimensional dense vectors)
 _MODEL_NAME = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL_NAME = _MODEL_NAME
+EMBEDDING_MODEL_VERSION = "sentence-transformers-all-MiniLM-L6-v2-v1"
 _model_instance = None
 
 

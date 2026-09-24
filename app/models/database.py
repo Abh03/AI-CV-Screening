@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import AsyncGenerator
-from sqlalchemy import String, Float, DateTime, JSON, ForeignKey
+from sqlalchemy import String, Float, DateTime, JSON, ForeignKey, Integer, Text, Index
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -57,3 +58,68 @@ class EvaluationResultModel(Base):
     )
 
     job_profile: Mapped["JobProfileModel"] = relationship(back_populates="evaluations")
+
+
+class CandidateModel(Base):
+    __tablename__ = "candidates"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class DocumentVersionModel(Base):
+    __tablename__ = "document_versions"
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    redaction_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    chunking_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    __table_args__ = (Index("ix_document_versions_candidate", "candidate_id", "created_at"),)
+
+
+class SourceChunkModel(Base):
+    __tablename__ = "source_chunks"
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    document_id: Mapped[str] = mapped_column(ForeignKey("document_versions.id", ondelete="CASCADE"), nullable=False)
+    candidate_id: Mapped[str] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"), nullable=False)
+    category: Mapped[str] = mapped_column(String(16), nullable=False)
+    section: Mapped[str] = mapped_column(String(32), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_location: Mapped[dict] = mapped_column(JSON, nullable=False)
+    __table_args__ = (Index("ix_source_chunks_scope", "candidate_id", "document_id", "category"),)
+
+
+class ChunkEmbeddingModel(Base):
+    __tablename__ = "chunk_embeddings"
+    chunk_id: Mapped[str] = mapped_column(ForeignKey("source_chunks.id", ondelete="CASCADE"), primary_key=True)
+    model_name: Mapped[str] = mapped_column(String(128), primary_key=True)
+    model_version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    vector: Mapped[list] = mapped_column(Vector(384), nullable=False)
+
+
+class CategoryMetadataModel(Base):
+    __tablename__ = "category_metadata"
+    category: Mapped[str] = mapped_column(String(16), primary_key=True)
+    fallback_category: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    policy_version: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+class JobQueryEmbeddingModel(Base):
+    __tablename__ = "job_query_embeddings"
+    job_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    category: Mapped[str] = mapped_column(String(16), primary_key=True)
+    query_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model_name: Mapped[str] = mapped_column(String(128), primary_key=True)
+    model_version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    vector: Mapped[list] = mapped_column(Vector(384), nullable=False)
+
+
+class ScreeningRunModel(Base):
+    __tablename__ = "screening_runs"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    job_id: Mapped[str] = mapped_column(ForeignKey("job_profiles.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    metrics: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

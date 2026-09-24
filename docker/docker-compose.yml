@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -13,12 +11,23 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ../sql/01_init_extensions.sql:/docker-entrypoint-initdb.d/01_init_extensions.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d cv_engine"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   redis:
     image: redis:7-alpine
@@ -49,12 +58,15 @@ services:
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
       - DEFAULT_STAGE2_CUTOFF=30
+      - STAGE2_BACKEND=postgres
       - LLM_CONCURRENCY_LIMIT=5
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
