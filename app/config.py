@@ -1,5 +1,5 @@
 from typing import Optional, Literal
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     
     # Redis Configuration
     REDIS_URL: str = "redis://127.0.0.1:6379/0"
+    CELERY_VISIBILITY_TIMEOUT_SECONDS: int = Field(default=3600, ge=60)
+    QUEUE_RECOVERY_SECONDS: int = Field(default=300, ge=30)
+    RUN_TIMEOUT_SECONDS: int = Field(default=1800, ge=30)
+    RUN_MAX_ATTEMPTS: int = Field(default=3, ge=1)
+    OCR_CONCURRENCY_LIMIT: int = Field(default=1, ge=1)
+    EMBEDDING_CONCURRENCY_LIMIT: int = Field(default=1, ge=1)
+    RERANK_CONCURRENCY_LIMIT: int = Field(default=1, ge=1)
+    PROVIDER_TIMEOUT_SECONDS: int = Field(default=45, ge=1)
     
     # Security & Encryption
     ENCRYPTION_SECRET_KEY: Optional[str] = None
@@ -47,6 +55,12 @@ class Settings(BaseSettings):
 
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct:free"
+
+    @model_validator(mode="after")
+    def validate_worker_timeouts(self):
+        if self.CELERY_VISIBILITY_TIMEOUT_SECONDS <= self.RUN_TIMEOUT_SECONDS + 35:
+            raise ValueError("CELERY_VISIBILITY_TIMEOUT_SECONDS must exceed the run timeout and lease")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

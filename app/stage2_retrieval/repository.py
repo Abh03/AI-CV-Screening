@@ -2,6 +2,7 @@
 import hashlib
 import json
 import math
+import asyncio
 from datetime import datetime, timezone
 
 from sqlalchemy import text, select
@@ -88,7 +89,7 @@ class PostgresRetrievalRepository:
         if uncached:
             # The embedding model can be slow; release the database transaction first.
             await self.session.commit()
-            vectors = generate_embeddings([c["text"] for c in uncached])
+            vectors = await asyncio.to_thread(generate_embeddings, [c["text"] for c in uncached])
             for chunk, vector in zip(uncached, vectors):
                 vector_literal(vector)
                 await self.session.execute(pg_insert(ChunkEmbeddingModel).values(
@@ -107,7 +108,7 @@ class PostgresRetrievalRepository:
             await self.session.commit()
             return vector
         await self.session.commit()
-        vector = generate_single_embedding(query)
+        vector = await asyncio.to_thread(generate_single_embedding, query)
         vector_literal(vector)
         await self.session.execute(pg_insert(JobQueryEmbeddingModel).values(
             job_id=job_id, category=category, query_hash=query_hash,

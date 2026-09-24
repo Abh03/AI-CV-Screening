@@ -1,17 +1,121 @@
 import base64
 import binascii
 import hashlib
+import asyncio
+import json
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import ScreeningRequestSchema, ScreeningResponseSchema, PDFScreeningRequestSchema
 from app.config import settings
 from app.stage0_extraction.pipeline import ingest_pdf
-from app.models.database import get_db
+from app.models.database import get_db, ScreeningRunModel
 from app.orchestrator import run_end_to_end_screening_pipeline
 from app.run_audit import canonical_hash, complete_run, policy_snapshot, reserve_run
+from app.core.security import encrypt_payload
 
 router = APIRouter(prefix="/api/v1/screening", tags=["CV Screening"])
+
+
+@router.post("/submit", status_code=status.HTTP_202_ACCEPTED)
+async def submit_screening_endpoint(payload: ScreeningRequestSchema, db: AsyncSession = Depends(get_db)):
+    """Reserve and queue a run; clients poll /runs/{run_id}."""
+    if settings.ENVIRONMENT.lower() == "production":
+        raise HTTPException(status_code=404, detail="Text screening is available only for internal use")
+    if not payload.candidates:
+        raise HTTPException(status_code=400, detail="Candidate list cannot be empty")
+    job = payload.job_profile.model_dump(mode="json")
+    candidates = [c.model_dump(mode="json", exclude_unset=True) for c in payload.candidates]
+    try:
+        cipher = base64.b64encode(encrypt_payload(json.dumps(candidates).encode("utf-8"))).decode("ascii")
+    except ValueError:
+        raise HTTPException(status_code=503, detail="ENCRYPTION_NOT_CONFIGURED")
+    policy = policy_snapshot(payload.top_n_stage2_cutoff)
+    digest = canonical_hash({"job": job, "candidates": candidates, "policy": policy})
+    state, run = await reserve_run(db, key=payload.idempotency_key or digest, request_hash=digest,
+                                   job_snapshot=job, policy=policy, candidates=candidates)
+    if state == "CONFLICT":
+        raise HTTPException(status_code=409, detail="Idempotency key belongs to a different request")
+    if state == "REPLAY":
+        return {"run_id": run.id, "status": "COMPLETED", "result_url": f"/api/v1/screening/runs/{run.id}"}
+    if state == "IN_PROGRESS":
+        return {"run_id": run.id, "status": run.status, "result_url": f"/api/v1/screening/runs/{run.id}"}
+    run.request_snapshot = {"kind": "text", "encrypted_candidates": cipher}
+    run.status = "QUEUED"
+    run.lease_until = datetime.now(timezone.utc) + timedelta(seconds=settings.QUEUE_RECOVERY_SECONDS)
+    run.failure_code = None
+    await db.commit()
+    try:
+        from app.workers.tasks import screening_task
+        screening_task.delay(run.id)
+    except Exception:
+        run.status = "FAILED"
+        run.failure_code = "QUEUE_UNAVAILABLE"
+        await db.commit()
+        raise HTTPException(status_code=503, detail={"run_id": run.id, "code": "QUEUE_UNAVAILABLE"})
+    return {"run_id": run.id, "status": "QUEUED", "result_url": f"/api/v1/screening/runs/{run.id}"}
+
+
+@router.get("/runs/{run_id}")
+async def get_screening_run(run_id: str, db: AsyncSession = Depends(get_db)):
+    run = await db.get(ScreeningRunModel, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return {"run_id": run.id, "status": run.status, "attempt_count": run.attempt_count,
+            "failure_code": run.failure_code, "result": run.response_snapshot}
+
+
+@router.post("/submit-pdf", status_code=status.HTTP_202_ACCEPTED)
+async def submit_pdf_screening_endpoint(payload: PDFScreeningRequestSchema,
+                                        db: AsyncSession = Depends(get_db)):
+    if len(payload.pdf_base64) > ((settings.PDF_MAX_BYTES + 2) // 3) * 4:
+        raise HTTPException(status_code=413, detail="PDF_TOO_LARGE")
+    try:
+        pdf = base64.b64decode(payload.pdf_base64, validate=True)
+    except binascii.Error:
+        raise HTTPException(status_code=422, detail="INVALID_PDF_ENCODING")
+    if len(pdf) > settings.PDF_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="PDF_TOO_LARGE")
+    try:
+        cipher = base64.b64encode(encrypt_payload(base64.b64encode(pdf))).decode("ascii")
+    except ValueError:
+        raise HTTPException(status_code=503, detail="ENCRYPTION_NOT_CONFIGURED")
+    job = payload.job_profile.model_dump(mode="json")
+    policy = policy_snapshot(payload.top_n_stage2_cutoff)
+    attributes = {"candidate_id": payload.candidate_id,
+                  "work_authorized": payload.work_authorized.value,
+                  "authorization_source": payload.authorization_source.value,
+                  "parsed_attributes": payload.parsed_attributes.model_dump(mode="json"),
+                  "recruiter_overrides": payload.recruiter_overrides.model_dump(mode="json")}
+    digest = canonical_hash({"job": job, "attributes": attributes,
+                             "pdf_sha256": hashlib.sha256(pdf).hexdigest(), "policy": policy})
+    state, run = await reserve_run(db, key=payload.idempotency_key or digest, request_hash=digest,
+                                   job_snapshot=job, policy=policy,
+                                   candidates=[{"candidate_id": payload.candidate_id,
+                                                "pdf_sha256": hashlib.sha256(pdf).hexdigest()}])
+    if state == "CONFLICT":
+        raise HTTPException(status_code=409, detail="Idempotency key belongs to a different request")
+    if state in {"REPLAY", "IN_PROGRESS"}:
+        return {"run_id": run.id, "status": run.status,
+                "result_url": f"/api/v1/screening/runs/{run.id}"}
+    run.request_snapshot = {"kind": "pdf", "encrypted_pdf": cipher, "attributes": attributes}
+    run.status = "QUEUED"
+    run.lease_until = datetime.now(timezone.utc) + timedelta(seconds=settings.QUEUE_RECOVERY_SECONDS)
+    run.failure_code = None
+    await db.commit()
+    try:
+        from app.workers.tasks import screening_task
+        screening_task.delay(run.id)
+    except Exception:
+        run.status = "FAILED"
+        run.failure_code = "QUEUE_UNAVAILABLE"
+        await db.commit()
+        raise HTTPException(status_code=503, detail={"run_id": run.id, "code": "QUEUE_UNAVAILABLE"})
+    return {"run_id": run.id, "status": "QUEUED",
+            "result_url": f"/api/v1/screening/runs/{run.id}"}
 
 
 @router.post("/ingest-pdf")
@@ -24,7 +128,7 @@ async def ingest_pdf_upload(request: Request):
         if len(data) + len(chunk) > settings.PDF_MAX_BYTES:
             return {"status": "failure", "code": "PDF_TOO_LARGE"}
         data.extend(chunk)
-    result = ingest_pdf(bytes(data))
+    result = await asyncio.to_thread(ingest_pdf, bytes(data))
     data.clear()
     return {"status": result.status, "code": result.code,
             "pages": result.pages if result.status == "success" else []}
@@ -33,6 +137,8 @@ async def ingest_pdf_upload(request: Request):
 @router.post("/run-pdf")
 async def run_pdf_screening_endpoint(payload: PDFScreeningRequestSchema, db: AsyncSession = Depends(get_db)):
     """PDF-only production entry point; no unredacted document reaches screening."""
+    if settings.ENVIRONMENT.lower() == "production":
+        return JSONResponse(status_code=202, content=await submit_pdf_screening_endpoint(payload, db))
     if len(payload.pdf_base64) > ((settings.PDF_MAX_BYTES + 2) // 3) * 4:
         return await _record_pdf_failure(payload, db, "PDF_TOO_LARGE")
     try:

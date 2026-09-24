@@ -1,10 +1,13 @@
 """Bounded, ephemeral PDF ingestion. Only redacted blocks leave this module."""
 from dataclasses import dataclass, field
 import subprocess
+from threading import BoundedSemaphore
 
 import fitz
 
 from app.config import settings
+
+_ocr_slots = BoundedSemaphore(settings.OCR_CONCURRENCY_LIMIT)
 from app.stage0_extraction.integrity import assess_extraction_integrity
 from app.stage0_extraction.parser import sort_page_blocks
 from app.stage0_extraction.pii_masker import mask_header_zone, mask_body_zone
@@ -25,11 +28,12 @@ def _ocr_page(page: fitz.Page) -> str:
     pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
     if pixmap.width * pixmap.height > settings.PDF_MAX_PAGE_PIXELS:
         raise ValueError("OCR_PIXEL_LIMIT")
-    result = subprocess.run(
-        ["tesseract", "stdin", "stdout", "-l", settings.PDF_OCR_LANGUAGE],
-        input=pixmap.tobytes("png"), capture_output=True,
-        timeout=settings.PDF_OCR_TIMEOUT_SECONDS, check=False,
-    )
+    with _ocr_slots:
+        result = subprocess.run(
+            ["tesseract", "stdin", "stdout", "-l", settings.PDF_OCR_LANGUAGE],
+            input=pixmap.tobytes("png"), capture_output=True,
+            timeout=settings.PDF_OCR_TIMEOUT_SECONDS, check=False,
+        )
     if result.returncode:
         raise RuntimeError("OCR_FAILED")
     return result.stdout.decode("utf-8", errors="replace").strip()

@@ -193,14 +193,15 @@ async def test_mock_is_marked_and_blocked_in_production(monkeypatch):
 @pytest.mark.parametrize("provider", ["groq", "openrouter", "gemini"])
 async def test_provider_channels_and_schema(monkeypatch, provider):
     captured = {}
+    await llm_client.aclose()
     response_data = output().model_dump()
     monkeypatch.setattr(llm_client, "provider", provider)
     monkeypatch.setattr(llm_client, "_initialized", True)
     if provider == "gemini":
-        def generate_content(**kwargs):
+        async def generate_content(**kwargs):
             captured.update(kwargs)
             return SimpleNamespace(text=json.dumps(response_data))
-        monkeypatch.setattr(llm_client, "gemini_client", SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)))
+        monkeypatch.setattr(llm_client, "gemini_client", SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))))
     else:
         def handler(request):
             captured.update(json.loads(request.content))
@@ -223,3 +224,39 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
     root = ET.fromstring(user_content)
     for tag, ref in result.evidence_verification.registry.items():
         assert root.find(f'.//snippet[@tag="{tag}"]').text == ref.text
+
+
+@pytest.mark.asyncio
+async def test_http_provider_retries_rate_limit_but_not_bad_request(monkeypatch):
+    await llm_client.aclose()
+    attempts = []
+
+    def handler(request):
+        attempts.append(request)
+        return httpx.Response(429 if len(attempts) == 1 else 200,
+                              json={"choices": [{"message": {"content": "{}"}}]})
+
+    llm_client.http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+    async def no_sleep(_):
+        pass
+
+    monkeypatch.setattr("app.stage3_evaluation.llm_client.asyncio.sleep", no_sleep)
+    result = await llm_client._execute_openai_compatible_http(
+        "https://example.test", {}, {}, "test", "candidate")
+    assert result == {}
+    assert len(attempts) == 2
+    await llm_client.aclose()
+
+    bad_requests = []
+
+    def bad_handler(request):
+        bad_requests.append(request)
+        return httpx.Response(400)
+
+    llm_client.http_client = httpx.AsyncClient(transport=httpx.MockTransport(bad_handler))
+    with pytest.raises(httpx.HTTPStatusError):
+        await llm_client._execute_openai_compatible_http(
+            "https://example.test", {}, {}, "test", "candidate")
+    assert len(bad_requests) == 1
+    await llm_client.aclose()

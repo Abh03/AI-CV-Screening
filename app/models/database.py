@@ -128,6 +128,11 @@ class ScreeningRunModel(Base):
     job_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     policy_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     response_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    request_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_owner: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 

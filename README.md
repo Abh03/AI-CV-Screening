@@ -225,12 +225,13 @@ existing outcome JSON. Run audit records now persist Stage 1 reviews and
 rejections alongside every later candidate outcome.
 # PDF ingestion and privacy policy
 
-Production screening accepts PDFs through `POST /api/v1/screening/run-pdf`.
+Production screening accepts PDFs through `POST /api/v1/screening/run-pdf`
+or `POST /api/v1/screening/submit-pdf`. Both return HTTP 202 with a `run_id`
+and `result_url` after reserving the run and sending it to Redis/Celery.
 Send JSON with `job_profile`, `candidate_id`, and `pdf_base64`; candidate rule
 facts (`work_authorized`, `authorization_source`, `parsed_attributes`, and
-`recruiter_overrides`) are optional. The response includes `status` (`success`,
-`review`, or `failure`) and a stable `code`. On success, `screening` contains
-the ordinary screening response. The existing `/run` raw-text route is for
+`recruiter_overrides`) are optional. Poll `GET /api/v1/screening/runs/{run_id}`
+for `status`, `failure_code`, and the completed `result`. The existing `/run` raw-text route is for
 internal development and tests and returns 404 in production.
 `POST /api/v1/screening/ingest-pdf` also accepts a raw `application/pdf` body
 and returns only redacted page/block text with source locations.
@@ -247,8 +248,9 @@ also returns a `run_id` and stores a Stage 0 outcome. The audit stores redacted
 CV text or a PDF hash, never raw PDF bytes. `recompute_stored_decision` in
 `app/run_audit.py` checks a stored Stage 3 score and tier without a provider call.
 
-Raw PDF bytes and extracted text are processed in memory and discarded after
-the request. Only redacted blocks enter retrieval and LLM evaluation. OCR uses
+Raw PDF bytes are encrypted before reservation and discarded from API memory.
+The worker decrypts them for ingestion; the encrypted run request snapshot is
+cleared on completion. Only redacted blocks enter retrieval and LLM evaluation. OCR uses
 English (`eng`) and runs only on pages that fail the text integrity check,
 with page count, image pixel, and per-page time limits. With
 `STAGE2_BACKEND=postgres`, redacted text is stored in source chunks and indexed
@@ -258,3 +260,16 @@ Set `ENCRYPTION_SECRET_KEY` to a valid Fernet key before starting in
 production. Production startup rejects a missing or invalid key. For example,
 generate a key with `cryptography.fernet.Fernet.generate_key()` and supply it
 through the deployment secret manager.
+
+For development text batches, `POST /api/v1/screening/submit` provides the
+same asynchronous contract. Set `ENCRYPTION_SECRET_KEY` for this route too;
+queued text candidate inputs are encrypted in the run snapshot. The synchronous `/run` route remains available in
+development. The compose stack starts separate `worker` and `beat` services;
+beat revisits queued runs and expired worker leases every minute. Tasks carry
+only run IDs, acknowledge after completion, and use late acknowledgment and
+worker-loss redelivery. The default worker concurrency is one process to keep
+the embedding and reranker models in one memory footprint per worker. Provider
+requests are bounded within each run by `LLM_CONCURRENCY_LIMIT`; OCR, embedding,
+and reranking have separate local limits. A failed run reports a stable
+`failure_code` and can be resubmitted with the same idempotency key while its
+attempt budget remains. Apply Alembic migrations before starting workers.

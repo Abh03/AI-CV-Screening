@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+import asyncio
 from app.stage2_retrieval.chunker import generate_cv_chunks
 from app.stage2_retrieval.embeddings import generate_embeddings, generate_single_embedding
 from app.stage2_retrieval.hybrid_search import execute_category_hybrid_search
@@ -136,7 +137,7 @@ async def extract_candidate_category_evidence_postgres(
             hits = await repo.search(candidate_id, document_id, category, query,
                                      query_vector, fallback_to_experience=category in ("SKILLS", "PROJECTS"))
             await session.commit()
-            ranked = rerank_category_chunks(query, hits, top_n=2)
+            ranked = await asyncio.to_thread(rerank_category_chunks, query, hits, top_n=2)
             evidence_by_category[category] = ranked
             category_scores[category] = (max(0.0, sum(c["rerank_score"] for c in ranked) / len(ranked))
                                          if ranked else 0.0)

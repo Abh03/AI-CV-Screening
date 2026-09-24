@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+import asyncio
 import hashlib
 from app.stage0_extraction.pii_masker import mask_pii_runtime_view
 from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
@@ -190,7 +191,7 @@ async def run_end_to_end_screening_pipeline(
             if settings.STAGE2_BACKEND == "postgres":
                 evidence_payload = await extractor(**kwargs, job_id=effective_jd["job_id"])
             else:
-                evidence_payload = extractor(**kwargs)
+                evidence_payload = await asyncio.to_thread(extractor, **kwargs)
             if evidence_payload.get("candidate_id") != survivor["candidate_id"]:
                 raise ValueError("Evidence ownership mismatch")
         except Exception:

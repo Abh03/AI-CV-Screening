@@ -1,8 +1,11 @@
 from typing import List, Dict, Any, Optional
 from sentence_transformers import CrossEncoder
+from threading import BoundedSemaphore
+from app.config import settings
 
 _MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 _reranker_instance: Optional[CrossEncoder] = None
+_rerank_slots = BoundedSemaphore(settings.RERANK_CONCURRENCY_LIMIT)
 
 
 def get_reranker_model() -> CrossEncoder:
@@ -20,9 +23,10 @@ def rerank_category_chunks(
     if not category_query or not chunks:
         return []
 
-    model = get_reranker_model()
-    pairs = [[category_query, chunk.get("text", "")] for chunk in chunks]
-    scores = model.predict(pairs)
+    with _rerank_slots:
+        model = get_reranker_model()
+        pairs = [[category_query, chunk.get("text", "")] for chunk in chunks]
+        scores = model.predict(pairs)
 
     reranked = []
     for chunk, score in zip(chunks, scores):

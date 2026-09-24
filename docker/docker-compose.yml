@@ -68,6 +68,56 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:?Set ENCRYPTION_SECRET_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:?Set LLM_PROVIDER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:?Set ENCRYPTION_SECRET_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:?Set LLM_PROVIDER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - STAGE2_BACKEND=postgres
+      - LLM_CONCURRENCY_LIMIT=5
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  beat:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "beat", "--loglevel=INFO"]
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:?Set ENCRYPTION_SECRET_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:?Set LLM_PROVIDER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - STAGE2_BACKEND=postgres
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:
   redisdata:

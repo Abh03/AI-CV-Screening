@@ -1,11 +1,14 @@
 from typing import List
 from sentence_transformers import SentenceTransformer
+from threading import BoundedSemaphore
+from app.config import settings
 
 # Load compact local embedding model (384-dimensional dense vectors)
 _MODEL_NAME = "all-MiniLM-L6-v2"
 EMBEDDING_MODEL_NAME = _MODEL_NAME
 EMBEDDING_MODEL_VERSION = "sentence-transformers-all-MiniLM-L6-v2-v1"
 _model_instance = None
+_embedding_slots = BoundedSemaphore(settings.EMBEDDING_CONCURRENCY_LIMIT)
 
 
 def get_embedding_model() -> SentenceTransformer:
@@ -23,9 +26,10 @@ def generate_embeddings(texts: List[str]) -> List[List[float]]:
     if not texts:
         return []
 
-    model = get_embedding_model()
-    embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
-    return embeddings.tolist()
+    with _embedding_slots:
+        model = get_embedding_model()
+        embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+        return embeddings.tolist()
 
 
 def generate_single_embedding(text: str) -> List[float]:

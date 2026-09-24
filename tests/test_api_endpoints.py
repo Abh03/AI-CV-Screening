@@ -12,6 +12,147 @@ from app.stage0_extraction import pipeline as pdf_pipeline
 import base64
 import fitz
 
+
+@pytest.mark.asyncio
+async def test_async_submission_completion_and_redelivery(monkeypatch):
+    from cryptography.fernet import Fernet
+    from app.workers import tasks
+    from app.models.database import CandidateOutcomeModel
+
+    monkeypatch.setattr(settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
+
+    queued = []
+    monkeypatch.setattr(tasks.screening_task, "delay", lambda run_id: queued.append(run_id))
+    monkeypatch.setattr(tasks, "AsyncSessionLocal", TestingSessionLocal)
+
+    class NoDispose:
+        async def dispose(self):
+            pass
+
+    monkeypatch.setattr(tasks, "engine", NoDispose())
+    payload = {"job_profile": {"job_id": "async-job", "title": "Engineer",
+                               "jd_category_queries": {}},
+               "candidates": [{"candidate_id": "async-candidate", "raw_cv_text": "Experience unknown"}]}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post("/api/v1/screening/submit", json=payload)
+        second = await client.post("/api/v1/screening/submit", json=payload)
+        assert first.status_code == 202
+        assert second.json()["run_id"] == first.json()["run_id"]
+        assert len(queued) == 1
+        pending = await client.get(first.json()["result_url"])
+        assert pending.json()["status"] == "QUEUED"
+        from app.models.database import ScreeningRunModel
+        async with TestingSessionLocal() as session:
+            reserved = await session.get(ScreeningRunModel, queued[0])
+            assert "Experience unknown" not in str(reserved.request_snapshot)
+        assert await tasks.execute_run(queued[0]) == "COMPLETED"
+        assert await tasks.execute_run(queued[0]) == "ALREADY_COMPLETE"
+        finished = await client.get(first.json()["result_url"])
+        assert finished.json()["status"] == "COMPLETED"
+        assert finished.json()["result"]["metrics"]["accounted_candidates"] == 1
+    async with TestingSessionLocal() as session:
+        outcomes = (await session.execute(select(CandidateOutcomeModel))).scalars().all()
+        assert len(outcomes) == 1
+        assert outcomes[0].outcome != "PENDING"
+
+
+@pytest.mark.asyncio
+async def test_async_pdf_submission_runs_ocr_in_worker(monkeypatch):
+    from cryptography.fernet import Fernet
+    from app.workers import tasks
+    from app import config
+
+    queued = []
+    monkeypatch.setattr(tasks.screening_task, "delay", lambda run_id: queued.append(run_id))
+    monkeypatch.setattr(tasks, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(config.settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
+
+    class NoDispose:
+        async def dispose(self):
+            pass
+
+    monkeypatch.setattr(tasks, "engine", NoDispose())
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((70, 70), "Experience unknown. Skills unknown.")
+    pdf = document.tobytes()
+    document.close()
+    payload = {"job_profile": {"job_id": "pdf-async", "title": "Engineer",
+                               "jd_category_queries": {}},
+               "candidate_id": "pdf-candidate",
+               "pdf_base64": base64.b64encode(pdf).decode()}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        submitted = await client.post("/api/v1/screening/submit-pdf", json=payload)
+        assert submitted.status_code == 202
+        assert len(queued) == 1
+        assert await tasks.execute_run(queued[0]) == "COMPLETED"
+        finished = await client.get(submitted.json()["result_url"])
+        assert finished.json()["status"] == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_expired_worker_lease_is_recovered(monkeypatch):
+    from cryptography.fernet import Fernet
+    from datetime import datetime, timedelta, timezone
+    from app.workers import tasks
+    from app.models.database import ScreeningRunModel
+
+    monkeypatch.setattr(settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
+
+    monkeypatch.setattr(tasks.screening_task, "delay", lambda run_id: None)
+    monkeypatch.setattr(tasks, "AsyncSessionLocal", TestingSessionLocal)
+
+    class NoDispose:
+        async def dispose(self):
+            pass
+
+    monkeypatch.setattr(tasks, "engine", NoDispose())
+    payload = {"job_profile": {"job_id": "restart-job", "title": "Engineer",
+                               "jd_category_queries": {}},
+               "candidates": [{"candidate_id": "restart-candidate", "raw_cv_text": "Unknown"}]}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        run_id = (await client.post("/api/v1/screening/submit", json=payload)).json()["run_id"]
+        async with TestingSessionLocal() as session:
+            run = await session.get(ScreeningRunModel, run_id)
+            run.status = "RUNNING"
+            run.attempt_count = 1
+            run.lease_owner = "interrupted-worker"
+            run.lease_until = datetime.now(timezone.utc) - timedelta(seconds=1)
+            await session.commit()
+        assert run_id in await tasks.find_recoverable_runs()
+        assert await tasks.execute_run(run_id) == "COMPLETED"
+        status = (await client.get(f"/api/v1/screening/runs/{run_id}")).json()
+        assert status["status"] == "COMPLETED"
+        assert status["attempt_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_async_pdf_invalid_document_has_actionable_failure(monkeypatch):
+    from cryptography.fernet import Fernet
+    from app.workers import tasks
+    from app import config
+
+    monkeypatch.setattr(tasks.screening_task, "delay", lambda run_id: None)
+    monkeypatch.setattr(tasks, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(config.settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
+
+    class NoDispose:
+        async def dispose(self):
+            pass
+
+    monkeypatch.setattr(tasks, "engine", NoDispose())
+    payload = {"job_profile": {"job_id": "bad-pdf", "title": "Engineer",
+                               "jd_category_queries": {}},
+               "candidate_id": "bad-candidate",
+               "pdf_base64": base64.b64encode(b"not a PDF").decode()}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        run_id = (await client.post("/api/v1/screening/submit-pdf", json=payload)).json()["run_id"]
+        with pytest.raises(tasks.NonRetryableRunError):
+            await tasks.execute_run(run_id)
+        status = (await client.get(f"/api/v1/screening/runs/{run_id}")).json()
+        assert status["status"] == "FAILED"
+        assert status["failure_code"] == "INVALID_PDF"
+
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 # StaticPool keeps the in-memory database alive across all sessions/connections

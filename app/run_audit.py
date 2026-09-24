@@ -62,6 +62,14 @@ async def reserve_run(db, *, key, request_hash, job_snapshot, policy, candidates
             if existing.status == "COMPLETED":
                 await db.commit()
                 return "REPLAY", existing
+            if existing.status == "QUEUED":
+                await db.commit()
+                return "IN_PROGRESS", existing
+            if existing.status == "RUNNING" and existing.request_snapshot is not None:
+                lease = existing.lease_until
+                if lease is None or (lease.replace(tzinfo=timezone.utc) if lease.tzinfo is None else lease) > datetime.now(timezone.utc):
+                    await db.commit()
+                    return "IN_PROGRESS", existing
             if existing.status == "RUNNING" and existing.created_at:
                 started = existing.created_at.replace(tzinfo=timezone.utc) if existing.created_at.tzinfo is None else existing.created_at
                 if datetime.now(timezone.utc) - started < timedelta(minutes=5):

@@ -21,8 +21,23 @@ class LLMClientWrapper:
     def __init__(self):
         self.provider = settings.LLM_PROVIDER.lower()
         self.gemini_client: Optional[genai.Client] = None
+        self.http_client: Optional[httpx.AsyncClient] = None
 
         self._initialized = False
+
+    async def aclose(self):
+        if self.http_client is not None and not self.http_client.is_closed:
+            await self.http_client.aclose()
+        self.http_client = None
+        if self.gemini_client is not None:
+            close = getattr(self.gemini_client.aio, "aclose", None)
+            if close is not None:
+                await close()
+            sync_close = getattr(self.gemini_client, "close", None)
+            if sync_close is not None:
+                sync_close()
+            self.gemini_client = None
+            self._initialized = False
 
     def _initialize(self):
         if self.provider == "mock" and settings.ENVIRONMENT.lower() not in {"development", "test", "testing"}:
@@ -85,11 +100,10 @@ class LLMClientWrapper:
                     temperature=0.1,
                 )
 
-                response = self.gemini_client.models.generate_content(
-                    model="gemini-3.6-flash",
-                    contents=user_prompt,
-                    config=config,
-                )
+                response = await asyncio.wait_for(
+                    self.gemini_client.aio.models.generate_content(
+                        model="gemini-3.6-flash", contents=user_prompt, config=config),
+                    timeout=settings.PROVIDER_TIMEOUT_SECONDS)
 
                 if not response.text:
                     raise ValueError("Empty response received from Gemini API.")
@@ -97,8 +111,9 @@ class LLMClientWrapper:
                 return json.loads(response.text)
 
             except Exception as e:
-                if ("503" in str(e) or "429" in str(e)) and attempt < max_retries - 1:
-                    wait_time = (attempt + 1) * 2
+                status_code = getattr(e, "code", None) or getattr(e, "status_code", None)
+                if (status_code in (429, 500, 502, 503, 504) or isinstance(e, (TimeoutError, asyncio.TimeoutError))) and attempt < max_retries - 1:
+                    wait_time = min(8, 2 ** attempt)
                     logger.warning(f"Gemini API rate limit/overload for {candidate_id}. Retrying in {wait_time}s...")
                     await asyncio.sleep(wait_time)
                 else:
@@ -148,30 +163,30 @@ class LLMClientWrapper:
         self, url: str, headers: Dict[str, str], payload: Dict[str, Any], provider_name: str, candidate_id: str
     ) -> Dict[str, Any]:
         max_retries = 3
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            for attempt in range(max_retries):
-                try:
-                    response = await client.post(url, headers=headers, json=payload)
-                    if response.status_code >= 400:
-                        logger.error(
-                            f"{provider_name} HTTP {response.status_code}"
-                        )
-                        response.raise_for_status()
-
-                    data = response.json()
-                    content = data["choices"][0]["message"]["content"]
-
-                    cleaned_content = self._clean_json_text(content)
-                    return json.loads(cleaned_content)
-
-                except Exception as e:
-                    if (isinstance(e, httpx.HTTPStatusError) and e.response.status_code in [429, 503]) and attempt < max_retries - 1:
-                        wait_time = (attempt + 1) * 2
-                        logger.warning(f"{provider_name} rate limit/503 for {candidate_id}. Retrying in {wait_time}s...")
-                        await asyncio.sleep(wait_time)
-                    else:
-                        logger.error(f"{provider_name} API call failed ({type(e).__name__})")
-                        raise e
+        if self.http_client is None or self.http_client.is_closed:
+            self.http_client = httpx.AsyncClient(timeout=settings.PROVIDER_TIMEOUT_SECONDS)
+        client = self.http_client
+        for attempt in range(max_retries):
+            try:
+                response = await client.post(url, headers=headers, json=payload)
+                if response.status_code >= 400:
+                    logger.error("%s HTTP %s", provider_name, response.status_code)
+                    response.raise_for_status()
+                data = response.json()
+                content = data["choices"][0]["message"]["content"]
+                return json.loads(self._clean_json_text(content))
+            except Exception as exc:
+                retryable = ((isinstance(exc, httpx.HTTPStatusError) and
+                              exc.response.status_code in (429, 500, 502, 503, 504)) or
+                             isinstance(exc, (httpx.TimeoutException, httpx.TransportError)))
+                if retryable and attempt < max_retries - 1:
+                    wait_time = min(8, 2 ** attempt)
+                    logger.warning("%s transient failure for %s; retrying in %ss", provider_name,
+                                   candidate_id, wait_time)
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error("%s API call failed (%s)", provider_name, type(exc).__name__)
+                    raise
 
     def _clean_json_text(self, text: str) -> str:
         text = text.strip()
