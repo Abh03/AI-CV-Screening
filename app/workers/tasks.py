@@ -2,6 +2,8 @@
 import asyncio
 import base64
 import json
+import logging
+import time
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
 
@@ -18,6 +20,7 @@ from app.workers.celery_app import celery_app
 from app.stage3_evaluation.llm_client import llm_client
 from app.core.security import decrypt_payload
 from app.stage0_extraction.pipeline import ingest_pdf
+logger = logging.getLogger("cv_screening")
 
 
 class NonRetryableRunError(Exception):
@@ -62,10 +65,15 @@ async def execute_run(run_id):
                 request = {"candidates": json.loads(decrypt_payload(base64.b64decode(
                     request["encrypted_candidates"])))}
             if request.get("kind") == "pdf":
+                extraction_started = time.perf_counter()
                 pdf = base64.b64decode(decrypt_payload(base64.b64decode(
                     request["encrypted_pdf"])).encode("ascii"))
                 view = await asyncio.wait_for(asyncio.to_thread(ingest_pdf, pdf),
                                               timeout=settings.RUN_TIMEOUT_SECONDS)
+                logger.info("pdf extraction", extra={"event": "stage_complete", "run_id": run_id,
+                                                     "stage": "STAGE0_PDF",
+                                                     "latency_ms": round((time.perf_counter() - extraction_started) * 1000, 2),
+                                                     "count": 1})
                 del pdf
                 if view.status != "success":
                     raise NonRetryableRunError(view.code)
@@ -99,14 +107,17 @@ async def execute_run(run_id):
                                        response.model_dump(mode="json"))
             return "COMPLETED"
         except Exception as exc:
+            error_code = (str(exc) if isinstance(exc, NonRetryableRunError) else
+                          "RUN_TIMEOUT" if isinstance(exc, asyncio.TimeoutError) else "WORKER_ERROR")
+            logger.error("worker failed", extra={"event": "run_failed", "run_id": run_id,
+                                                 "error_code": error_code})
             async with AsyncSessionLocal() as db:
                 async with db.begin():
                     run = (await db.execute(select(ScreeningRunModel).where(
                         ScreeningRunModel.id == run_id).with_for_update())).scalar_one()
                     if run.status != "COMPLETED" and run.lease_owner == owner:
                         run.status = "FAILED"
-                        run.failure_code = (str(exc) if isinstance(exc, NonRetryableRunError) else
-                                            "RUN_TIMEOUT" if isinstance(exc, asyncio.TimeoutError) else "WORKER_ERROR")
+                        run.failure_code = error_code
                         if isinstance(exc, NonRetryableRunError):
                             run.request_snapshot = None
                         run.lease_until = None

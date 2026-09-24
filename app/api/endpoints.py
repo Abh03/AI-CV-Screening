@@ -16,12 +16,14 @@ from app.models.database import get_db, ScreeningRunModel
 from app.orchestrator import run_end_to_end_screening_pipeline
 from app.run_audit import canonical_hash, complete_run, policy_snapshot, reserve_run
 from app.core.security import encrypt_payload
+from app.core.auth import Principal, current_principal, can_access
 
 router = APIRouter(prefix="/api/v1/screening", tags=["CV Screening"])
 
 
 @router.post("/submit", status_code=status.HTTP_202_ACCEPTED)
-async def submit_screening_endpoint(payload: ScreeningRequestSchema, db: AsyncSession = Depends(get_db)):
+async def submit_screening_endpoint(payload: ScreeningRequestSchema, db: AsyncSession = Depends(get_db),
+                                    principal: Principal = Depends(current_principal)):
     """Reserve and queue a run; clients poll /runs/{run_id}."""
     if settings.ENVIRONMENT.lower() == "production":
         raise HTTPException(status_code=404, detail="Text screening is available only for internal use")
@@ -36,7 +38,8 @@ async def submit_screening_endpoint(payload: ScreeningRequestSchema, db: AsyncSe
     policy = policy_snapshot(payload.top_n_stage2_cutoff)
     digest = canonical_hash({"job": job, "candidates": candidates, "policy": policy})
     state, run = await reserve_run(db, key=payload.idempotency_key or digest, request_hash=digest,
-                                   job_snapshot=job, policy=policy, candidates=candidates)
+                                   job_snapshot=job, policy=policy, candidates=candidates,
+                                   owner_id=principal.id, admin=principal.role == "admin")
     if state == "CONFLICT":
         raise HTTPException(status_code=409, detail="Idempotency key belongs to a different request")
     if state == "REPLAY":
@@ -60,9 +63,10 @@ async def submit_screening_endpoint(payload: ScreeningRequestSchema, db: AsyncSe
 
 
 @router.get("/runs/{run_id}")
-async def get_screening_run(run_id: str, db: AsyncSession = Depends(get_db)):
+async def get_screening_run(run_id: str, db: AsyncSession = Depends(get_db),
+                            principal: Principal = Depends(current_principal)):
     run = await db.get(ScreeningRunModel, run_id)
-    if run is None:
+    if run is None or not can_access(run.owner_id, principal):
         raise HTTPException(status_code=404, detail="Run not found")
     return {"run_id": run.id, "status": run.status, "attempt_count": run.attempt_count,
             "failure_code": run.failure_code, "result": run.response_snapshot}
@@ -70,7 +74,8 @@ async def get_screening_run(run_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/submit-pdf", status_code=status.HTTP_202_ACCEPTED)
 async def submit_pdf_screening_endpoint(payload: PDFScreeningRequestSchema,
-                                        db: AsyncSession = Depends(get_db)):
+                                        db: AsyncSession = Depends(get_db),
+                                        principal: Principal = Depends(current_principal)):
     if len(payload.pdf_base64) > ((settings.PDF_MAX_BYTES + 2) // 3) * 4:
         raise HTTPException(status_code=413, detail="PDF_TOO_LARGE")
     try:
@@ -95,7 +100,8 @@ async def submit_pdf_screening_endpoint(payload: PDFScreeningRequestSchema,
     state, run = await reserve_run(db, key=payload.idempotency_key or digest, request_hash=digest,
                                    job_snapshot=job, policy=policy,
                                    candidates=[{"candidate_id": payload.candidate_id,
-                                                "pdf_sha256": hashlib.sha256(pdf).hexdigest()}])
+                                                "pdf_sha256": hashlib.sha256(pdf).hexdigest()}],
+                                   owner_id=principal.id, admin=principal.role == "admin")
     if state == "CONFLICT":
         raise HTTPException(status_code=409, detail="Idempotency key belongs to a different request")
     if state in {"REPLAY", "IN_PROGRESS"}:
@@ -119,7 +125,7 @@ async def submit_pdf_screening_endpoint(payload: PDFScreeningRequestSchema,
 
 
 @router.post("/ingest-pdf")
-async def ingest_pdf_upload(request: Request):
+async def ingest_pdf_upload(request: Request, principal: Principal = Depends(current_principal)):
     """Accept a bounded PDF byte stream and return its redacted view."""
     if request.headers.get("content-type", "").split(";", 1)[0].lower() != "application/pdf":
         return {"status": "failure", "code": "INVALID_CONTENT_TYPE"}
@@ -135,20 +141,21 @@ async def ingest_pdf_upload(request: Request):
 
 
 @router.post("/run-pdf")
-async def run_pdf_screening_endpoint(payload: PDFScreeningRequestSchema, db: AsyncSession = Depends(get_db)):
+async def run_pdf_screening_endpoint(payload: PDFScreeningRequestSchema, db: AsyncSession = Depends(get_db),
+                                     principal: Principal = Depends(current_principal)):
     """PDF-only production entry point; no unredacted document reaches screening."""
     if settings.ENVIRONMENT.lower() == "production":
-        return JSONResponse(status_code=202, content=await submit_pdf_screening_endpoint(payload, db))
+        return JSONResponse(status_code=202, content=await submit_pdf_screening_endpoint(payload, db, principal))
     if len(payload.pdf_base64) > ((settings.PDF_MAX_BYTES + 2) // 3) * 4:
-        return await _record_pdf_failure(payload, db, "PDF_TOO_LARGE")
+        return await _record_pdf_failure(payload, db, "PDF_TOO_LARGE", principal=principal)
     try:
         pdf = base64.b64decode(payload.pdf_base64, validate=True)
     except binascii.Error:
-        return await _record_pdf_failure(payload, db, "INVALID_PDF_ENCODING")
+        return await _record_pdf_failure(payload, db, "INVALID_PDF_ENCODING", principal=principal)
     result = ingest_pdf(pdf)
     del pdf
     if result.status != "success":
-        return await _record_pdf_failure(payload, db, result.code, result.status)
+        return await _record_pdf_failure(payload, db, result.code, result.status, principal)
     candidate = {
         "candidate_id": payload.candidate_id,
         "raw_cv_text": result.redacted_text,
@@ -160,11 +167,12 @@ async def run_pdf_screening_endpoint(payload: PDFScreeningRequestSchema, db: Asy
     screening = ScreeningRequestSchema(job_profile=payload.job_profile, candidates=[candidate],
                                        top_n_stage2_cutoff=payload.top_n_stage2_cutoff,
                                        idempotency_key=payload.idempotency_key)
-    response = await _run_screening(screening, db, {payload.candidate_id: result})
+    response = await _run_screening(screening, db, {payload.candidate_id: result}, principal)
     return {"status": "success", "code": "OK", "screening": response.model_dump(mode="json")}
 
 
-async def _record_pdf_failure(payload, db, code, outcome_status="failure"):
+async def _record_pdf_failure(payload, db, code, outcome_status="failure", principal=None):
+    principal = principal or Principal("local", "admin")
     job = payload.job_profile.model_dump(mode="json")
     policy = policy_snapshot(payload.top_n_stage2_cutoff)
     pdf_hash = hashlib.sha256(payload.pdf_base64.encode()).hexdigest()
@@ -173,7 +181,8 @@ async def _record_pdf_failure(payload, db, code, outcome_status="failure"):
     state, run = await reserve_run(db, key=payload.idempotency_key or request_hash, request_hash=request_hash,
                                    job_snapshot=job, policy=policy,
                                    candidates=[{"candidate_id": payload.candidate_id,
-                                                "pdf_sha256": pdf_hash}])
+                                                "pdf_sha256": pdf_hash}], owner_id=principal.id,
+                                   admin=principal.role == "admin")
     if state == "CONFLICT":
         raise HTTPException(status_code=409, detail="Idempotency key belongs to a different request")
     if state == "IN_PROGRESS":
@@ -213,7 +222,8 @@ async def _record_pdf_failure(payload, db, code, outcome_status="failure"):
 @router.post("/run", response_model=ScreeningResponseSchema, status_code=status.HTTP_200_OK)
 async def run_cv_screening_endpoint(
     payload: ScreeningRequestSchema,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(current_principal)
 ):
     """
     Triggers the 4-Stage automated screening pipeline over a candidate batch
@@ -221,10 +231,12 @@ async def run_cv_screening_endpoint(
     """
     if settings.ENVIRONMENT.lower() == "production":
         raise HTTPException(status_code=404, detail="Text screening is available only for internal use")
-    return await _run_screening(payload, db)
+    return await _run_screening(payload, db, principal=principal)
 
 
-async def _run_screening(payload: ScreeningRequestSchema, db: AsyncSession, stage0_views=None):
+async def _run_screening(payload: ScreeningRequestSchema, db: AsyncSession, stage0_views=None,
+                         principal=None):
+    principal = principal or Principal("local", "admin")
     if not payload.candidates:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -236,7 +248,8 @@ async def _run_screening(payload: ScreeningRequestSchema, db: AsyncSession, stag
     policy = policy_snapshot(payload.top_n_stage2_cutoff)
     request_hash = canonical_hash({"job": job_dict, "candidates": raw_candidates_list, "policy": policy})
     state, run = await reserve_run(db, key=payload.idempotency_key or request_hash, request_hash=request_hash,
-                                   job_snapshot=job_dict, policy=policy, candidates=raw_candidates_list)
+                                   job_snapshot=job_dict, policy=policy, candidates=raw_candidates_list,
+                                   owner_id=principal.id, admin=principal.role == "admin")
     if state == "CONFLICT":
         raise HTTPException(status_code=409, detail="Idempotency key belongs to a different request")
     if state == "IN_PROGRESS":

@@ -1,38 +1,115 @@
-name: CI Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
-  test:
+  unit:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: System OCR dependencies
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng libgomp1 poppler-utils
+      - name: Install in clean environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Unit and API tests
+        env:
+          HF_HUB_OFFLINE: '1'
+          TRANSFORMERS_OFFLINE: '1'
+        run: python -m pytest tests -q -m 'not infrastructure and not integration and not worker and not model'
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
+  database_worker:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cv_engine
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cv_engine"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/cv_engine
+      REDIS_URL: redis://127.0.0.1:6379/0
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng libgomp1 poppler-utils postgresql-client
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Set ephemeral encryption key
+        run: echo "ENCRYPTION_SECRET_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> "$GITHUB_ENV"
+      - name: Migrate production database
+        run: python -m alembic upgrade head
+      - name: Backup and restore migration state
+        env:
+          PGPASSWORD: postgres
+        run: |
+          pg_dump -h 127.0.0.1 -U postgres -d cv_engine -Fc -f /tmp/cv_engine.dump
+          createdb -h 127.0.0.1 -U postgres cv_engine_restore
+          pg_restore -h 127.0.0.1 -U postgres -d cv_engine_restore /tmp/cv_engine.dump
+          test "$(psql -h 127.0.0.1 -U postgres -d cv_engine_restore -Atc 'SELECT version_num FROM alembic_version')" = '92a1c4d06e9f'
+      - name: PostgreSQL, pgvector and Redis integration
+        run: python -m pytest tests/test_phase1.py tests/test_postgres_retrieval.py -q --run-infrastructure
+      - name: Start worker and exercise queued run
+        run: |
+          celery -A app.workers.celery_app:celery_app worker --loglevel=WARNING --concurrency=1 > /tmp/celery.log 2>&1 &
+          python -m pytest tests/test_worker_integration.py -q --run-infrastructure
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+  model_image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build clean image with pinned models
+        run: docker build -t cv-screening:ci .
+      - name: Inspect runtime contents and load models offline
+        run: |
+          docker run --rm cv-screening:ci python -c "from app.stage2_retrieval.embeddings import get_embedding_model; from app.stage2_retrieval.reranker import get_reranker_model; get_embedding_model(); get_reranker_model()"
+          docker run --rm cv-screening:ci sh -c 'test ! -e /app/.env && test ! -e /app/venv && test ! -e /app/data && test ! -e /app/tests'
+          if docker run --rm -e ENVIRONMENT=production cv-screening:ci python -c 'import app.main'; then exit 1; fi
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio httpx
-
-    - name: Run Test Suite
-      run: |
-        pytest tests/ -v
+  live_provider:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: live-provider
+    env:
+      LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng libgomp1 poppler-utils
+      - run: |
+          python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+      - run: python -m pytest tests/test_live_stage3_evaluation.py -q --run-live-llm

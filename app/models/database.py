@@ -26,6 +26,7 @@ class JobProfileModel(Base):
     __tablename__ = "job_profiles"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), nullable=False, default="local")
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     category_queries: Mapped[dict] = mapped_column(JSON, nullable=False)
     hard_filter_rules: Mapped[dict] = mapped_column(JSON, nullable=True)
@@ -120,6 +121,7 @@ class JobQueryEmbeddingModel(Base):
 class ScreeningRunModel(Base):
     __tablename__ = "screening_runs"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), nullable=False, default="local")
     job_id: Mapped[str] = mapped_column(ForeignKey("job_profiles.id"), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False)
     metrics: Mapped[dict] = mapped_column(JSON, nullable=False)

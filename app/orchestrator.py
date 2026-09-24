@@ -1,6 +1,8 @@
 from typing import List, Dict, Any, Optional
 import asyncio
 import hashlib
+import logging
+import time
 from app.stage0_extraction.pii_masker import mask_pii_runtime_view
 from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
 from app.stage1_rules.contracts import CandidateInput, resolve_hard_filters
@@ -14,6 +16,7 @@ from app.stage3_evaluation.llm_client import evaluate_candidate_batch_async
 from app.stage3_evaluation.schemas import FinalCandidateEvaluation, EvaluationStatus
 from app.stage3_evaluation.scoring import evaluation_sort_key
 from app.stage3_evaluation.scoring import failed_evaluation
+logger = logging.getLogger("cv_screening")
 
 
 async def run_end_to_end_screening_pipeline(
@@ -33,6 +36,10 @@ async def run_end_to_end_screening_pipeline(
     - Stage 3: Async LLM Multi-Attribute Evaluation & Tier Assembly
     """
     rules = resolve_hard_filters(jd_profile, hard_filter_rules)
+    stage_started = time.perf_counter()
+    stage_latencies = {}
+    stage0_elapsed = 0.0
+    stage1_elapsed = 0.0
     candidates = [CandidateInput.model_validate(candidate) for candidate in raw_candidates]
     pipeline_metrics = {
         "total_input_candidates": len(raw_candidates),
@@ -81,6 +88,17 @@ async def run_end_to_end_screening_pipeline(
                 for cand in candidates}
 
     def finish():
+        stage_latencies.setdefault("STAGE0", round(stage0_elapsed * 1000, 2))
+        stage_latencies.setdefault("STAGE1", round(stage1_elapsed * 1000, 2))
+        for stage, latency in stage_latencies.items():
+            logger.info("stage", extra={"event": "stage_complete", "stage": stage,
+                                        "latency_ms": latency,
+                                        "count": pipeline_metrics.get({"STAGE0": "stage0_processed", "STAGE1": "stage1_passed", "STAGE2": "stage2_shortlisted",
+                                                                      "STAGE3": "stage3_evaluated"}[stage])})
+            failed = pipeline_metrics.get(stage.lower() + "_failed", 0)
+            if failed:
+                logger.warning("stage failures", extra={"event": "stage_errors", "stage": stage,
+                                                        "count": failed, "error_code": "STAGE_FAILURE"})
         pipeline_metrics["accounted_candidates"] = len([entry for entry in outcomes.values() if entry.get("outcome")])
         if pipeline_metrics["accounted_candidates"] != len(candidates):
             raise RuntimeError("Candidate accounting is incomplete")
@@ -96,12 +114,14 @@ async def run_end_to_end_screening_pipeline(
     for cand in candidates:
         cand_id = cand.candidate_id
         raw_text = cand.raw_cv_text
+        candidate_started = time.perf_counter()
 
         # Stage 0: PII Redaction (returns string directly)
         view = (stage0_views or {}).get(cand_id)
         try:
             redacted_text = view.redacted_text if view is not None else mask_pii_runtime_view(raw_text)
         except Exception:
+            stage0_elapsed += time.perf_counter() - candidate_started
             item = {"candidate_id": cand_id, "stage": "STAGE0", "evaluation_status": "EXTRACTION_FAILED",
                     "reason": "EXTRACTION_FAILED"}
             failed_candidates.append(item)
@@ -109,11 +129,13 @@ async def run_end_to_end_screening_pipeline(
             outcomes[cand_id]["stage_history"].append({"stage": "STAGE0", "status": "FAILED"})
             pipeline_metrics["stage0_failed"] += 1
             continue
+        stage0_elapsed += time.perf_counter() - candidate_started
         outcomes[cand_id]["input_snapshot"]["redacted_cv_text"] = redacted_text
         outcomes[cand_id]["stage_history"].append({"stage": "STAGE0", "status": "PROCESSED"})
         pipeline_metrics["stage0_processed"] += 1
 
         # Stage 1: Deterministic Rules Filter
+        candidate_started = time.perf_counter()
         try:
             facts = cand.rule_facts()
             filter_result = evaluate_stage1_hard_filters(
@@ -125,6 +147,7 @@ async def run_end_to_end_screening_pipeline(
                 authorization_source=facts.authorization_source,
             )
         except Exception:
+            stage1_elapsed += time.perf_counter() - candidate_started
             item = {"candidate_id": cand_id, "stage": "STAGE1", "evaluation_status": "PROCESSING_FAILED",
                     "reason": "RULE_EVALUATION_FAILED"}
             failed_candidates.append(item)
@@ -132,6 +155,7 @@ async def run_end_to_end_screening_pipeline(
             outcomes[cand_id]["stage_history"].append({"stage": "STAGE1", "status": "FAILED"})
             pipeline_metrics["stage1_failed"] += 1
             continue
+        stage1_elapsed += time.perf_counter() - candidate_started
         filter_result["input_provenance"] = {
             "reported_experience_years": cand.parsed_attributes.experience_years,
             "reported_experience_source": cand.parsed_attributes.experience_source.value,
@@ -173,6 +197,10 @@ async def run_end_to_end_screening_pipeline(
 
     if not stage1_survivors:
         return finish()
+
+    stage_latencies["STAGE0"] = round(stage0_elapsed * 1000, 2)
+    stage_latencies["STAGE1"] = round(stage1_elapsed * 1000, 2)
+    stage_started = time.perf_counter()
 
     # Stage 2: Category-Aware Evidence Extraction & Candidate Batch Ranking
     if settings.ENVIRONMENT.lower() == "production" and settings.STAGE2_BACKEND != "postgres":
@@ -239,6 +267,8 @@ async def run_end_to_end_screening_pipeline(
             pipeline_metrics["stage2_excluded"] += 1
 
     # Stage 3: Async LLM Multi-Attribute Evaluation
+    stage_latencies["STAGE2"] = round((time.perf_counter() - stage_started) * 1000, 2)
+    stage_started = time.perf_counter()
     try:
         final_evaluations: List[FinalCandidateEvaluation] = await evaluate_candidate_batch_async(
             candidate_payloads=shortlisted_candidates, jd_profile=effective_jd,
@@ -269,4 +299,5 @@ async def run_end_to_end_screening_pipeline(
         else:
             pipeline_metrics["stage3_failed"] += 1
             failed_candidates.append(item)
+    stage_latencies["STAGE3"] = round((time.perf_counter() - stage_started) * 1000, 2)
     return finish()

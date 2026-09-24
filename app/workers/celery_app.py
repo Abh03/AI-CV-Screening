@@ -1,10 +1,23 @@
 from celery import Celery
+from celery.signals import after_setup_logger, after_setup_task_logger
 
 from app.config import settings
+from app.core.logging import SafeJSONFormatter, setup_logging
+settings.validate_production()
+setup_logging()
+
+
+@after_setup_logger.connect
+@after_setup_task_logger.connect
+def protect_worker_logs(logger=None, **_kwargs):
+    if logger:
+        for handler in logger.handlers:
+            handler.setFormatter(SafeJSONFormatter())
 
 celery_app = Celery("cv_screening", broker=settings.REDIS_URL, backend=settings.REDIS_URL,
                     include=["app.workers.tasks"])
 celery_app.conf.update(
+    worker_hijack_root_logger=False,
     task_serializer="json", accept_content=["json"], result_serializer="json",
     task_acks_late=True, task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1, task_track_started=True,

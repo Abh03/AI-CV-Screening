@@ -1,21 +1,40 @@
+x-runtime: &runtime
+  DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+  REDIS_URL: redis://redis:6379/0
+  ENVIRONMENT: production
+  STAGE2_BACKEND: postgres
+  ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY:?Set ENCRYPTION_SECRET_KEY}
+  API_TOKENS_JSON: ${API_TOKENS_JSON:?Set API_TOKENS_JSON}
+  LLM_PROVIDER: ${LLM_PROVIDER:?Set LLM_PROVIDER}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: cv_postgres
-    restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       POSTGRES_DB: cv_engine
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d cv_engine"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   migrate:
     build:
@@ -23,100 +42,57 @@ services:
       dockerfile: Dockerfile
     command: ["python", "-m", "alembic", "upgrade", "head"]
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
 
-  redis:
-    image: redis:7-alpine
-    container_name: cv_redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
-    command: ["redis-server", "--appendonly", "yes"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   web:
     build:
       context: ..
       dockerfile: Dockerfile
-    container_name: cv_screening_api
-    restart: always
+    environment: *runtime
     ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
-      - REDIS_URL=redis://redis:6379/0
-      - ENVIRONMENT=production
-      - LOG_LEVEL=INFO
-      - DEFAULT_STAGE2_CUTOFF=30
-      - STAGE2_BACKEND=postgres
-      - LLM_CONCURRENCY_LIMIT=5
+      - "127.0.0.1:8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   worker:
     build:
       context: ..
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
-    restart: always
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
-      - REDIS_URL=redis://redis:6379/0
-      - ENVIRONMENT=production
-      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:?Set ENCRYPTION_SECRET_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER:?Set LLM_PROVIDER}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:?Set ENCRYPTION_SECRET_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER:?Set LLM_PROVIDER}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - STAGE2_BACKEND=postgres
-      - LLM_CONCURRENCY_LIMIT=5
+    environment: *runtime
+    healthcheck:
+      disable: true
     depends_on:
-      redis:
-        condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
   beat:
     build:
       context: ..
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app:celery_app", "beat", "--loglevel=INFO"]
-    restart: always
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/cv_engine
-      - REDIS_URL=redis://redis:6379/0
-      - ENVIRONMENT=production
-      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:?Set ENCRYPTION_SECRET_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER:?Set LLM_PROVIDER}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - STAGE2_BACKEND=postgres
+    environment: *runtime
+    healthcheck:
+      disable: true
     depends_on:
-      redis:
-        condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
   pgdata:

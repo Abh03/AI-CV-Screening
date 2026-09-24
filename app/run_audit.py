@@ -17,7 +17,7 @@ from app.stage1_rules.rules_engine import STAGE1_POLICY_VERSION
 from app.stage2_retrieval.embeddings import EMBEDDING_MODEL_NAME, EMBEDDING_MODEL_VERSION
 from app.stage2_retrieval.repository import CHUNKING_VERSION, REDACTION_VERSION
 from app.stage2_retrieval.evidence_extractor import DEFAULT_CATEGORY_WEIGHTS
-from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME
+from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME, RERANKER_MODEL_VERSION
 
 PROMPT_VERSION = "stage3-prompt-v1"
 RUN_POLICY_VERSION = "orchestration-v1"
@@ -36,7 +36,7 @@ def policy_snapshot(cutoff):
             "stage1_policy_version": STAGE1_POLICY_VERSION, "category_policy_version": "category-v1",
             "redaction_version": REDACTION_VERSION, "chunking_version": CHUNKING_VERSION,
             "embedding_model": EMBEDDING_MODEL_NAME, "embedding_model_version": EMBEDDING_MODEL_VERSION,
-            "reranker_model": RERANKER_MODEL_NAME,
+            "reranker_model": RERANKER_MODEL_NAME, "reranker_model_version": RERANKER_MODEL_VERSION,
             "stage2_category_weights": DEFAULT_CATEGORY_WEIGHTS.copy(),
             "category_weights": {key: str(value) for key, value in CATEGORY_WEIGHTS.items()},
             "tier_thresholds": {"TIER_1": 75, "TIER_2": 55},
@@ -50,12 +50,15 @@ def policy_snapshot(cutoff):
             "pdf_ocr_language": settings.PDF_OCR_LANGUAGE}
 
 
-async def reserve_run(db, *, key, request_hash, job_snapshot, policy, candidates):
+async def reserve_run(db, *, key, request_hash, job_snapshot, policy, candidates, owner_id="local", admin=False):
     """Commit the reservation before any retrieval or provider call."""
     if key:
         existing = (await db.execute(select(ScreeningRunModel).where(
             ScreeningRunModel.idempotency_key == key))).scalar_one_or_none()
         if existing:
+            if existing.owner_id != owner_id and not admin:
+                from fastapi import HTTPException
+                raise HTTPException(status_code=403, detail="Run access denied")
             if existing.request_hash != request_hash:
                 await db.commit()
                 return "CONFLICT", existing
@@ -83,29 +86,35 @@ async def reserve_run(db, *, key, request_hash, job_snapshot, policy, candidates
     job_id = job_snapshot["job_id"]
     job = await db.get(JobProfileModel, job_id)
     if job is None:
-        db.add(JobProfileModel(id=job_id, title=job_snapshot["title"],
+        db.add(JobProfileModel(id=job_id, owner_id=owner_id, title=job_snapshot["title"],
                                category_queries=job_snapshot["jd_category_queries"],
                                hard_filter_rules=job_snapshot["hard_filter_rules"]))
     else:
+        if job.owner_id != owner_id and not admin:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="Job access denied")
         # This compatibility table reflects the latest profile; decisions refer to the run snapshot.
         job.title = job_snapshot["title"]
         job.category_queries = job_snapshot["jd_category_queries"]
         job.hard_filter_rules = job_snapshot["hard_filter_rules"]
-    run = ScreeningRunModel(id=str(uuid4()), job_id=job_id, status="RUNNING", metrics={},
+    run = ScreeningRunModel(id=str(uuid4()), owner_id=owner_id, job_id=job_id, status="RUNNING", metrics={},
                             idempotency_key=key, request_hash=request_hash,
                             job_snapshot=job_snapshot, policy_snapshot=policy)
     db.add(run)
-    for candidate in candidates:
-        db.add(CandidateOutcomeModel(
-            run_id=run.id, candidate_id=candidate["candidate_id"], outcome="PENDING", stage="RUN",
-            input_snapshot={"candidate_id": candidate["candidate_id"],
-                            "input_sha256": canonical_hash(candidate)},
-            stage_history=[{"stage": "RUN", "status": "RESERVED"}],
-            evidence_snapshot=None, citation_mapping=None, validated_output=None,
-            result_snapshot={}, provider=policy["provider"], model=policy["model"],
-            prompt_version=policy["prompt_version"],
-            scoring_policy_version=policy["scoring_policy_version"]))
     try:
+        # These ORM objects have no mapped relationship; flush the parent before
+        # inserting candidate outcomes so PostgreSQL enforces the FK in this order.
+        await db.flush()
+        for candidate in candidates:
+            db.add(CandidateOutcomeModel(
+                run_id=run.id, candidate_id=candidate["candidate_id"], outcome="PENDING", stage="RUN",
+                input_snapshot={"candidate_id": candidate["candidate_id"],
+                                "input_sha256": canonical_hash(candidate)},
+                stage_history=[{"stage": "RUN", "status": "RESERVED"}],
+                evidence_snapshot=None, citation_mapping=None, validated_output=None,
+                result_snapshot={}, provider=policy["provider"], model=policy["model"],
+                prompt_version=policy["prompt_version"],
+                scoring_policy_version=policy["scoring_policy_version"]))
         await db.commit()
     except IntegrityError:
         await db.rollback()

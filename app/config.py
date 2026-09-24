@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     
     # Security & Encryption
     ENCRYPTION_SECRET_KEY: Optional[str] = None
+    API_TOKENS_JSON: Optional[str] = None
     PDF_MAX_BYTES: int = Field(default=10 * 1024 * 1024, ge=1)
     PDF_MAX_PAGES: int = Field(default=20, ge=1)
     PDF_MAX_PAGE_PIXELS: int = Field(default=4_000_000, ge=1)
@@ -52,6 +53,27 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
     OPENROUTER_API_KEY: Optional[str] = None
+
+    def validate_production(self):
+        if self.ENVIRONMENT.lower() != "production":
+            return
+        from sqlalchemy.engine import make_url
+        from app.core.auth import configured_principals
+        from app.core.security import validate_encryption_configuration
+        if make_url(self.DATABASE_URL).get_backend_name() != "postgresql" or self.STAGE2_BACKEND != "postgres":
+            raise ValueError("Production requires PostgreSQL and postgres retrieval")
+        if (self.DATABASE_URL == "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/cv_engine"
+                or self.REDIS_URL == "redis://127.0.0.1:6379/0"):
+            raise ValueError("Production requires explicit database and Redis configuration")
+        if self.LLM_PROVIDER.lower() not in {"gemini", "groq", "openrouter"}:
+            raise ValueError("Production requires a supported live LLM provider")
+        key = {"gemini": self.GEMINI_API_KEY, "groq": self.GROQ_API_KEY,
+               "openrouter": self.OPENROUTER_API_KEY}[self.LLM_PROVIDER.lower()]
+        if not key:
+            raise ValueError("Production LLM provider key is missing")
+        if not configured_principals(self.API_TOKENS_JSON):
+            raise ValueError("Production API_TOKENS_JSON is missing or empty")
+        validate_encryption_configuration()
 
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct:free"

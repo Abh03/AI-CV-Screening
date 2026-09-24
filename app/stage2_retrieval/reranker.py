@@ -1,9 +1,11 @@
 from typing import List, Dict, Any, Optional
 from sentence_transformers import CrossEncoder
 from threading import BoundedSemaphore
+import os
 from app.config import settings
 
 _MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+RERANKER_MODEL_VERSION = "ce0834f22110de6d9222af7a7a03628121708969"
 _reranker_instance: Optional[CrossEncoder] = None
 _rerank_slots = BoundedSemaphore(settings.RERANK_CONCURRENCY_LIMIT)
 
@@ -11,7 +13,7 @@ _rerank_slots = BoundedSemaphore(settings.RERANK_CONCURRENCY_LIMIT)
 def get_reranker_model() -> CrossEncoder:
     global _reranker_instance
     if _reranker_instance is None:
-        _reranker_instance = CrossEncoder(_MODEL_NAME)
+        _reranker_instance = CrossEncoder(os.getenv("RERANKER_MODEL_PATH", _MODEL_NAME))
     return _reranker_instance
 
 

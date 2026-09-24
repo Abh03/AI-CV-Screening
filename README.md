@@ -273,3 +273,76 @@ requests are bounded within each run by `LLM_CONCURRENCY_LIMIT`; OCR, embedding,
 and reranking have separate local limits. A failed run reports a stable
 `failure_code` and can be resubmitted with the same idempotency key while its
 attempt budget remains. Apply Alembic migrations before starting workers.
+
+## Phase 9 deployment and operations
+
+This release supports one organization. Each production API call needs a bearer
+token. `API_TOKENS_JSON` is a JSON list of `{id,role,token}` with roles `admin`
+or `recruiter`; tokens must contain at least 32 characters. Recruiters can read
+their own runs and update only their own jobs. Admins can access all jobs and
+runs, including records created before ownership was introduced. The system has
+no tenant isolation, so do not share an installation between organizations.
+
+Supply the variables listed in `.env.example` from a deployment secret manager:
+a Fernet key, PostgreSQL password and URL, API credentials, and a live LLM
+provider key. URL encode special characters in the database password. No local
+secret file is needed. Run from the repository root:
+
+```sh
+docker compose -f docker/docker-compose.yml build
+docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml ps
+```
+
+When using a private `docker/.env` file instead of exported variables, add
+`--env-file docker/.env` to each Compose command. Check values without printing
+secrets with `python -m scripts.check_deployment_env docker/.env`. After startup,
+run `python -m scripts.production_smoke` for a synthetic authenticated request
+through the queue and worker.
+
+The image installs OCR dependencies and downloads fixed revisions of the
+embedding and reranker models during build. Runtime model loading is offline.
+`/health` reports process liveness. `/ready` returns 503 until PostgreSQL is
+reachable at the current Alembic revision, Redis responds, and both model
+directories exist in production. Migration runs before web and worker startup.
+Production startup rejects mock LLMs, missing provider credentials, an invalid
+Fernet key, missing API credentials, and non-PostgreSQL retrieval.
+
+For a manual migration or rollback exercise, stop web and workers, back up the
+database, then run `docker compose -f docker/docker-compose.yml
+run --rm migrate`. Back up PostgreSQL with
+`pg_dump -Fc -h HOST -U postgres cv_engine > backup.dump` and restore to a new
+empty PostgreSQL 16/pgvector database with
+`pg_restore --clean --if-exists -d cv_engine_restore backup.dump`. Run
+`alembic current` against the restored URL, start a disposable web/worker pair,
+and check `/ready` and a test run before swapping traffic. Back up encryption
+keys separately; losing the key makes pending encrypted input unreadable. Redis
+contains the queue and transient task state; keep its append-only volume, but
+the database is the source of truth for reserved runs. The beat process scans
+expired leases every minute and requeues eligible runs. After a worker crash,
+check `failure_code`, `attempt_count`, and beat logs before manual retry.
+
+Logs are JSON events with route templates, correlation IDs, latency, stage
+counts, and stable error codes. Send `X-Correlation-ID` to trace an API call.
+Logs omit CV text, PDF bytes, provider output, and credentials. Protect the
+database, backups, and logs with restricted access. Input PDFs are encrypted
+while queued and cleared from successful runs. The proposed retention targets
+are 30 days for pending encrypted input and 90 days for structured outcomes;
+automatic deletion is not enabled because historical outcomes may need manual
+retention. Decide and implement the final erasure policy before claiming a
+retention service-level commitment.
+
+Acceptance assumptions are 50 CVs per batch, five concurrent API users,
+submission p95 under 2 seconds, and a rough 120 second processing target on
+4 CPU cores and 8 GB RAM. The production PDF API currently creates one run per
+CV, so a 50 CV workload means 50 submissions. Run a representative trial with
+`python scripts/load_test.py --pdf sample.pdf --job job.json --count 50
+--concurrency 5` and `API_TOKEN` in the environment. The script reports p95
+submission time, total elapsed time, unfinished runs, and request errors; it
+does not store PDF contents in its report. Run the labeled quality report with
+`python scripts/acceptance_benchmark.py labels.json --cutoff 30`. The JSON
+input contains query `relevant_ids` and `ranked_ids`, plus candidate `label`
+and `decision`; see the script header. It reports recall@k, shortlist precision
+and recall, review rate, and error rate. No quality gate is set until labeled
+data and thresholds are agreed. CI separates unit, PostgreSQL/Redis and worker,
+image/model, and manually dispatched live-provider checks.
