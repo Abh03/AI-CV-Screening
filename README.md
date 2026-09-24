@@ -221,8 +221,8 @@ informational only and cannot bypass CV evidence checks.
 All results contain rule checks with stable codes, messages, policy version, and
 attribute sources. Stage 1 reviews stop before Stage 2 and remain separate from
 rejections. Stage 3 outcomes also carry `stage1_filter_details`, persisted in the
-existing outcome JSON. Durable storage of all Stage 1-only outcomes remains part
-of the run-audit phase. No new database migration is required for Phase 4.
+existing outcome JSON. Run audit records now persist Stage 1 reviews and
+rejections alongside every later candidate outcome.
 # PDF ingestion and privacy policy
 
 Production screening accepts PDFs through `POST /api/v1/screening/run-pdf`.
@@ -234,6 +234,18 @@ the ordinary screening response. The existing `/run` raw-text route is for
 internal development and tests and returns 404 in production.
 `POST /api/v1/screening/ingest-pdf` also accepts a raw `application/pdf` body
 and returns only redacted page/block text with source locations.
+
+Each `/run` response includes `run_id` and `idempotency_key`. Supply an
+`idempotency_key` in the request to name a logical submission. Reusing it with
+the same request returns the stored response; reusing it with changed inputs
+returns HTTP 409. Without a supplied key, a hash of the request and policy is
+used, so identical submissions replay. The `screening_runs` row stores the
+job/rule and policy snapshots. `candidate_outcomes` records every input from
+reservation through its final result, including reviews, rejections, cutoff
+exclusions, extraction errors, and evaluation errors. A failed PDF ingestion
+also returns a `run_id` and stores a Stage 0 outcome. The audit stores redacted
+CV text or a PDF hash, never raw PDF bytes. `recompute_stored_decision` in
+`app/run_audit.py` checks a stored Stage 3 score and tier without a provider call.
 
 Raw PDF bytes and extracted text are processed in memory and discarded after
 the request. Only redacted blocks enter retrieval and LLM evaluation. OCR uses

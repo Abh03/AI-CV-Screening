@@ -135,6 +135,7 @@ async def extract_candidate_category_evidence_postgres(
             query_vector = await repo.query_vector(job_id, category, query)
             hits = await repo.search(candidate_id, document_id, category, query,
                                      query_vector, fallback_to_experience=category in ("SKILLS", "PROJECTS"))
+            await session.commit()
             ranked = rerank_category_chunks(query, hits, top_n=2)
             evidence_by_category[category] = ranked
             category_scores[category] = (max(0.0, sum(c["rerank_score"] for c in ranked) / len(ranked))

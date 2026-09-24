@@ -86,6 +86,8 @@ class PostgresRetrievalRepository:
                     model_version=EMBEDDING_MODEL_VERSION, vector=reused)
                     .on_conflict_do_nothing(index_elements=["chunk_id", "model_name", "model_version"]))
         if uncached:
+            # The embedding model can be slow; release the database transaction first.
+            await self.session.commit()
             vectors = generate_embeddings([c["text"] for c in uncached])
             for chunk, vector in zip(uncached, vectors):
                 vector_literal(vector)
@@ -93,6 +95,7 @@ class PostgresRetrievalRepository:
                     chunk_id=chunk["chunk_id"], model_name=EMBEDDING_MODEL_NAME,
                     model_version=EMBEDDING_MODEL_VERSION, vector=vector)
                     .on_conflict_do_nothing(index_elements=["chunk_id", "model_name", "model_version"]))
+        await self.session.commit()
         return document_id
 
     async def query_vector(self, job_id, category, query):
@@ -100,7 +103,10 @@ class PostgresRetrievalRepository:
         key = (job_id, category, query_hash, EMBEDDING_MODEL_NAME, EMBEDDING_MODEL_VERSION)
         cached = await self.session.get(JobQueryEmbeddingModel, key)
         if cached is not None:
-            return list(cached.vector)
+            vector = list(cached.vector)
+            await self.session.commit()
+            return vector
+        await self.session.commit()
         vector = generate_single_embedding(query)
         vector_literal(vector)
         await self.session.execute(pg_insert(JobQueryEmbeddingModel).values(
@@ -108,6 +114,7 @@ class PostgresRetrievalRepository:
             model_name=EMBEDDING_MODEL_NAME, model_version=EMBEDDING_MODEL_VERSION,
             vector=vector).on_conflict_do_nothing(index_elements=[
                 "job_id", "category", "query_hash", "model_name", "model_version"]))
+        await self.session.commit()
         return vector
 
     async def search(self, candidate_id, document_id, category, query, query_vector,

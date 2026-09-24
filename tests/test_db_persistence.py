@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy import select
 
 from app.main import app
-from app.models.database import Base, get_db, JobProfileModel, EvaluationResultModel
+from app.models.database import Base, get_db, JobProfileModel, EvaluationResultModel, ScreeningRunModel, CandidateOutcomeModel
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -143,3 +143,129 @@ async def test_api_preserves_review_and_failure_outcomes(monkeypatch, review_kin
         assert stored["evidence_verification"]["registry"]["SKILLS:1"]["text"] == "Test evidence"
         if review_kind == "invalid_citation":
             assert stored["evidence_verification"]["checks"][0]["reason"] == "WRONG_CATEGORY"
+
+
+@pytest.mark.asyncio
+async def test_run_replay_and_changed_job_snapshot(monkeypatch):
+    from app import orchestrator
+    from app.run_audit import recompute_stored_decision
+
+    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
+    monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", lambda **kwargs: {
+        "candidate_id": kwargs["candidate_id"], "composite_score": 5,
+        "evidence_by_category": {name: [{"text": "Documented evidence"}] for name in
+                                 ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")}})
+    payload = {"job_profile": {"job_id": "versioned", "title": "Engineer",
+                               "jd_category_queries": {"SKILLS": "Python"}},
+               "candidates": [{"candidate_id": "c", "raw_cv_text": "Python engineer",
+                               "recruiter_overrides": {"work_authorized": "eligible"}}],
+               "idempotency_key": "request-one"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post("/api/v1/screening/run", json=payload)
+        replay = await client.post("/api/v1/screening/run", json=payload)
+        changed = {**payload, "job_profile": {**payload["job_profile"],
+                                               "title": "Senior Engineer",
+                                               "jd_category_queries": {"SKILLS": "FastAPI"}}}
+        conflict = await client.post("/api/v1/screening/run", json=changed)
+        changed["idempotency_key"] = "request-two"
+        second = await client.post("/api/v1/screening/run", json=changed)
+    assert first.status_code == replay.status_code == second.status_code == 200
+    assert replay.json() == first.json()
+    assert conflict.status_code == 409
+    assert first.json()["run_id"] != second.json()["run_id"]
+    async with TestingSessionLocal() as session:
+        runs = (await session.execute(select(ScreeningRunModel).order_by(ScreeningRunModel.created_at))).scalars().all()
+        assert len(runs) == 2
+        assert [run.job_snapshot["title"] for run in runs] == ["Engineer", "Senior Engineer"]
+        assert [run.job_snapshot["jd_category_queries"]["SKILLS"] for run in runs] == ["Python", "FastAPI"]
+        assert runs[0].policy_snapshot["prompt_sha256"]
+        outcomes = (await session.execute(select(CandidateOutcomeModel))).scalars().all()
+        assert len(outcomes) == 2
+        for run in runs:
+            outcome = next(row for row in outcomes if row.run_id == run.id)
+            assert outcome.evidence_snapshot["candidate_id"] == "c"
+            assert outcome.citation_mapping["SKILLS:1"]["text"] == "Documented evidence"
+            assert recompute_stored_decision(run, outcome)["matches_stored"]
+
+
+@pytest.mark.asyncio
+async def test_every_candidate_has_outcome_across_stages(monkeypatch):
+    from app import orchestrator
+    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
+
+    def extract(**kwargs):
+        name = kwargs["candidate_id"]
+        if name == "broken":
+            raise RuntimeError("extractor unavailable")
+        return {"candidate_id": name, "composite_score": 10 if name == "top" else 1,
+                "evidence_by_category": {category: [{"text": "Evidence"}] for category in
+                                         ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")}}
+
+    monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", extract)
+    candidates = [{"candidate_id": name, "raw_cv_text": "Evidence",
+                   "recruiter_overrides": {"work_authorized": "eligible"}} for name in
+                  ("top", "other", "broken")]
+    candidates += [{"candidate_id": "review", "raw_cv_text": "Evidence"},
+                   {"candidate_id": "rejected", "raw_cv_text": "Evidence",
+                    "recruiter_overrides": {"work_authorized": "ineligible"}}]
+    payload = {"job_profile": {"job_id": "all-stages", "title": "Engineer", "jd_category_queries": {}},
+               "candidates": candidates, "top_n_stage2_cutoff": 1}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/screening/run", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["metrics"]["accounted_candidates"] == 5
+    async with TestingSessionLocal() as session:
+        rows = (await session.execute(select(CandidateOutcomeModel))).scalars().all()
+        assert {row.candidate_id: row.outcome for row in rows} == {
+            "top": "SUCCESS", "other": "CUTOFF_EXCLUDED", "broken": "EXTRACTION_FAILED",
+            "review": "REVIEW_REQUIRED", "rejected": "FILTER_REJECTED"}
+        assert all(row.stage_history for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_failed_publish_rolls_back_and_retry_reuses_run(monkeypatch):
+    from app.api import endpoints
+    actual = endpoints.complete_run
+    calls = 0
+
+    async def interrupted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("persistence interrupted")
+        return await actual(*args, **kwargs)
+
+    monkeypatch.setattr(endpoints, "complete_run", interrupted)
+    payload = {"job_profile": {"job_id": "retry", "title": "Engineer", "jd_category_queries": {}},
+               "candidates": [{"candidate_id": "review", "raw_cv_text": "Test"}],
+               "idempotency_key": "retry-key"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        with pytest.raises(RuntimeError, match="persistence interrupted"):
+            await client.post("/api/v1/screening/run", json=payload)
+        async with TestingSessionLocal() as session:
+            pending = (await session.execute(select(CandidateOutcomeModel))).scalars().all()
+            assert len(pending) == 1 and pending[0].outcome == "PENDING"
+        response = await client.post("/api/v1/screening/run", json=payload)
+    assert response.status_code == 200
+    async with TestingSessionLocal() as session:
+        runs = (await session.execute(select(ScreeningRunModel))).scalars().all()
+        outcomes = (await session.execute(select(CandidateOutcomeModel))).scalars().all()
+        assert len(runs) == len(outcomes) == 1
+        assert runs[0].id == response.json()["run_id"]
+        assert runs[0].status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_identical_submission_without_supplied_key_replays():
+    payload = {"job_profile": {"job_id": "automatic-key", "title": "Engineer",
+                               "jd_category_queries": {}},
+               "candidates": [{"candidate_id": "review", "raw_cv_text": "Test"}]}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post("/api/v1/screening/run", json=payload)
+        second = await client.post("/api/v1/screening/run", json=payload)
+    assert first.status_code == second.status_code == 200
+    assert first.json() == second.json()
+    assert first.json()["idempotency_key"]
+    async with TestingSessionLocal() as session:
+        assert len((await session.execute(select(ScreeningRunModel))).scalars().all()) == 1

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import AsyncGenerator
-from sqlalchemy import String, Float, DateTime, JSON, ForeignKey, Integer, Text, Index
+from sqlalchemy import String, Float, DateTime, JSON, ForeignKey, Integer, Text, Index, UniqueConstraint
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -41,6 +41,7 @@ class EvaluationResultModel(Base):
     __tablename__ = "evaluation_results"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("screening_runs.id"), nullable=True)
     job_id: Mapped[str] = mapped_column(ForeignKey("job_profiles.id"), nullable=False)
     candidate_id: Mapped[str] = mapped_column(String(64), nullable=False)
     composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -122,4 +123,29 @@ class ScreeningRunModel(Base):
     job_id: Mapped[str] = mapped_column(ForeignKey("job_profiles.id"), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False)
     metrics: Mapped[dict] = mapped_column(JSON, nullable=False)
+    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="legacy")
+    job_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    policy_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    response_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class CandidateOutcomeModel(Base):
+    __tablename__ = "candidate_outcomes"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("screening_runs.id"), nullable=False)
+    candidate_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(32), nullable=False)
+    stage: Mapped[str] = mapped_column(String(16), nullable=False)
+    input_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    stage_history: Mapped[list] = mapped_column(JSON, nullable=False)
+    evidence_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    citation_mapping: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    validated_output: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    result_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    scoring_policy_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    __table_args__ = (UniqueConstraint("run_id", "candidate_id", name="uq_candidate_outcome_run_candidate"),)
