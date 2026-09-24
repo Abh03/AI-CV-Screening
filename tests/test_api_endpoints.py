@@ -280,7 +280,9 @@ async def test_unknown_authorization_returns_review_through_api():
     result = response.json()
     assert result["leaderboard"] == result["rejected_candidates"] == []
     assert result["metrics"]["stage1_review_required"] == 1
-    assert result["review_candidates"][0]["filter_details"]["checks"][0]["code"] == "AUTHORIZATION_UNKNOWN"
+    outcome = (result["leaderboard"] + result["review_candidates"] + result["failed_candidates"])[0]
+    assert outcome["stage1_filter_details"]["checks"][0]["code"] == "AUTHORIZATION_UNKNOWN"
+    assert outcome["verification_required"] is True
 
 
 @pytest.mark.asyncio
@@ -301,16 +303,16 @@ async def test_pdf_api_passes_only_redacted_provenance_to_screening(monkeypatch,
                             "stage1_passed": 0, "stage1_rejected": 0, "stage1_review_required": 1,
                             "stage2_shortlisted": 0, "stage3_evaluated": 0, "stage3_succeeded": 0,
                             "stage3_review_required": 0, "stage3_failed": 0,
-                            "stage0_failed": 0, "stage2_failed": 0, "stage2_excluded": 0,
+                            "stage0_failed": 0, "stage2_failed": 0, "stage2_excluded": 1,
                             "accounted_candidates": 1},
-                "leaderboard": [], "rejected_candidates": [],
-                "review_candidates": [{"candidate_id": "pdf_candidate", "stage": "STAGE1",
-                                       "evaluation_status": "REVIEW_REQUIRED"}], "failed_candidates": [],
-                "outcomes": [{"candidate_id": "pdf_candidate", "outcome": "REVIEW_REQUIRED",
-                              "stage": "STAGE1", "input_snapshot": {"candidate_id": "pdf_candidate"},
+                "leaderboard": [], "rejected_candidates": [{"candidate_id": "pdf_candidate", "stage": "STAGE2",
+                                       "reason": "CUTOFF_EXCLUDED"}],
+                "review_candidates": [], "failed_candidates": [],
+                "outcomes": [{"candidate_id": "pdf_candidate", "outcome": "CUTOFF_EXCLUDED",
+                              "stage": "STAGE2", "input_snapshot": {"candidate_id": "pdf_candidate"},
                               "stage_history": [{"stage": "STAGE1", "status": "REVIEW"}],
                               "result_snapshot": {"candidate_id": "pdf_candidate",
-                                                  "evaluation_status": "REVIEW_REQUIRED"}}]}
+                                                  "reason": "CUTOFF_EXCLUDED"}}]}
 
     monkeypatch.setattr("app.api.endpoints.run_end_to_end_screening_pipeline", fake_screening)
     payload = {"job_profile": {"job_id": "pdf_job", "title": "Engineer", "jd_category_queries": {}},

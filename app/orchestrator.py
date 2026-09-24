@@ -19,6 +19,13 @@ from app.stage3_evaluation.scoring import failed_evaluation
 logger = logging.getLogger("cv_screening")
 
 
+def stage1_verification(details: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep rule uncertainty separate from the LLM's evidence judgment."""
+    reasons = [dict(check) for check in details["checks"] if check["status"] == "REVIEW"]
+    return {"verification_required": bool(reasons), "verification_reasons": reasons,
+            "stage1_filter_details": details}
+
+
 async def run_end_to_end_screening_pipeline(
     raw_candidates: List[Dict[str, Any]],
     jd_profile: Dict[str, Any],
@@ -167,24 +174,15 @@ async def run_end_to_end_screening_pipeline(
         }
         outcomes[cand_id]["stage_history"].append({"stage": "STAGE1", "status": filter_result["status"],
                                                     "details": filter_result})
-        is_passed = filter_result["status"] == "PASS"
-        if is_passed:
-            pipeline_metrics["stage1_passed"] += 1
+        if filter_result["status"] in {"PASS", "REVIEW"}:
+            pipeline_metrics["stage1_passed" if filter_result["status"] == "PASS"
+                             else "stage1_review_required"] += 1
             stage1_survivors.append({
                 "candidate_id": cand_id,
                 "redacted_cv_text": redacted_text,
                 "parsed_attributes": cand.parsed_attributes.model_dump(mode="json"),
                 "filter_details": filter_result
             })
-        elif filter_result["status"] == "REVIEW":
-            pipeline_metrics["stage1_review_required"] += 1
-            item = {
-                "candidate_id": cand_id, "stage": "STAGE1",
-                "evaluation_status": "REVIEW_REQUIRED",
-                "reason": "STAGE1_REQUIRES_REVIEW", "filter_details": filter_result,
-            }
-            review_candidates.append(item)
-            outcomes[cand_id].update(outcome="REVIEW_REQUIRED", stage="STAGE1", result_snapshot=item)
         else:
             pipeline_metrics["stage1_rejected"] += 1
             item = {
@@ -226,6 +224,7 @@ async def run_end_to_end_screening_pipeline(
             cand_id = survivor["candidate_id"]
             item = {"candidate_id": cand_id, "stage": "STAGE2", "evaluation_status": "EXTRACTION_FAILED",
                     "reason": "EVIDENCE_EXTRACTION_FAILED"}
+            item.update(stage1_verification(survivor["filter_details"]))
             failed_candidates.append(item)
             outcomes[cand_id].update(outcome="EXTRACTION_FAILED", stage="STAGE2", result_snapshot=item)
             outcomes[cand_id]["stage_history"].append({"stage": "STAGE2", "status": "FAILED"})
@@ -233,7 +232,7 @@ async def run_end_to_end_screening_pipeline(
             continue
         outcomes[survivor["candidate_id"]]["evidence_snapshot"] = evidence_payload
         outcomes[survivor["candidate_id"]]["stage_history"].append({"stage": "STAGE2", "status": "EXTRACTED"})
-        stage2_payloads.append(evidence_payload)
+        stage2_payloads.append(dict(evidence_payload, **stage1_verification(survivor["filter_details"])))
 
     # Global Batch Cutoff: Rank all Stage 1 survivors by S_cand and slice top candidates
     try:
@@ -249,6 +248,8 @@ async def run_end_to_end_screening_pipeline(
             cand_id = evidence["candidate_id"]
             item = {"candidate_id": cand_id, "stage": "STAGE2", "evaluation_status": "PROCESSING_FAILED",
                     "reason": "RANKING_FAILED"}
+            item.update({key: evidence[key] for key in
+                         ("verification_required", "verification_reasons", "stage1_filter_details")})
             failed_candidates.append(item)
             outcomes[cand_id].update(outcome="PROCESSING_FAILED", stage="STAGE2", result_snapshot=item)
             outcomes[cand_id]["stage_history"].append({"stage": "STAGE2", "status": "FAILED"})
@@ -261,6 +262,8 @@ async def run_end_to_end_screening_pipeline(
         if cand_id not in shortlisted_ids:
             item = {"candidate_id": cand_id, "stage": "STAGE2", "reason": "CUTOFF_EXCLUDED",
                     "retrieval_score": evidence.get("composite_score")}
+            item.update({key: evidence[key] for key in
+                         ("verification_required", "verification_reasons", "stage1_filter_details")})
             rejected_candidates.append(item)
             outcomes[cand_id].update(outcome="CUTOFF_EXCLUDED", stage="STAGE2", result_snapshot=item)
             outcomes[cand_id]["stage_history"].append({"stage": "STAGE2", "status": "CUTOFF_EXCLUDED"})
@@ -285,7 +288,9 @@ async def run_end_to_end_screening_pipeline(
     stage1_details = {candidate["candidate_id"]: candidate["filter_details"] for candidate in stage1_survivors}
     for result in sorted(final_evaluations, key=evaluation_sort_key):
         item = result.model_dump(mode="json")
-        item["stage1_filter_details"] = stage1_details[result.candidate_id]
+        item.update(stage1_verification(stage1_details[result.candidate_id]))
+        item["provisional"] = (result.evaluation_status == EvaluationStatus.SUCCESS
+                               and item["verification_required"])
         outcomes[result.candidate_id].update(outcome=result.evaluation_status.value,
                                               stage="STAGE3", result_snapshot=item)
         outcomes[result.candidate_id]["stage_history"].append(

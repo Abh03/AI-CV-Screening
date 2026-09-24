@@ -4,6 +4,56 @@ from app.stage3_evaluation.schemas import DecisionTier
 
 
 @pytest.mark.asyncio
+async def test_stage1_review_is_provisional_without_changing_stage3_status(monkeypatch):
+    from app import orchestrator
+    from app.stage3_evaluation.schemas import CategoryAssessment, LLMEvaluationOutput, EvidenceVerification
+    from app.stage3_evaluation.scoring import score_evaluation, failed_evaluation
+
+    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
+    retrieved = []
+
+    def extract(**kwargs):
+        retrieved.append(kwargs["candidate_id"])
+        return {"candidate_id": kwargs["candidate_id"], "composite_score": 1,
+                "evidence_by_category": {}}
+
+    async def evaluate(candidate_payloads, **kwargs):
+        assert all("stage1_filter_details" in item for item in candidate_payloads)
+        output = LLMEvaluationOutput(
+            **{name: CategoryAssessment(score=80, rationale="test", citations=[])
+               for name in ("skills", "experience", "projects", "education")},
+            flags=[], executive_summary="test")
+        return [failed_evaluation(item["candidate_id"], "PROVIDER_ERROR", "Unavailable")
+                if item["candidate_id"] == "failed" else
+                score_evaluation(item["candidate_id"], output,
+                                 EvidenceVerification(registry={}, checks=[], review_reasons=["UNSUPPORTED_EVIDENCE"]
+                                                      if item["candidate_id"] == "evidence_review" else [],
+                                                      verified_flag_indices=[], injection_signals=[]))
+                for item in candidate_payloads]
+
+    monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", extract)
+    monkeypatch.setattr(orchestrator, "evaluate_candidate_batch_async", evaluate)
+    candidates = [{"candidate_id": name, "raw_cv_text": "Test"} for name in
+                  ("provisional", "evidence_review", "failed")]
+    candidates.append({"candidate_id": "rejected", "raw_cv_text": "Test",
+                       "recruiter_overrides": {"work_authorized": "ineligible"}})
+    result = await orchestrator.run_end_to_end_screening_pipeline(
+        candidates, {"job_id": "job", "title": "Engineer", "jd_category_queries": {}})
+    assert set(retrieved) == {"provisional", "evidence_review", "failed"}
+    assert [item["candidate_id"] for item in result["leaderboard"]] == ["provisional"]
+    success = result["leaderboard"][0]
+    assert success["provisional"] and success["verification_required"]
+    assert success["verification_reasons"][0]["code"] == "AUTHORIZATION_UNKNOWN"
+    assert success["tier"] == "TIER_1" and success["review_reasons"] == []
+    review = result["review_candidates"][0]
+    assert review["evaluation_status"] == "REVIEW_REQUIRED" and review["tier"] is None
+    assert review["verification_required"] and review["review_reasons"] == ["UNSUPPORTED_EVIDENCE"]
+    assert result["failed_candidates"][0]["verification_required"]
+    assert result["rejected_candidates"][0]["candidate_id"] == "rejected"
+    assert result["metrics"]["accounted_candidates"] == 4
+
+
+@pytest.mark.asyncio
 async def test_full_pipeline_end_to_end_execution():
     jd_profile = {
         "title": "Senior Python Backend Engineer",

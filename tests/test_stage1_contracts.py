@@ -142,18 +142,22 @@ async def test_direct_pipeline_validates_before_masking(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_unverified_claims_route_to_review_without_retrieval(monkeypatch):
+async def test_unverified_claims_continue_to_retrieval(monkeypatch):
     from app import orchestrator
     monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
-    def forbidden(**kwargs):
-        pytest.fail("Stage 1 review cannot reach Stage 2")
-    monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", forbidden)
+    seen = []
+    def extract(**kwargs):
+        seen.append(kwargs["candidate_id"])
+        return {"candidate_id": kwargs["candidate_id"], "composite_score": 1,
+                "evidence_by_category": {}}
+    monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", extract)
     result = await orchestrator.run_end_to_end_screening_pipeline(
         [{"candidate_id": "a", "raw_cv_text": "", "parsed_attributes": {
             "experience_years": 10, "experience_source": "cv_extracted"}}],
         {"title": "Engineer", "hard_filter_rules": {"min_years_experience": 5}})
     assert result["rejected_candidates"] == []
     assert result["metrics"]["stage1_review_required"] == 1
-    details = result["review_candidates"][0]["filter_details"]
+    assert seen == ["a"]
+    details = result["outcomes"][0]["result_snapshot"]["stage1_filter_details"]
     assert {check["code"] for check in details["checks"]} >= {"EXPERIENCE_UNVERIFIED", "AUTHORIZATION_UNKNOWN"}
     assert details["input_provenance"]["reported_experience_years"] == 10

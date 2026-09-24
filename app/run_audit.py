@@ -20,7 +20,7 @@ from app.stage2_retrieval.evidence_extractor import DEFAULT_CATEGORY_WEIGHTS
 from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME, RERANKER_MODEL_VERSION
 
 PROMPT_VERSION = "stage3-prompt-v1"
-RUN_POLICY_VERSION = "orchestration-v1"
+RUN_POLICY_VERSION = "orchestration-v2"
 
 
 def canonical_hash(value):
@@ -160,9 +160,24 @@ def validate_accounting(result, candidate_ids):
                              {"EXTRACTION_FAILED", "PROCESSING_FAILED"} for item in outcomes)
         if stage_failures != metrics.get(metric, 0):
             raise ValueError(f"{stage} failure metric does not reconcile")
-    if metrics["stage1_review_required"] != sum(item["stage"] == "STAGE1" and
-                                                 item["outcome"] == "REVIEW_REQUIRED" for item in outcomes):
+    stage1_reviews = sum(any(event["stage"] == "STAGE1" and event["status"] == "REVIEW"
+                             for event in item["stage_history"]) for item in outcomes)
+    if metrics["stage1_review_required"] != stage1_reviews:
         raise ValueError("Stage 1 review metric does not reconcile")
+    for item in outcomes:
+        details = next((event["details"] for event in item["stage_history"]
+                        if event["stage"] == "STAGE1" and "details" in event), None)
+        if details is None or item["stage"] not in {"STAGE2", "STAGE3"}:
+            continue
+        decision = item["result_snapshot"]
+        reasons = [check for check in details["checks"] if check["status"] == "REVIEW"]
+        if (decision.get("stage1_filter_details") != details or
+                decision.get("verification_reasons") != reasons or
+                decision.get("verification_required") is not bool(reasons)):
+            raise ValueError("Stage 1 verification metadata does not reconcile")
+        if item["stage"] == "STAGE3" and decision.get("provisional") is not (
+                item["outcome"] == "SUCCESS" and bool(reasons)):
+            raise ValueError("Provisional outcome does not reconcile")
     if metrics["stage3_review_required"] != sum(item["stage"] == "STAGE3" and
                                                  item["outcome"] == "REVIEW_REQUIRED" for item in outcomes):
         raise ValueError("Stage 3 review metric does not reconcile")
@@ -177,7 +192,8 @@ def validate_accounting(result, candidate_ids):
         raise ValueError("Stage 0 review metric does not reconcile")
     if metrics["stage1_passed"] + metrics["stage1_rejected"] + metrics["stage1_review_required"] + metrics.get("stage1_failed", 0) != metrics["stage0_processed"]:
         raise ValueError("Stage 1 metrics do not reconcile")
-    if metrics["stage2_shortlisted"] + metrics["stage2_excluded"] + metrics["stage2_failed"] != metrics["stage1_passed"]:
+    if (metrics["stage2_shortlisted"] + metrics["stage2_excluded"] + metrics["stage2_failed"] !=
+            metrics["stage1_passed"] + metrics["stage1_review_required"]):
         raise ValueError("Stage 2 metrics do not reconcile")
     if metrics["stage3_succeeded"] + metrics["stage3_review_required"] + metrics["stage3_failed"] != metrics["stage3_evaluated"] or metrics["stage3_evaluated"] != metrics["stage2_shortlisted"]:
         raise ValueError("Stage 3 metrics do not reconcile")

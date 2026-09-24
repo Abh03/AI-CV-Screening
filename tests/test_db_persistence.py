@@ -115,13 +115,17 @@ async def test_api_preserves_review_and_failure_outcomes(monkeypatch, review_kin
     monkeypatch.setattr(llm_client, "generate_evaluation", generate)
     payload = {
         "job_profile": {"job_id": "outcomes", "title": "Engineer", "jd_category_queries": {}},
-        "candidates": [{"candidate_id": name, "raw_cv_text": "Test", "recruiter_overrides": {"work_authorized": "eligible"}} for name in ("failed", "review", "success")],
+        "candidates": [{"candidate_id": name, "raw_cv_text": "Test",
+                        **({} if name == "success" else {"recruiter_overrides": {"work_authorized": "eligible"}})}
+                       for name in ("failed", "review", "success")],
     }
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post("/api/v1/screening/run", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert [item["candidate_id"] for item in data["leaderboard"]] == ["success"]
+    assert data["leaderboard"][0]["provisional"] is True
+    assert data["leaderboard"][0]["verification_reasons"][0]["code"] == "AUTHORIZATION_UNKNOWN"
     assert data["review_candidates"][0]["tier"] is None
     assert data["failed_candidates"][0]["composite_score"] is None
     assert data["metrics"]["stage3_evaluated"] == 3
@@ -136,6 +140,8 @@ async def test_api_preserves_review_and_failure_outcomes(monkeypatch, review_kin
         assert by_id["failed"].composite_score is None
         assert by_id["failed"].evaluation_status == "EVALUATION_FAILED"
         assert by_id["failed"].llm_raw_output["error_code"] == "PROVIDER_ERROR"
+        assert by_id["success"].llm_raw_output["verification_required"] is True
+        assert by_id["success"].llm_raw_output["stage1_filter_details"]["checks"][0]["code"] == "AUTHORIZATION_UNKNOWN"
         assert by_id["review"].tier is None
         assert by_id["review"].scoring_policy_version == "stage3-v1.1.0"
         stored = by_id["review"].llm_raw_output
@@ -219,7 +225,8 @@ async def test_every_candidate_has_outcome_across_stages(monkeypatch):
         rows = (await session.execute(select(CandidateOutcomeModel))).scalars().all()
         assert {row.candidate_id: row.outcome for row in rows} == {
             "top": "SUCCESS", "other": "CUTOFF_EXCLUDED", "broken": "EXTRACTION_FAILED",
-            "review": "REVIEW_REQUIRED", "rejected": "FILTER_REJECTED"}
+            "review": "CUTOFF_EXCLUDED", "rejected": "FILTER_REJECTED"}
+        assert next(row for row in rows if row.candidate_id == "review").result_snapshot["verification_required"]
         assert all(row.stage_history for row in rows)
 
 
