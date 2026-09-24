@@ -1,7 +1,9 @@
 """Run with --run-infrastructure against PostgreSQL 16 + pgvector."""
 import uuid
+import asyncio
 
 import pytest
+import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
@@ -53,7 +55,7 @@ async def test_migrations_scoped_retrieval_and_cache(migrated_database, monkeypa
         async with sessions() as session:
             assert 160000 <= int((await session.execute(text("SHOW server_version_num"))).scalar_one()) < 170000
             assert (await session.execute(text("SELECT extversion FROM pg_extension WHERE extname='vector'"))).scalar_one()
-            assert (await session.execute(text("SELECT version_num FROM alembic_version"))).scalar_one() == "92a1c4d06e9f"
+            assert (await session.execute(text("SELECT version_num FROM alembic_version"))).scalar_one() == "e52b7c9d0143"
             repo = PostgresRetrievalRepository(session)
             first = generate_cv_chunks("SKILLS\nPython FastAPI PostgreSQL\n\nEXPERIENCE\nBuilt Python services")
             other = generate_cv_chunks("SKILLS\nPython and Kubernetes")
@@ -112,6 +114,67 @@ async def test_migrations_scoped_retrieval_and_cache(migrated_database, monkeypa
             assert "ix_source_chunks_fts" in fts_plan
     finally:
         await engine.dispose()
+
+
+async def test_campaign_upgrade_preserves_existing_run_and_pair_constraints(monkeypatch):
+    """Upgrade an occupied previous head, then verify campaign FK and uniqueness."""
+    name = "campaign_upgrade_" + uuid.uuid4().hex[:16]
+    source = make_url(settings.DATABASE_URL)
+    admin_dsn = source.set(drivername="postgresql", database="postgres").render_as_string(hide_password=False)
+    conn = psycopg2.connect(admin_dsn)
+    conn.autocommit = True
+    with conn.cursor() as cursor:
+        cursor.execute(f'CREATE DATABASE "{name}"')
+    test_url = source.set(database=name)
+    monkeypatch.setattr(settings, "DATABASE_URL", test_url.render_as_string(hide_password=False))
+    try:
+        await asyncio.to_thread(command.upgrade, Config("alembic.ini"), "92a1c4d06e9f")
+        engine = create_async_engine(settings.DATABASE_URL)
+        try:
+            async with engine.begin() as db:
+                await db.execute(text("""INSERT INTO job_profiles
+                    (id, owner_id, title, category_queries, created_at)
+                    VALUES ('legacy-job', 'owner-a', 'Engineer', '{}', CURRENT_TIMESTAMP)"""))
+                await db.execute(text("""INSERT INTO screening_runs
+                    (id, owner_id, job_id, status, metrics, request_hash, job_snapshot,
+                     policy_snapshot, attempt_count, created_at)
+                    VALUES ('legacy-run', 'owner-a', 'legacy-job', 'COMPLETED', '{}',
+                            'legacy', '{}', '{}', 0, CURRENT_TIMESTAMP)"""))
+        finally:
+            await engine.dispose()
+        await asyncio.to_thread(command.upgrade, Config("alembic.ini"), "head")
+        engine = create_async_engine(settings.DATABASE_URL)
+        try:
+            from app.campaigns.persistence import reserve_campaign, reserve_cv, finish_stage0, campaign_counts
+            from app.models.database import CampaignPairModel
+            from sqlalchemy.exc import IntegrityError
+
+            sessions = async_sessionmaker(engine, expire_on_commit=False)
+            async with sessions() as db:
+                assert (await db.execute(text("SELECT status FROM screening_runs WHERE id='legacy-run'"))).scalar_one() == "COMPLETED"
+                _, campaign = await reserve_campaign(db, owner_id="owner-a", request_hash="request",
+                    job_snapshots=[{"job_id": "jd-a"}, {"job_id": "jd-b"}],
+                    policy_snapshots=[{"version": 1}, {"version": 1}])
+                _, cv = await reserve_cv(db, campaign_id=campaign.id, owner_id="owner-a",
+                    candidate_id="candidate", source_filename="cv.pdf", content_hash="hash")
+                assert (await campaign_counts(db, campaign_id=campaign.id, owner_id="owner-a"))["pairs"] == {"PENDING": 2}
+                await finish_stage0(db, campaign_id=campaign.id, owner_id="owner-a",
+                                    candidate_id="candidate", error_code="INVALID_PDF")
+                assert (await campaign_counts(db, campaign_id=campaign.id, owner_id="owner-a"))["terminal_pairs"] == 2
+                pairs = (await db.execute(sa.select(CampaignPairModel).where(
+                    CampaignPairModel.campaign_id == campaign.id))).scalars().all()
+                db.add(CampaignPairModel(id=str(uuid.uuid4()), campaign_id=campaign.id,
+                    jd_id=pairs[0].jd_id, cv_id=cv.id, status="PENDING",
+                    verification_required=False, verification_reasons=[], attempt_count=0))
+                with pytest.raises(IntegrityError):
+                    await db.commit()
+                await db.rollback()
+        finally:
+            await engine.dispose()
+    finally:
+        with conn.cursor() as cursor:
+            cursor.execute(f'DROP DATABASE "{name}" WITH (FORCE)')
+        conn.close()
 
 
 async def test_production_extractor_keeps_rrf_rerank_and_cutoff(migrated_database, monkeypatch):

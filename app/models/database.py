@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import AsyncGenerator
-from sqlalchemy import String, Float, DateTime, JSON, ForeignKey, Integer, Text, Index, UniqueConstraint
+from sqlalchemy import String, Float, DateTime, JSON, ForeignKey, ForeignKeyConstraint, Integer, Text, Index, UniqueConstraint, CheckConstraint, LargeBinary
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -156,3 +156,108 @@ class CandidateOutcomeModel(Base):
     prompt_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     scoring_policy_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     __table_args__ = (UniqueConstraint("run_id", "candidate_id", name="uq_candidate_outcome_run_candidate"),)
+
+
+class CampaignModel(Base):
+    __tablename__ = "campaigns"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="INTAKE")
+    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("owner_id", "idempotency_key", name="uq_campaign_owner_key"),
+        Index("ix_campaigns_owner_created", "owner_id", "created_at"),
+        CheckConstraint("status IN ('INTAKE','RUNNING','COMPLETED','FAILED')", name="ck_campaign_status"),
+    )
+
+
+class CampaignJDModel(Base):
+    __tablename__ = "campaign_jds"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False)
+    jd_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    job_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    policy_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    stage3_cap: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="PENDING")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "id", name="uq_campaign_jd_scope"),
+        UniqueConstraint("campaign_id", "jd_key", name="uq_campaign_jd_key"),
+        Index("ix_campaign_jds_campaign_status", "campaign_id", "status"),
+        CheckConstraint("stage3_cap > 0", name="ck_campaign_jd_cap"),
+        CheckConstraint("status IN ('PENDING','PROCESSING','SHORTLISTED','COMPLETED','FAILED')", name="ck_campaign_jd_status"),
+    )
+
+
+class CampaignCVModel(Base):
+    __tablename__ = "campaign_cvs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False)
+    candidate_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    document_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    source_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    stage0_status: Mapped[str] = mapped_column(String(24), nullable=False, default="PENDING")
+    redacted_text: Mapped[str | None] = mapped_column(Text)
+    source_locations: Mapped[list | None] = mapped_column(JSON)
+    extraction_error_code: Mapped[str | None] = mapped_column(String(64))
+    encrypted_pdf: Mapped[bytes | None] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "id", name="uq_campaign_cv_scope"),
+        UniqueConstraint("campaign_id", "candidate_id", name="uq_campaign_candidate"),
+        Index("ix_campaign_cvs_campaign_stage0", "campaign_id", "stage0_status"),
+        CheckConstraint("document_version > 0", name="ck_campaign_cv_version"),
+        CheckConstraint("stage0_status IN ('PENDING','RUNNING','SUCCEEDED','FAILED')", name="ck_campaign_cv_stage0"),
+        CheckConstraint("stage0_status NOT IN ('SUCCEEDED','FAILED') OR encrypted_pdf IS NULL", name="ck_campaign_cv_purge_raw"),
+    )
+
+
+class CampaignPairModel(Base):
+    __tablename__ = "campaign_pairs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False)
+    jd_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    cv_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING")
+    stage1_decision: Mapped[str | None] = mapped_column(String(16))
+    stage1_details: Mapped[dict | None] = mapped_column(JSON)
+    stage2_score: Mapped[float | None] = mapped_column(Float)
+    stage2_rank: Mapped[int | None] = mapped_column(Integer)
+    stage3_status: Mapped[str | None] = mapped_column(String(32))
+    composite_score: Mapped[float | None] = mapped_column(Float)
+    tier: Mapped[str | None] = mapped_column(String(16))
+    verification_required: Mapped[bool] = mapped_column(nullable=False, default=False)
+    verification_reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    result_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failure_code: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        ForeignKeyConstraint(["campaign_id", "jd_id"], ["campaign_jds.campaign_id", "campaign_jds.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["campaign_id", "cv_id"], ["campaign_cvs.campaign_id", "campaign_cvs.id"], ondelete="CASCADE"),
+        UniqueConstraint("jd_id", "cv_id", name="uq_campaign_pair_jd_cv"),
+        Index("ix_campaign_pairs_jd_status", "jd_id", "status"),
+        Index("ix_campaign_pairs_jd_rank", "jd_id", "status", "composite_score", "cv_id"),
+        Index("ix_campaign_pairs_campaign_status", "campaign_id", "status"),
+        CheckConstraint("attempt_count >= 0", name="ck_campaign_pair_attempts"),
+        CheckConstraint("stage2_rank IS NULL OR stage2_rank > 0", name="ck_campaign_pair_stage2_rank"),
+        CheckConstraint("status IN ('PENDING','RUNNING','EXTRACTION_FAILED','FILTER_REJECTED','PROCESSING_FAILED','CUTOFF_EXCLUDED','SHORTLISTED','SUCCESS','REVIEW_REQUIRED','EVALUATION_FAILED')", name="ck_campaign_pair_status"),
+    )
