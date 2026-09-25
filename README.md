@@ -348,7 +348,7 @@ data and thresholds are agreed. CI separates unit, PostgreSQL/Redis and worker,
 image/model, and manually dispatched live-provider checks.
 ## Campaign intake (Phase 3)
 
-Create a campaign with one or more structured JDs, then upload a ZIP of PDFs. Stage 0 runs asynchronously; candidate/JD screening and rankings are added in later phases.
+Create a campaign with one or more structured JDs, then upload a ZIP of PDFs. Stage 0 and per-JD Stage 1/2 screening run asynchronously. The Stage 3 evaluation and final ranking APIs are added in Phase 5.
 
 ```bash
 curl -H "Authorization: Bearer $API_TOKEN" -H "Content-Type: application/json" \
@@ -364,4 +364,4 @@ The upload response reports accepted candidates and rejected ZIP members in arch
 
 For files already on the server, put the structured JD array in `jobs.json` and run `python scripts/import_campaign_folder.py /path/to/pdfs jobs.json --owner OWNER_ID --idempotency-key campaign-key` from the project root. The owner must match an API credential ID for subsequent owner-scoped reads.
 
-Compose runs legacy screening on `screening`, PDF extraction on `ocr`, and recovery on `control`, each with a single worker process. Status reads query PostgreSQL directly. Keep the control worker and beat service running to republish pending or interrupted Stage 0 tasks.
+Compose runs legacy screening on `screening`, PDF extraction on `ocr`, retrieval on `retrieval`, and coordination/recovery on `control`, each with a single worker process. Status reads query PostgreSQL directly. Keep the control worker and beat service running to recover interrupted Stage 0 and pair tasks. Pair dispatch is bounded by `CAMPAIGN_RETRIEVAL_INFLIGHT` per campaign and `CAMPAIGN_RETRIEVAL_GLOBAL_INFLIGHT` overall. A JD becomes `SHORTLISTED` only when all its accepted CVs have a terminal extraction/Stage 1/Stage 2 outcome; Stage 2 scores are ranked globally by descending score and candidate ID, and at most the JD cap (30 by default) is selected. Retrieval failures are retried up to `RUN_MAX_ATTEMPTS`; failed attempts remain visible as `PROCESSING_FAILED`.

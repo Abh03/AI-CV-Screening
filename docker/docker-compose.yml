@@ -104,6 +104,18 @@ services:
       redis:
         condition: service_healthy
 
+  retrieval-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "retrieval"]
+    environment: *runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
   beat:
     build:
       context: ..

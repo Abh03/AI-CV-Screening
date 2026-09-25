@@ -248,6 +248,7 @@ class CampaignPairModel(Base):
     result_snapshot: Mapped[dict | None] = mapped_column(JSON)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_owner: Mapped[str | None] = mapped_column(String(64))
     failure_code: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -259,7 +260,8 @@ class CampaignPairModel(Base):
         Index("ix_campaign_pairs_jd_status", "jd_id", "status"),
         Index("ix_campaign_pairs_jd_rank", "jd_id", "status", "composite_score", "cv_id"),
         Index("ix_campaign_pairs_campaign_status", "campaign_id", "status"),
+        Index("ix_campaign_pairs_dispatch", "campaign_id", "status", "lease_until"),
         CheckConstraint("attempt_count >= 0", name="ck_campaign_pair_attempts"),
         CheckConstraint("stage2_rank IS NULL OR stage2_rank > 0", name="ck_campaign_pair_stage2_rank"),
-        CheckConstraint("status IN ('PENDING','RUNNING','EXTRACTION_FAILED','FILTER_REJECTED','PROCESSING_FAILED','CUTOFF_EXCLUDED','SHORTLISTED','SUCCESS','REVIEW_REQUIRED','EVALUATION_FAILED')", name="ck_campaign_pair_status"),
+        CheckConstraint("status IN ('PENDING','RUNNING','STAGE2_READY','EXTRACTION_FAILED','FILTER_REJECTED','PROCESSING_FAILED','CUTOFF_EXCLUDED','SHORTLISTED','SUCCESS','REVIEW_REQUIRED','EVALUATION_FAILED')", name="ck_campaign_pair_status"),
     )

@@ -12,7 +12,7 @@ from app.campaigns.persistence import campaign_counts, reserve_campaign
 from app.config import settings
 from app.core.auth import Principal, can_access, current_principal
 from app.models.database import CampaignModel, get_db
-from app.workers.tasks import campaign_stage0_task
+from app.workers.tasks import campaign_stage0_task, campaign_coordinate_task
 
 router = APIRouter(prefix="/api/v1/campaigns", tags=["Campaigns"])
 
@@ -85,6 +85,10 @@ async def upload_archive(campaign_id: str, request: Request, db: AsyncSession = 
         except Exception:
             # Recovery on the control queue republishes pending rows.
             pass
+    try:
+        campaign_coordinate_task.delay(campaign_id)
+    except Exception:
+        pass
     return {"campaign_id": campaign_id, "status": "RUNNING", **report}
 
 

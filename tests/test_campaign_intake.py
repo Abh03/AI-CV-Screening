@@ -20,7 +20,8 @@ TestingSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expir
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def campaign_db():
+async def campaign_db(monkeypatch):
+    monkeypatch.setattr(tasks.campaign_coordinate_task, "delay", lambda *args: None)
     async with test_engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
     async def override():

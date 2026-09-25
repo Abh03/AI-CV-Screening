@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     OCR_CONCURRENCY_LIMIT: int = Field(default=1, ge=1)
     EMBEDDING_CONCURRENCY_LIMIT: int = Field(default=1, ge=1)
     RERANK_CONCURRENCY_LIMIT: int = Field(default=1, ge=1)
+    CAMPAIGN_RETRIEVAL_INFLIGHT: int = Field(default=4, ge=1, le=100)
+    CAMPAIGN_RETRIEVAL_GLOBAL_INFLIGHT: int = Field(default=8, ge=1, le=1000)
+    CAMPAIGN_DISPATCH_BATCH: int = Field(default=100, ge=1, le=1000)
     PROVIDER_TIMEOUT_SECONDS: int = Field(default=45, ge=1)
     
     # Security & Encryption

@@ -3,6 +3,7 @@ import asyncio
 import base64
 import json
 import logging
+import math
 import time
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
@@ -20,8 +21,13 @@ from app.workers.celery_app import celery_app
 from app.stage3_evaluation.llm_client import llm_client
 from app.core.security import decrypt_payload
 from app.core.security import decrypt_bytes
-from app.models.database import CampaignCVModel, CampaignModel, CampaignPairModel
+from app.models.database import CampaignCVModel, CampaignJDModel, CampaignModel, CampaignPairModel
 from app.campaigns.persistence import finish_stage0
+from app.campaigns.coordinator import dispatch_pairs, finalize_ready_jds
+from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
+from app.stage1_rules.contracts import AttributeSource, AuthorizationStatus, resolve_hard_filters
+from app.stage2_retrieval.evidence_extractor import (
+    extract_candidate_category_evidence, extract_candidate_category_evidence_postgres)
 from app.stage0_extraction.pipeline import ingest_pdf
 logger = logging.getLogger("cv_screening")
 
@@ -264,3 +270,144 @@ def recover_campaign_stage0():
             await engine.dispose()
     for cv_id in asyncio.run(find()):
         campaign_stage0_task.delay(cv_id)
+
+
+async def execute_campaign_pair(pair_id, lease_owner):
+    """Use the stored redacted document and fence results from expired workers."""
+    await engine.dispose()
+    try:
+        async with AsyncSessionLocal() as db:
+            row = (await db.execute(select(CampaignPairModel, CampaignCVModel, CampaignJDModel).join(
+                CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id).join(
+                CampaignJDModel, CampaignJDModel.id == CampaignPairModel.jd_id).where(
+                CampaignPairModel.id == pair_id))).one_or_none()
+            if row is None:
+                return "NOT_FOUND"
+            pair, cv, jd = row
+            if pair.status != "RUNNING" or pair.lease_owner != lease_owner:
+                return "LEASE_LOST"
+            campaign_id = pair.campaign_id
+            candidate_id = cv.candidate_id
+            redacted_text = cv.redacted_text
+            pages = cv.source_locations
+            job = jd.job_snapshot
+            job_id = jd.id
+            document_version = cv.document_version
+            await db.rollback()
+        decision, details, evidence, error = None, None, None, None
+        try:
+            rules = resolve_hard_filters(job)
+            details = evaluate_stage1_hard_filters(
+                candidate_yoe=None, candidate_cv_text=redacted_text,
+                work_authorized=AuthorizationStatus.UNKNOWN, jd_profile=rules,
+                experience_source=AttributeSource.UNKNOWN,
+                authorization_source=AttributeSource.UNKNOWN)
+            details["input_provenance"] = {
+                "reported_experience_source": "unknown",
+                "reported_authorization_source": "unknown",
+                "document_version": document_version}
+            decision = details["status"]
+            if decision in ("PASS", "REVIEW"):
+                kwargs = dict(candidate_id=candidate_id, redacted_cv_text=redacted_text,
+                              jd_category_queries=job["jd_category_queries"], source_pages=pages)
+                if settings.STAGE2_BACKEND == "postgres":
+                    evidence = await asyncio.wait_for(
+                        extract_candidate_category_evidence_postgres(**kwargs, job_id=job_id),
+                        timeout=settings.RUN_TIMEOUT_SECONDS)
+                else:
+                    evidence = await asyncio.wait_for(asyncio.to_thread(
+                        extract_candidate_category_evidence, **kwargs),
+                        timeout=settings.RUN_TIMEOUT_SECONDS)
+                score = evidence.get("composite_score")
+                if (evidence.get("candidate_id") != candidate_id or evidence.get("status") != "SUCCESS"
+                        or isinstance(score, bool) or not isinstance(score, (int, float))
+                        or not math.isfinite(score)):
+                    error = "EVIDENCE_EXTRACTION_FAILED"
+        except Exception:
+            error = "PAIR_PROCESSING_FAILED"
+        async with AsyncSessionLocal() as db:
+            async with db.begin():
+                pair = (await db.execute(select(CampaignPairModel).where(
+                    CampaignPairModel.id == pair_id).with_for_update())).scalar_one()
+                if pair.status != "RUNNING" or pair.lease_owner != lease_owner:
+                    return "LEASE_LOST"
+                pair.stage1_decision = decision
+                pair.stage1_details = details
+                pair.verification_reasons = ([dict(check) for check in details["checks"]
+                    if check["status"] == "REVIEW"] if details else [])
+                pair.verification_required = bool(pair.verification_reasons)
+                if error:
+                    # Retries are scheduled by control, preserving the original queue.
+                    if pair.attempt_count < settings.RUN_MAX_ATTEMPTS:
+                        pair.status = "PENDING"
+                    else:
+                        pair.status = "PROCESSING_FAILED"
+                        pair.failure_code = error
+                elif decision == "FAIL":
+                    pair.status = "FILTER_REJECTED"
+                else:
+                    pair.status = "STAGE2_READY"
+                    pair.stage2_score = evidence["composite_score"]
+                    pair.result_snapshot = {"stage2_evidence": evidence,
+                                            "document_version": document_version}
+                pair.lease_owner = None
+                pair.lease_until = None
+                pair.updated_at = datetime.now(timezone.utc)
+        try:
+            campaign_coordinate_task.delay(campaign_id)
+        except Exception:
+            pass
+        return "RETRY_PENDING" if error and pair.attempt_count < settings.RUN_MAX_ATTEMPTS else pair.status
+    finally:
+        await engine.dispose()
+
+
+@celery_app.task(name="campaign.stage2_pair")
+def campaign_stage2_pair_task(pair_id, lease_owner):
+    return asyncio.run(execute_campaign_pair(pair_id, lease_owner))
+
+
+async def coordinate_campaigns(campaign_id=None):
+    await engine.dispose()
+    try:
+        async with AsyncSessionLocal() as db:
+            if campaign_id is None:
+                last_id = ""
+                while True:
+                    async with db.begin():
+                        ids = (await db.execute(select(CampaignModel.id).where(
+                            CampaignModel.status == "RUNNING", CampaignModel.id > last_id)
+                            .order_by(CampaignModel.id).limit(100))).scalars().all()
+                    if not ids:
+                        break
+                    for item_id in ids:
+                        await coordinate_one_campaign(db, item_id)
+                    last_id = ids[-1]
+            else:
+                await coordinate_one_campaign(db, campaign_id)
+    finally:
+        await engine.dispose()
+
+
+async def coordinate_one_campaign(db, campaign_id):
+    reserved = await dispatch_pairs(db, campaign_id)
+    for pair_id, token in reserved:
+        try:
+            campaign_stage2_pair_task.delay(pair_id, token)
+        except Exception:
+            async with db.begin():
+                pair = (await db.execute(select(CampaignPairModel).where(
+                    CampaignPairModel.id == pair_id).with_for_update())).scalar_one()
+                if pair.status == "RUNNING" and pair.lease_owner == token:
+                    pair.status = "PENDING"
+                    pair.lease_owner = None
+                    pair.lease_until = None
+                    pair.attempt_count -= 1
+            logger.warning("retrieval enqueue failed", extra={
+                "event": "campaign_enqueue_failed", "campaign_id": campaign_id})
+    await finalize_ready_jds(db, campaign_id)
+
+
+@celery_app.task(name="campaign.coordinate")
+def campaign_coordinate_task(campaign_id=None):
+    return asyncio.run(coordinate_campaigns(campaign_id))
