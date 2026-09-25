@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, or_
 from sqlalchemy.exc import OperationalError
+from redis.asyncio import Redis
 import httpx
 
 from app.config import settings
@@ -23,7 +24,10 @@ from app.core.security import decrypt_payload
 from app.core.security import decrypt_bytes
 from app.models.database import CampaignCVModel, CampaignJDModel, CampaignModel, CampaignPairModel
 from app.campaigns.persistence import finish_stage0
-from app.campaigns.coordinator import dispatch_pairs, finalize_ready_jds
+from app.campaigns.coordinator import dispatch_pairs, finalize_ready_jds, dispatch_stage3, finalize_campaign
+from app.campaigns.provider_limit import admit, release, retry_delay
+from app.stage3_evaluation.llm_client import ProviderRateLimited, evaluate_single_candidate_async
+from app.stage3_evaluation.scoring import failed_evaluation
 from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
 from app.stage1_rules.contracts import AttributeSource, AuthorizationStatus, resolve_hard_filters
 from app.stage2_retrieval.evidence_extractor import (
@@ -406,6 +410,133 @@ async def coordinate_one_campaign(db, campaign_id):
             logger.warning("retrieval enqueue failed", extra={
                 "event": "campaign_enqueue_failed", "campaign_id": campaign_id})
     await finalize_ready_jds(db, campaign_id)
+    claims = await dispatch_stage3(db, campaign_id)
+    for pair_id, token in claims:
+        try:
+            campaign_stage3_pair_task.delay(pair_id, token)
+        except Exception:
+            async with db.begin():
+                pair = (await db.execute(select(CampaignPairModel).where(
+                    CampaignPairModel.id == pair_id).with_for_update())).scalar_one()
+                if pair.status == "STAGE3_RUNNING" and pair.lease_owner == token:
+                    pair.status = "SHORTLISTED"
+                    pair.lease_owner = None
+                    pair.lease_until = None
+            logger.warning("evaluation enqueue failed", extra={
+                "event": "campaign_enqueue_failed", "campaign_id": campaign_id})
+    await finalize_campaign(db, campaign_id)
+
+
+async def execute_campaign_stage3(pair_id, lease_owner):
+    """Evaluate one persisted shortlist place, fenced against duplicate writes."""
+    await engine.dispose()
+    redis = Redis.from_url(settings.REDIS_URL)
+    admission_token = None
+    try:
+        async with AsyncSessionLocal() as db:
+            row = (await db.execute(select(CampaignPairModel, CampaignCVModel,
+                CampaignJDModel).join(CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id)
+                .join(CampaignJDModel, CampaignJDModel.id == CampaignPairModel.jd_id).where(
+                CampaignPairModel.id == pair_id))).one_or_none()
+            if row is None:
+                return "NOT_FOUND"
+            pair, cv, jd = row
+            if pair.status != "STAGE3_RUNNING" or pair.lease_owner != lease_owner:
+                return "LEASE_LOST"
+            campaign_id, candidate_id = pair.campaign_id, cv.candidate_id
+            evidence = (pair.result_snapshot or {}).get("stage2_evidence")
+            job = jd.job_snapshot
+            policy = jd.policy_snapshot
+            await db.rollback()
+        admission_token, wait = await admit(redis)
+        if admission_token is None:
+            async with AsyncSessionLocal() as db:
+                async with db.begin():
+                    pair = (await db.execute(select(CampaignPairModel).where(
+                        CampaignPairModel.id == pair_id).with_for_update())).scalar_one()
+                    if pair.status == "STAGE3_RUNNING" and pair.lease_owner == lease_owner:
+                        pair.status = "SHORTLISTED"
+                        pair.lease_owner = None
+                        pair.lease_until = datetime.now(timezone.utc) + timedelta(seconds=wait)
+            try:
+                campaign_coordinate_task.apply_async(args=[campaign_id], countdown=wait)
+            except Exception:
+                pass  # Beat will recover the delayed claim.
+            return "ADMISSION_DELAYED"
+        async with AsyncSessionLocal() as db:
+            async with db.begin():
+                pair = (await db.execute(select(CampaignPairModel).where(
+                    CampaignPairModel.id == pair_id).with_for_update())).scalar_one()
+                if pair.status != "STAGE3_RUNNING" or pair.lease_owner != lease_owner:
+                    return "LEASE_LOST"
+                pair.stage3_attempt_count += 1
+                attempt = pair.stage3_attempt_count
+        try:
+            if not evidence or evidence.get("candidate_id") != candidate_id:
+                result = failed_evaluation(candidate_id, "INVALID_EVIDENCE", "Stored retrieval evidence is unavailable.")
+            else:
+                result = await evaluate_single_candidate_async(
+                    evidence, job, max_retries=0, raise_rate_limits=True,
+                    max_provider_attempts=1)
+        except ProviderRateLimited as exc:
+            delay = retry_delay(attempt, exc.retry_after)
+            async with AsyncSessionLocal() as db:
+                async with db.begin():
+                    pair = (await db.execute(select(CampaignPairModel).where(
+                        CampaignPairModel.id == pair_id).with_for_update())).scalar_one()
+                    if pair.status != "STAGE3_RUNNING" or pair.lease_owner != lease_owner:
+                        return "LEASE_LOST"
+                    pair.lease_owner = None
+                    if attempt >= settings.CAMPAIGN_STAGE3_MAX_ATTEMPTS:
+                        pair.status = "EVALUATION_FAILED"
+                        pair.stage3_status = "EVALUATION_FAILED"
+                        pair.failure_code = "PROVIDER_RATE_LIMIT_EXHAUSTED"
+                        pair.lease_until = None
+                    else:
+                        pair.status = "SHORTLISTED"
+                        pair.failure_code = "PROVIDER_RATE_LIMITED"
+                        pair.lease_until = datetime.now(timezone.utc) + timedelta(seconds=delay)
+            if attempt < settings.CAMPAIGN_STAGE3_MAX_ATTEMPTS:
+                try:
+                    campaign_coordinate_task.apply_async(args=[campaign_id], countdown=delay)
+                except Exception:
+                    pass  # Beat will recover the delayed claim.
+            return "RATE_LIMITED"
+        async with AsyncSessionLocal() as db:
+            async with db.begin():
+                pair = (await db.execute(select(CampaignPairModel).where(
+                    CampaignPairModel.id == pair_id).with_for_update())).scalar_one()
+                if pair.status != "STAGE3_RUNNING" or pair.lease_owner != lease_owner:
+                    return "LEASE_LOST"
+                pair.status = result.evaluation_status.value
+                pair.stage3_status = result.evaluation_status.value
+                pair.composite_score = result.composite_score
+                pair.tier = result.tier.value if result.tier else None
+                pair.failure_code = result.error_code
+                pair.result_snapshot = {**(pair.result_snapshot or {}),
+                    "stage3_evaluation": result.model_dump(mode="json"),
+                    "stage3_policy": {"prompt_version": policy.get("prompt_version"),
+                                      "scoring_policy_version": result.scoring_policy_version,
+                                      "provider": settings.LLM_PROVIDER.lower()}}
+                pair.lease_owner = None
+                pair.lease_until = None
+                pair.updated_at = datetime.now(timezone.utc)
+        try:
+            campaign_coordinate_task.delay(campaign_id)
+        except Exception:
+            pass
+        return result.evaluation_status.value
+    finally:
+        if admission_token:
+            await release(redis, admission_token)
+        await redis.aclose()
+        await llm_client.aclose()
+        await engine.dispose()
+
+
+@celery_app.task(name="campaign.stage3_pair")
+def campaign_stage3_pair_task(pair_id, lease_owner):
+    return asyncio.run(execute_campaign_stage3(pair_id, lease_owner))
 
 
 @celery_app.task(name="campaign.coordinate")

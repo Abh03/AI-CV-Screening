@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     DEFAULT_STAGE2_CUTOFF: int = 30
     STAGE2_BACKEND: Literal["memory", "postgres"] = "memory"
     LLM_CONCURRENCY_LIMIT: int = 5
+    CAMPAIGN_STAGE3_GLOBAL_INFLIGHT: int = Field(default=2, ge=1, le=100)
+    PROVIDER_REQUESTS_PER_MINUTE: int = Field(default=60, ge=1)
+    PROVIDER_TOKENS_PER_MINUTE: int = Field(default=120000, ge=1)
+    PROVIDER_TOKENS_PER_REQUEST: int = Field(default=6000, ge=1)
+    CAMPAIGN_STAGE3_MAX_ATTEMPTS: int = Field(default=5, ge=1)
+    CAMPAIGN_STAGE3_RETRY_BASE_SECONDS: int = Field(default=15, ge=1)
+    CAMPAIGN_STAGE3_RETRY_MAX_SECONDS: int = Field(default=900, ge=1)
     
     # LLM API Keys & Provider Config
     LLM_PROVIDER: str = "mock"
@@ -89,6 +96,8 @@ class Settings(BaseSettings):
     def validate_worker_timeouts(self):
         if self.CELERY_VISIBILITY_TIMEOUT_SECONDS <= self.RUN_TIMEOUT_SECONDS + 35:
             raise ValueError("CELERY_VISIBILITY_TIMEOUT_SECONDS must exceed the run timeout and lease")
+        if self.PROVIDER_TOKENS_PER_REQUEST > self.PROVIDER_TOKENS_PER_MINUTE:
+            raise ValueError("PROVIDER_TOKENS_PER_REQUEST must not exceed the minute budget")
         return self
 
     model_config = SettingsConfigDict(

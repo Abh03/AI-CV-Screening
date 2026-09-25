@@ -2,6 +2,8 @@ import json
 import logging
 import asyncio
 import httpx
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from pydantic import ValidationError
 from google import genai
@@ -11,6 +13,30 @@ from app.config import settings
 from app.stage3_evaluation.schemas import LLMEvaluationOutput, FinalCandidateEvaluation
 
 logger = logging.getLogger("cv_screening")
+
+
+class ProviderRateLimited(Exception):
+    def __init__(self, retry_after: float | None = None):
+        super().__init__("Provider rate limited")
+        self.retry_after = retry_after
+
+
+def retry_after_seconds(value: str | None) -> float | None:
+    if not value:
+        return None
+    if hasattr(value, "total_seconds"):
+        value = value.total_seconds()
+    try:
+        seconds = float(value)
+        if 0 <= seconds <= 86400:
+            return seconds
+    except (TypeError, ValueError):
+        pass
+    try:
+        return max(0.0, min(86400.0,
+            (parsedate_to_datetime(value) - datetime.now(timezone.utc)).total_seconds()))
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 class LLMClientWrapper:
@@ -78,20 +104,21 @@ class LLMClientWrapper:
             },
         }
 
-    async def generate_evaluation(self, *, system_prompt: str, user_prompt: str, candidate_id: str) -> Dict[str, Any]:
+    async def generate_evaluation(self, *, system_prompt: str, user_prompt: str,
+                                  candidate_id: str, max_provider_attempts: int = 3) -> Dict[str, Any]:
         self._initialize()
         if self.provider == "gemini":
-            return await self._call_gemini(system_prompt, user_prompt, candidate_id)
+            return await self._call_gemini(system_prompt, user_prompt, candidate_id, max_provider_attempts)
         elif self.provider == "groq":
-            return await self._call_groq(system_prompt, user_prompt, candidate_id)
+            return await self._call_groq(system_prompt, user_prompt, candidate_id, max_provider_attempts)
         elif self.provider == "openrouter":
-            return await self._call_openrouter(system_prompt, user_prompt, candidate_id)
+            return await self._call_openrouter(system_prompt, user_prompt, candidate_id, max_provider_attempts)
         else:
             return self._call_mock(candidate_id)
 
-    async def _call_gemini(self, system_prompt: str, user_prompt: str, candidate_id: str) -> Dict[str, Any]:
-        max_retries = 3
-        for attempt in range(max_retries):
+    async def _call_gemini(self, system_prompt: str, user_prompt: str, candidate_id: str,
+                           max_provider_attempts: int = 3) -> Dict[str, Any]:
+        for attempt in range(max_provider_attempts):
             try:
                 config = types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -112,7 +139,13 @@ class LLMClientWrapper:
 
             except Exception as e:
                 status_code = getattr(e, "code", None) or getattr(e, "status_code", None)
-                if (status_code in (429, 500, 502, 503, 504) or isinstance(e, (TimeoutError, asyncio.TimeoutError))) and attempt < max_retries - 1:
+                if str(status_code) == "429":
+                    headers = (getattr(e, "headers", None) or
+                               getattr(getattr(e, "response", None), "headers", None) or {})
+                    hint = (headers.get("retry-after") or headers.get("Retry-After") or
+                            getattr(e, "retry_after", None) or getattr(e, "retry_delay", None))
+                    raise ProviderRateLimited(retry_after_seconds(hint)) from e
+                if (status_code in (500, 502, 503, 504) or isinstance(e, (TimeoutError, asyncio.TimeoutError))) and attempt < max_provider_attempts - 1:
                     wait_time = min(8, 2 ** attempt)
                     logger.warning(f"Gemini API rate limit/overload for {candidate_id}. Retrying in {wait_time}s...")
                     await asyncio.sleep(wait_time)
@@ -120,7 +153,8 @@ class LLMClientWrapper:
                     logger.error(f"Gemini API call failed ({type(e).__name__})")
                     raise e
 
-    async def _call_groq(self, system_prompt: str, user_prompt: str, candidate_id: str) -> Dict[str, Any]:
+    async def _call_groq(self, system_prompt: str, user_prompt: str, candidate_id: str,
+                         max_provider_attempts: int = 3) -> Dict[str, Any]:
         """Call Groq API with strict JSON schema enforcement."""
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
@@ -135,9 +169,11 @@ class LLMClientWrapper:
             "response_format": self._get_structured_response_format(),
         }
 
-        return await self._execute_openai_compatible_http(url, headers, payload, "Groq", candidate_id)
+        return await self._execute_openai_compatible_http(url, headers, payload, "Groq", candidate_id,
+                                                          max_provider_attempts)
 
-    async def _call_openrouter(self, system_prompt: str, user_prompt: str, candidate_id: str) -> Dict[str, Any]:
+    async def _call_openrouter(self, system_prompt: str, user_prompt: str, candidate_id: str,
+                               max_provider_attempts: int = 3) -> Dict[str, Any]:
         """Call OpenRouter API with strict JSON schema enforcement."""
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
@@ -157,18 +193,21 @@ class LLMClientWrapper:
             },
         }
 
-        return await self._execute_openai_compatible_http(url, headers, payload, "OpenRouter", candidate_id)
+        return await self._execute_openai_compatible_http(url, headers, payload, "OpenRouter", candidate_id,
+                                                          max_provider_attempts)
 
     async def _execute_openai_compatible_http(
-        self, url: str, headers: Dict[str, str], payload: Dict[str, Any], provider_name: str, candidate_id: str
+        self, url: str, headers: Dict[str, str], payload: Dict[str, Any], provider_name: str,
+        candidate_id: str, max_provider_attempts: int = 3
     ) -> Dict[str, Any]:
-        max_retries = 3
         if self.http_client is None or self.http_client.is_closed:
             self.http_client = httpx.AsyncClient(timeout=settings.PROVIDER_TIMEOUT_SECONDS)
         client = self.http_client
-        for attempt in range(max_retries):
+        for attempt in range(max_provider_attempts):
             try:
                 response = await client.post(url, headers=headers, json=payload)
+                if response.status_code == 429:
+                    raise ProviderRateLimited(retry_after_seconds(response.headers.get("retry-after")))
                 if response.status_code >= 400:
                     logger.error("%s HTTP %s", provider_name, response.status_code)
                     response.raise_for_status()
@@ -176,10 +215,12 @@ class LLMClientWrapper:
                 content = data["choices"][0]["message"]["content"]
                 return json.loads(self._clean_json_text(content))
             except Exception as exc:
+                if isinstance(exc, ProviderRateLimited):
+                    raise
                 retryable = ((isinstance(exc, httpx.HTTPStatusError) and
                               exc.response.status_code in (429, 500, 502, 503, 504)) or
                              isinstance(exc, (httpx.TimeoutException, httpx.TransportError)))
-                if retryable and attempt < max_retries - 1:
+                if retryable and attempt < max_provider_attempts - 1:
                     wait_time = min(8, 2 ** attempt)
                     logger.warning("%s transient failure for %s; retrying in %ss", provider_name,
                                    candidate_id, wait_time)
@@ -251,6 +292,8 @@ async def evaluate_single_candidate_async(
     jd_profile: Dict[str, Any],
     llm_provider: Optional[Any] = None,
     max_retries: int = 2,
+    raise_rate_limits: bool = False,
+    max_provider_attempts: int = 3,
 ) -> FinalCandidateEvaluation:
     # Local import avoids the evaluator/client circular dependency.
     from app.stage3_evaluation.evaluator import compute_deterministic_tier
@@ -259,6 +302,8 @@ async def evaluate_single_candidate_async(
 
     if max_retries < 0:
         raise ValueError("max_retries must be nonnegative")
+    if max_provider_attempts < 1:
+        raise ValueError("max_provider_attempts must be positive")
     candidate_id = candidate_payload.get("candidate_id", "UNKNOWN")
     from app.stage3_evaluation.evidence import build_evidence_registry
     from app.stage0_extraction.injection_guard import scan_for_injection_anomalies
@@ -278,8 +323,11 @@ async def evaluate_single_candidate_async(
         try:
             if llm_provider is None:
                 # Honor configured real providers instead of silently using Mock.
+                provider_options = ({"max_provider_attempts": max_provider_attempts}
+                                    if max_provider_attempts != 3 else {})
                 data = await llm_client.generate_evaluation(
-                    system_prompt=SYSTEM_PROMPT_STAGE3, user_prompt=user_prompt, candidate_id=candidate_id
+                    system_prompt=SYSTEM_PROMPT_STAGE3, user_prompt=user_prompt,
+                    candidate_id=candidate_id, **provider_options
                 )
             else:
                 raw_response = await llm_provider.generate_structured_evaluation(
@@ -294,6 +342,10 @@ async def evaluate_single_candidate_async(
         except (json.JSONDecodeError, ValidationError) as exc:
             if attempt == max_retries:
                 return failed_evaluation(candidate_id, "INVALID_LLM_OUTPUT", "Evaluation failed: invalid provider response.", is_mock=is_mock)
+        except ProviderRateLimited as exc:
+            if raise_rate_limits:
+                raise
+            return failed_evaluation(candidate_id, "PROVIDER_RATE_LIMITED", "Provider rate limit; retry is required.", is_mock=is_mock)
         except Exception as exc:
             # Provider details may contain sensitive data; return a stable operational error.
             return failed_evaluation(candidate_id, "PROVIDER_ERROR", "Evaluation failed: provider request could not complete.", is_mock=is_mock)

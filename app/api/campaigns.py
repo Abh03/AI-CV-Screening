@@ -2,8 +2,11 @@
 import hashlib
 import json
 import tempfile
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import Query
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import CampaignCreateSchema
@@ -11,7 +14,8 @@ from app.campaigns.intake import ArchiveLimitError, import_zip
 from app.campaigns.persistence import campaign_counts, reserve_campaign
 from app.config import settings
 from app.core.auth import Principal, can_access, current_principal
-from app.models.database import CampaignModel, get_db
+from app.models.database import CampaignModel, CampaignJDModel, CampaignPairModel, CampaignCVModel, get_db
+from app.run_audit import policy_snapshot
 from app.workers.tasks import campaign_stage0_task, campaign_coordinate_task
 
 router = APIRouter(prefix="/api/v1/campaigns", tags=["Campaigns"])
@@ -34,7 +38,8 @@ async def create_campaign(payload: CampaignCreateSchema, db: AsyncSession = Depe
     try:
         created, campaign = await reserve_campaign(
             db, owner_id=principal.id, request_hash=digest, job_snapshots=jobs,
-            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 30} for _ in jobs],
+            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 30,
+                               **policy_snapshot(30)} for _ in jobs],
             idempotency_key=payload.idempotency_key)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -101,6 +106,104 @@ async def campaign_status(campaign_id: str, db: AsyncSession = Depends(get_db),
     from app.models.database import CampaignCVModel
     stage0 = dict((await db.execute(select(CampaignCVModel.stage0_status, func.count()).where(
         CampaignCVModel.campaign_id == campaign.id).group_by(CampaignCVModel.stage0_status))).all())
+    retry_waiting = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
+        CampaignPairModel.campaign_id == campaign.id,
+        CampaignPairModel.status == "SHORTLISTED",
+        CampaignPairModel.lease_until > datetime.now(timezone.utc)))).scalar_one()
     return {"campaign_id": campaign.id, "status": campaign.status,
-            "counts": counts, "stage0": stage0,
+            "counts": counts, "stage0": stage0, "stage3_retry_waiting": retry_waiting,
             "intake_report": campaign.intake_report}
+
+
+async def _jd(db, campaign_id, jd_key):
+    jd = (await db.execute(select(CampaignJDModel).where(
+        CampaignJDModel.campaign_id == campaign_id,
+        CampaignJDModel.jd_key == jd_key))).scalar_one_or_none()
+    if jd is None:
+        raise HTTPException(status_code=404, detail="JD not found")
+    return jd
+
+
+def _pair_view(pair, candidate_id, *, rank=None):
+    evaluation = (pair.result_snapshot or {}).get("stage3_evaluation") or {}
+    registry = (evaluation.get("evidence_verification") or {}).get("registry") or {}
+    citations = evaluation.get("verified_citations") or []
+    return {
+        "candidate_id": candidate_id, "status": pair.status,
+        "rank": rank, "stage2_rank": pair.stage2_rank, "stage2_score": pair.stage2_score,
+        "score": pair.composite_score, "tier": pair.tier,
+        "category_scores": evaluation.get("category_scores", {}),
+        "provisional": pair.status == "SUCCESS" and pair.verification_required,
+        "verification_required": pair.verification_required,
+        "verification_reasons": pair.verification_reasons,
+        "stage1_decision": pair.stage1_decision,
+        "stage1_checks": (pair.stage1_details or {}).get("checks", []),
+        "review_reasons": evaluation.get("review_reasons", []),
+        "failure_code": pair.failure_code,
+        "error_message": evaluation.get("error_message"),
+        "is_mock": evaluation.get("is_mock", False),
+        "evidence": [{"citation": citation,
+                      "document_id": registry[citation].get("document_id"),
+                      "chunk_id": registry[citation].get("chunk_id"),
+                      "source_location": registry[citation].get("source_location")}
+                     for citation in citations if citation in registry],
+    }
+
+
+@router.get("/{campaign_id}/jds")
+async def campaign_jds(campaign_id: str, db: AsyncSession = Depends(get_db),
+                       principal: Principal = Depends(current_principal)):
+    campaign = await _owned(db, campaign_id, principal)
+    jds = (await db.execute(select(CampaignJDModel).where(
+        CampaignJDModel.campaign_id == campaign.id).order_by(CampaignJDModel.jd_key))).scalars().all()
+    result = []
+    for jd in jds:
+        counts = dict((await db.execute(select(CampaignPairModel.status, func.count()).where(
+            CampaignPairModel.jd_id == jd.id).group_by(CampaignPairModel.status))).all())
+        retry_waiting = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
+            CampaignPairModel.jd_id == jd.id,
+            CampaignPairModel.status == "SHORTLISTED",
+            CampaignPairModel.lease_until > datetime.now(timezone.utc)))).scalar_one()
+        result.append({"jd_key": jd.jd_key, "title": jd.job_snapshot.get("title"),
+                       "status": jd.status, "stage3_cap": jd.stage3_cap,
+                       "counts": counts, "stage3_retry_waiting": retry_waiting})
+    return {"campaign_id": campaign.id, "jds": result}
+
+
+@router.get("/{campaign_id}/jds/{jd_key}/rankings")
+async def jd_rankings(campaign_id: str, jd_key: str, limit: int = Query(30, ge=1, le=100),
+                      offset: int = Query(0, ge=0), db: AsyncSession = Depends(get_db),
+                      principal: Principal = Depends(current_principal)):
+    campaign = await _owned(db, campaign_id, principal)
+    jd = await _jd(db, campaign.id, jd_key)
+    total = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
+        CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == "SUCCESS"))).scalar_one()
+    rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id).join(
+        CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id).where(
+        CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == "SUCCESS")
+        .order_by(CampaignPairModel.composite_score.desc(), CampaignCVModel.candidate_id)
+        .limit(limit).offset(offset))).all()
+    return {"campaign_id": campaign.id, "jd_key": jd_key, "jd_status": jd.status,
+            "total": total, "limit": limit, "offset": offset,
+            "results": [_pair_view(pair, candidate, rank=offset + index + 1)
+                        for index, (pair, candidate) in enumerate(rows)]}
+
+
+@router.get("/{campaign_id}/jds/{jd_key}/outcomes")
+async def jd_outcomes(campaign_id: str, jd_key: str,
+                      status: str = Query(..., pattern="^(REVIEW_REQUIRED|EVALUATION_FAILED|FILTER_REJECTED|PROCESSING_FAILED|CUTOFF_EXCLUDED|EXTRACTION_FAILED)$"),
+                      limit: int = Query(30, ge=1, le=100), offset: int = Query(0, ge=0),
+                      db: AsyncSession = Depends(get_db),
+                      principal: Principal = Depends(current_principal)):
+    campaign = await _owned(db, campaign_id, principal)
+    jd = await _jd(db, campaign.id, jd_key)
+    total = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
+        CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == status))).scalar_one()
+    rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id).join(
+        CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id).where(
+        CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == status)
+        .order_by(CampaignPairModel.stage2_rank, CampaignCVModel.candidate_id)
+        .limit(limit).offset(offset))).all()
+    return {"campaign_id": campaign.id, "jd_key": jd_key, "status": status,
+            "total": total, "limit": limit, "offset": offset,
+            "results": [_pair_view(pair, candidate) for pair, candidate in rows]}

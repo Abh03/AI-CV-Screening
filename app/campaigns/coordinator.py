@@ -11,6 +11,8 @@ from app.models.database import CampaignCVModel, CampaignJDModel, CampaignModel,
 DONE_BEFORE_CUTOFF = ("EXTRACTION_FAILED", "FILTER_REJECTED", "PROCESSING_FAILED",
                       "CUTOFF_EXCLUDED", "SHORTLISTED", "SUCCESS", "REVIEW_REQUIRED",
                       "EVALUATION_FAILED")
+TERMINAL = ("EXTRACTION_FAILED", "FILTER_REJECTED", "PROCESSING_FAILED",
+            "CUTOFF_EXCLUDED", "SUCCESS", "REVIEW_REQUIRED", "EVALUATION_FAILED")
 
 
 async def dispatch_pairs(db, campaign_id: str):
@@ -119,3 +121,81 @@ async def finalize_ready_jds(db, campaign_id: str):
             jd.updated_at = datetime.now(timezone.utc)
             finalized.append(jd_id)
     return finalized
+
+
+async def dispatch_stage3(db, campaign_id: str):
+    """Claim shortlisted pairs with fenced leases; delayed retries stay parked."""
+    async with db.begin():
+        if db.bind.dialect.name == "postgresql":
+            await db.execute(select(func.pg_advisory_xact_lock(410274, 5)))
+        campaign = (await db.execute(select(CampaignModel).where(
+            CampaignModel.id == campaign_id).with_for_update())).scalar_one_or_none()
+        if campaign is None or campaign.status != "RUNNING":
+            return []
+        now = datetime.now(timezone.utc)
+        expired = (await db.execute(select(CampaignPairModel).where(
+            CampaignPairModel.campaign_id == campaign_id,
+            CampaignPairModel.status == "STAGE3_RUNNING",
+            CampaignPairModel.lease_until < now).with_for_update())).scalars().all()
+        for pair in expired:
+            pair.lease_owner = None
+            pair.lease_until = None
+            if pair.stage3_attempt_count >= settings.CAMPAIGN_STAGE3_MAX_ATTEMPTS:
+                pair.status = "EVALUATION_FAILED"
+                pair.stage3_status = "EVALUATION_FAILED"
+                pair.failure_code = "STAGE3_ATTEMPTS_EXHAUSTED"
+            else:
+                pair.status = "SHORTLISTED"
+        running = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
+            CampaignPairModel.status == "STAGE3_RUNNING"))).scalar_one()
+        slots = min(settings.CAMPAIGN_STAGE3_GLOBAL_INFLIGHT - running,
+                    settings.CAMPAIGN_DISPATCH_BATCH)
+        if slots <= 0:
+            return []
+        rows = (await db.execute(select(CampaignPairModel).join(
+            CampaignJDModel, CampaignJDModel.id == CampaignPairModel.jd_id).where(
+            CampaignPairModel.campaign_id == campaign_id,
+            CampaignPairModel.status == "SHORTLISTED",
+            or_(CampaignPairModel.lease_until.is_(None), CampaignPairModel.lease_until <= now),
+            CampaignJDModel.status == "SHORTLISTED")
+            .order_by(CampaignJDModel.jd_key, CampaignPairModel.stage2_rank)
+            .limit(slots).with_for_update(skip_locked=True))).scalars().all()
+        claims = []
+        for pair in rows:
+            token = str(uuid4())
+            pair.status = "STAGE3_RUNNING"
+            pair.lease_owner = token
+            pair.lease_until = now + timedelta(seconds=settings.RUN_TIMEOUT_SECONDS + 35)
+            pair.updated_at = now
+            claims.append((pair.id, token))
+        return claims
+
+
+async def finalize_campaign(db, campaign_id: str):
+    """Complete each JD and the campaign only after every pair is terminal."""
+    async with db.begin():
+        campaign = (await db.execute(select(CampaignModel).where(
+            CampaignModel.id == campaign_id).with_for_update())).scalar_one_or_none()
+        if campaign is None or campaign.status != "RUNNING":
+            return False
+        jds = (await db.execute(select(CampaignJDModel).where(
+            CampaignJDModel.campaign_id == campaign_id).with_for_update())).scalars().all()
+        for jd in jds:
+            if jd.status != "SHORTLISTED":
+                continue
+            unresolved = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
+                CampaignPairModel.jd_id == jd.id,
+                CampaignPairModel.status.not_in(TERMINAL)))).scalar_one()
+            if not unresolved:
+                jd.status = "COMPLETED"
+                jd.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+        remaining = (await db.execute(select(func.count()).select_from(CampaignJDModel).where(
+            CampaignJDModel.campaign_id == campaign_id,
+            CampaignJDModel.status != "COMPLETED"))).scalar_one()
+        if remaining == 0 and jds:
+            campaign.status = "COMPLETED"
+            campaign.completed_at = datetime.now(timezone.utc)
+            campaign.updated_at = campaign.completed_at
+            return True
+        return False

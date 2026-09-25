@@ -9,7 +9,8 @@ from app.config import settings
 from app.stage3_evaluation.evidence import build_evidence_registry
 from app.stage3_evaluation.evaluator import compute_deterministic_tier
 from app.stage3_evaluation.llm_client import (
-    LLMClientWrapper, MockLLMProvider, evaluate_single_candidate_async, llm_client,
+    LLMClientWrapper, MockLLMProvider, ProviderRateLimited,
+    evaluate_single_candidate_async, llm_client,
 )
 from app.stage3_evaluation.prompts import SYSTEM_PROMPT_STAGE3, build_stage3_user_prompt
 from app.stage3_evaluation.schemas import EvaluationStatus, LLMEvaluationOutput
@@ -227,13 +228,14 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
 
 
 @pytest.mark.asyncio
-async def test_http_provider_retries_rate_limit_but_not_bad_request(monkeypatch):
+async def test_http_provider_surfaces_rate_limit_without_sleep_and_does_not_retry_bad_request(monkeypatch):
     await llm_client.aclose()
     attempts = []
 
     def handler(request):
         attempts.append(request)
         return httpx.Response(429 if len(attempts) == 1 else 200,
+                              headers={"Retry-After": "37"},
                               json={"choices": [{"message": {"content": "{}"}}]})
 
     llm_client.http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -242,10 +244,11 @@ async def test_http_provider_retries_rate_limit_but_not_bad_request(monkeypatch)
         pass
 
     monkeypatch.setattr("app.stage3_evaluation.llm_client.asyncio.sleep", no_sleep)
-    result = await llm_client._execute_openai_compatible_http(
-        "https://example.test", {}, {}, "test", "candidate")
-    assert result == {}
-    assert len(attempts) == 2
+    with pytest.raises(ProviderRateLimited) as rate_limit:
+        await llm_client._execute_openai_compatible_http(
+            "https://example.test", {}, {}, "test", "candidate")
+    assert rate_limit.value.retry_after == 37
+    assert len(attempts) == 1
     await llm_client.aclose()
 
     bad_requests = []
@@ -260,3 +263,21 @@ async def test_http_provider_retries_rate_limit_but_not_bad_request(monkeypatch)
             "https://example.test", {}, {}, "test", "candidate")
     assert len(bad_requests) == 1
     await llm_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_single_provider_attempt_does_not_hide_extra_requests():
+    await llm_client.aclose()
+    attempts = []
+    def handler(request):
+        attempts.append(request)
+        return httpx.Response(503 if len(attempts) == 1 else 200,
+                              json={"choices": [{"message": {"content": "{}"}}]})
+    llm_client.http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    try:
+        with pytest.raises(httpx.HTTPStatusError):
+            await llm_client._execute_openai_compatible_http(
+                "https://example.test", {}, {}, "test", "candidate", max_provider_attempts=1)
+        assert len(attempts) == 1
+    finally:
+        await llm_client.aclose()

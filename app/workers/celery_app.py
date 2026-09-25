@@ -23,6 +23,7 @@ celery_app.conf.update(
         "campaign.stage0": {"queue": "ocr"},
         "campaign.recover_stage0": {"queue": "control"},
         "campaign.stage2_pair": {"queue": "retrieval"},
+        "campaign.stage3_pair": {"queue": "evaluation"},
         "campaign.coordinate": {"queue": "control"},
     },
     worker_hijack_root_logger=False,

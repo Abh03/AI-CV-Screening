@@ -38,8 +38,8 @@ async def reserve_campaign(db, *, owner_id: str, request_hash: str, job_snapshot
     if not job_snapshots or len(job_snapshots) != len(policy_snapshots):
         raise ValueError("A campaign needs at least one JD and one policy per JD")
     keys = [item["job_id"] for item in job_snapshots]
-    if len(set(keys)) != len(keys) or stage3_cap < 1:
-        raise ValueError("JD IDs must be distinct and Stage 3 cap must be positive")
+    if len(set(keys)) != len(keys) or not 1 <= stage3_cap <= 30:
+        raise ValueError("JD IDs must be distinct and Stage 3 cap must be between 1 and 30")
     if idempotency_key:
         existing = (await db.execute(select(CampaignModel).where(
             CampaignModel.owner_id == owner_id,

@@ -9,6 +9,13 @@ x-runtime: &runtime
   GEMINI_API_KEY: ${GEMINI_API_KEY:-}
   GROQ_API_KEY: ${GROQ_API_KEY:-}
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  CAMPAIGN_STAGE3_GLOBAL_INFLIGHT: ${CAMPAIGN_STAGE3_GLOBAL_INFLIGHT:-2}
+  PROVIDER_REQUESTS_PER_MINUTE: ${PROVIDER_REQUESTS_PER_MINUTE:-60}
+  PROVIDER_TOKENS_PER_MINUTE: ${PROVIDER_TOKENS_PER_MINUTE:-120000}
+  PROVIDER_TOKENS_PER_REQUEST: ${PROVIDER_TOKENS_PER_REQUEST:-6000}
+  CAMPAIGN_STAGE3_MAX_ATTEMPTS: ${CAMPAIGN_STAGE3_MAX_ATTEMPTS:-5}
+  CAMPAIGN_STAGE3_RETRY_BASE_SECONDS: ${CAMPAIGN_STAGE3_RETRY_BASE_SECONDS:-15}
+  CAMPAIGN_STAGE3_RETRY_MAX_SECONDS: ${CAMPAIGN_STAGE3_RETRY_MAX_SECONDS:-900}
 
 services:
   postgres:
@@ -109,6 +116,18 @@ services:
       context: ..
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "retrieval"]
+    environment: *runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  evaluation-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "evaluation"]
     environment: *runtime
     depends_on:
       migrate:
