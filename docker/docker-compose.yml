@@ -21,6 +21,8 @@ x-runtime: &runtime
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}

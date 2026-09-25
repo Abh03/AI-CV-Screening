@@ -27,5 +27,8 @@
         "test": { "builder": "@angular/build:unit-test", "options": { "tsConfig": "tsconfig.spec.json", "buildTarget": "recruiter:build", "runnerConfig": "vitest.config.mts" } }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }
