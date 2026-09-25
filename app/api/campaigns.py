@@ -79,6 +79,8 @@ async def upload_archive(campaign_id: str, request: Request, db: AsyncSession = 
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
     if report["accepted_count"] == 0:
+        campaign.intake_report = report
+        await db.commit()
         return {"campaign_id": campaign_id, "status": "INTAKE", **report}
     campaign.status = "RUNNING"
     campaign.archive_hash = archive_hash
@@ -95,6 +97,27 @@ async def upload_archive(campaign_id: str, request: Request, db: AsyncSession = 
     except Exception:
         pass
     return {"campaign_id": campaign_id, "status": "RUNNING", **report}
+
+
+@router.get("")
+async def list_campaigns(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+                         db: AsyncSession = Depends(get_db),
+                         principal: Principal = Depends(current_principal)):
+    # Even administrators see their own list; opening another owner's ID remains an explicit action.
+    scope = CampaignModel.owner_id == principal.id
+    total = (await db.execute(select(func.count()).select_from(CampaignModel).where(scope))).scalar_one()
+    jd_count = (select(func.count()).select_from(CampaignJDModel)
+                .where(CampaignJDModel.campaign_id == CampaignModel.id).correlate(CampaignModel).scalar_subquery())
+    cv_count = (select(func.count()).select_from(CampaignCVModel)
+                .where(CampaignCVModel.campaign_id == CampaignModel.id).correlate(CampaignModel).scalar_subquery())
+    rows = (await db.execute(select(CampaignModel, jd_count, cv_count).where(scope)
+            .order_by(CampaignModel.created_at.desc(), CampaignModel.id.desc())
+            .limit(limit).offset(offset))).all()
+    return {"total": total, "limit": limit, "offset": offset, "campaigns": [
+        {"campaign_id": campaign.id, "status": campaign.status,
+         "created_at": campaign.created_at, "updated_at": campaign.updated_at,
+         "completed_at": campaign.completed_at, "jd_count": jds, "accepted_count": cvs}
+        for campaign, jds, cvs in rows]}
 
 
 @router.get("/{campaign_id}")
@@ -124,12 +147,21 @@ async def _jd(db, campaign_id, jd_key):
     return jd
 
 
-def _pair_view(pair, candidate_id, *, rank=None):
+@router.get("/{campaign_id}/jds/{jd_key}/definition")
+async def jd_definition(campaign_id: str, jd_key: str, db: AsyncSession = Depends(get_db),
+                        principal: Principal = Depends(current_principal)):
+    campaign = await _owned(db, campaign_id, principal)
+    jd = await _jd(db, campaign.id, jd_key)
+    return {"campaign_id": campaign.id, "jd_key": jd.jd_key,
+            "job_profile": jd.job_snapshot, "stage3_cap": jd.stage3_cap}
+
+
+def _pair_view(pair, candidate_id, source_filename=None, *, rank=None):
     evaluation = (pair.result_snapshot or {}).get("stage3_evaluation") or {}
     registry = (evaluation.get("evidence_verification") or {}).get("registry") or {}
     citations = evaluation.get("verified_citations") or []
     return {
-        "candidate_id": candidate_id, "status": pair.status,
+        "candidate_id": candidate_id, "source_filename": source_filename, "status": pair.status,
         "rank": rank, "stage2_rank": pair.stage2_rank, "stage2_score": pair.stage2_score,
         "score": pair.composite_score, "tier": pair.tier,
         "category_scores": evaluation.get("category_scores", {}),
@@ -178,15 +210,15 @@ async def jd_rankings(campaign_id: str, jd_key: str, limit: int = Query(30, ge=1
     jd = await _jd(db, campaign.id, jd_key)
     total = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
         CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == "SUCCESS"))).scalar_one()
-    rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id).join(
+    rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id, CampaignCVModel.source_filename).join(
         CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id).where(
         CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == "SUCCESS")
         .order_by(CampaignPairModel.composite_score.desc(), CampaignCVModel.candidate_id)
         .limit(limit).offset(offset))).all()
     return {"campaign_id": campaign.id, "jd_key": jd_key, "jd_status": jd.status,
             "total": total, "limit": limit, "offset": offset,
-            "results": [_pair_view(pair, candidate, rank=offset + index + 1)
-                        for index, (pair, candidate) in enumerate(rows)]}
+            "results": [_pair_view(pair, candidate, filename, rank=offset + index + 1)
+                        for index, (pair, candidate, filename) in enumerate(rows)]}
 
 
 @router.get("/{campaign_id}/jds/{jd_key}/outcomes")
@@ -199,11 +231,11 @@ async def jd_outcomes(campaign_id: str, jd_key: str,
     jd = await _jd(db, campaign.id, jd_key)
     total = (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
         CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == status))).scalar_one()
-    rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id).join(
+    rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id, CampaignCVModel.source_filename).join(
         CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id).where(
         CampaignPairModel.jd_id == jd.id, CampaignPairModel.status == status)
         .order_by(CampaignPairModel.stage2_rank, CampaignCVModel.candidate_id)
         .limit(limit).offset(offset))).all()
     return {"campaign_id": campaign.id, "jd_key": jd_key, "status": status,
             "total": total, "limit": limit, "offset": offset,
-            "results": [_pair_view(pair, candidate) for pair, candidate in rows]}
+            "results": [_pair_view(pair, candidate, filename) for pair, candidate, filename in rows]}

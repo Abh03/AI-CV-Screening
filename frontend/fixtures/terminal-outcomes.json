@@ -1,0 +1,14 @@
+{
+  "campaign_id": "campaign-synthetic-1",
+  "jd_key": "jd-synthetic-1",
+  "examples": [
+    { "candidate_id": "candidate-a", "status": "SUCCESS", "rank": 1, "score": 83.5, "tier": "STRONG", "provisional": true, "verification_reasons": ["Experience needs verification"], "is_mock": false },
+    { "candidate_id": "candidate-b", "status": "REVIEW_REQUIRED", "rank": null, "score": 61.0, "tier": null, "provisional": false, "review_reasons": ["Evidence needs review"] },
+    { "candidate_id": "candidate-c", "status": "EVALUATION_FAILED", "rank": null, "score": null, "tier": null, "failure_code": "PROVIDER_ERROR" },
+    { "candidate_id": "candidate-d", "status": "FILTER_REJECTED", "rank": null, "score": null, "tier": null, "stage1_decision": "REJECT" },
+    { "candidate_id": "candidate-e", "status": "PROCESSING_FAILED", "rank": null, "score": null, "tier": null, "failure_code": "PROCESSING_ERROR" },
+    { "candidate_id": "candidate-f", "status": "CUTOFF_EXCLUDED", "rank": null, "score": null, "tier": null, "stage2_rank": 31 },
+    { "candidate_id": "candidate-g", "status": "EXTRACTION_FAILED", "rank": null, "score": null, "tier": null, "failure_code": "PDF_UNREADABLE" }
+  ],
+  "note": "Synthetic screen-state samples. Endpoint responses contain one status per page and include the full PairResult shape."
+}

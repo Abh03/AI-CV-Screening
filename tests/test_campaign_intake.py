@@ -131,7 +131,36 @@ async def test_campaign_owner_scope_and_queue_routes(monkeypatch):
         assert (await client.post(url + "/archive", content=b"zip",
                                   headers={"Authorization": "Bearer " + "b" * 32,
                                            "Content-Type": "application/zip"})).status_code == 404
+        alice = {"Authorization": "Bearer " + "a" * 32}
+        bob = {"Authorization": "Bearer " + "b" * 32}
+        listing = (await client.get("/api/v1/campaigns?limit=1&offset=0", headers=alice)).json()
+        assert listing["total"] == 1
+        assert listing["campaigns"][0]["campaign_id"] == created.json()["campaign_id"]
+        assert listing["campaigns"][0]["jd_count"] == 2
+        assert listing["campaigns"][0]["accepted_count"] == 0
+        assert (await client.get("/api/v1/campaigns", headers=alice)).headers["Cache-Control"] == "no-store"
+        assert (await client.get("/api/v1/campaigns", headers=bob)).json()["campaigns"] == []
+        definition = (await client.get(url + "/jds/ops/definition", headers=alice)).json()
+        assert definition["job_profile"]["jd_category_queries"]["EXPERIENCE"] == "operations"
+        assert definition["stage3_cap"] == 30
+        assert (await client.get(url + "/jds/ops/definition", headers=bob)).status_code == 404
+        assert (await client.get(url + "/jds/missing/definition", headers=alice)).status_code == 404
     routes = celery_app.conf.task_routes
     assert routes["campaign.stage0"]["queue"] == "ocr"
     assert routes["campaign.recover_stage0"]["queue"] == "control"
     assert routes["screening.execute_run"]["queue"] == "screening"
+
+
+@pytest.mark.asyncio
+async def test_zero_accepted_report_survives_reload(monkeypatch):
+    monkeypatch.setattr(settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = (await client.post("/api/v1/campaigns", json={"job_profiles": JOBS})).json()
+        campaign_id = created["campaign_id"]
+        response = await client.post(created["upload_url"], content=archive([("note.txt", b"synthetic")]),
+                                     headers={"Content-Type": "application/zip"})
+        assert response.status_code == 202
+        assert response.json()["accepted_count"] == 0
+        status = (await client.get(f"/api/v1/campaigns/{campaign_id}")).json()
+        assert status["status"] == "INTAKE"
+        assert status["intake_report"]["rejected"][0]["code"] == "NOT_PDF"

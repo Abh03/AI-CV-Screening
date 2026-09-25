@@ -1,0 +1,28 @@
+{
+  "campaign_id": "campaign-synthetic-1",
+  "status": "RUNNING",
+  "counts": {
+    "jds": 2,
+    "cvs": 3,
+    "pairs": {
+      "SUCCESS": 1,
+      "REVIEW_REQUIRED": 1,
+      "FILTER_REJECTED": 1,
+      "SHORTLISTED": 1,
+      "PENDING": 2
+    },
+    "terminal_pairs": 3
+  },
+  "stage0": { "EXTRACTED": 2, "PENDING": 1 },
+  "stage3_retry_waiting": 1,
+  "intake_report": {
+    "accepted_count": 3,
+    "rejected_count": 1,
+    "accepted": [
+      { "name": "candidate-a.pdf", "candidate_id": "candidate-synthetic-a" },
+      { "name": "candidate-b.pdf", "candidate_id": "candidate-synthetic-b" },
+      { "name": "candidate-c.pdf", "candidate_id": "candidate-synthetic-c" }
+    ],
+    "rejected": [{ "name": "notes.txt", "code": "NOT_PDF" }]
+  }
+}

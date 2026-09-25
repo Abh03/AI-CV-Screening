@@ -244,10 +244,12 @@ async def test_stage3_result_apis_order_privacy_and_owner_scope(monkeypatch):
             assert ranked.json()["total"] == 2
             assert ranked.json()["results"][0]["rank"] == 2
             assert ranked.json()["results"][0]["provisional"] is True
+            assert ranked.json()["results"][0]["source_filename"]
             assert "secret CV text" not in ranked.text
             review = await client.get(f"/api/v1/campaigns/{campaign_id}/jds/ops/outcomes?status=REVIEW_REQUIRED")
             assert review.json()["results"][0]["score"] == 70
             assert review.json()["results"][0]["tier"] is None
+            assert review.json()["results"][0]["source_filename"]
             assert "secret CV text" not in review.text
             assert (await client.get(f"/api/v1/campaigns/{campaign_id}/jds/missing/rankings")).status_code == 404
             monkeypatch.setattr(settings, "ENVIRONMENT", "production")

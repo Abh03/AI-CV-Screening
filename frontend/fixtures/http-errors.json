@@ -1,0 +1,8 @@
+{
+  "401": { "detail": "Authentication required" },
+  "409": { "detail": "Campaign intake is closed" },
+  "413": { "detail": "ZIP archive exceeds limit" },
+  "415": { "detail": "Expected application/zip" },
+  "422": { "detail": [{ "loc": ["body", "job_profiles", 0, "title"], "msg": "Invalid value", "type": "value_error" }] },
+  "503": { "detail": "Service unavailable" }
+}

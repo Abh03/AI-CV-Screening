@@ -13,8 +13,9 @@ def main(path: Path) -> int:
     values = dotenv_values(path)
     checks = {}
     required = ("POSTGRES_PASSWORD", "DATABASE_URL", "ENCRYPTION_SECRET_KEY",
-                "API_TOKENS_JSON", "LLM_PROVIDER")
+                "JWT_SECRET_KEY", "LLM_PROVIDER")
     checks["required values"] = all(values.get(name) for name in required)
+    checks["JWT signing key"] = len((values.get("JWT_SECRET_KEY") or "").encode("utf-8")) >= 32
     try:
         Fernet(values["ENCRYPTION_SECRET_KEY"].encode("ascii"))
         checks["Fernet key"] = True
@@ -26,9 +27,10 @@ def main(path: Path) -> int:
     except (ValueError, TypeError, KeyError):
         checks["database password match"] = False
     try:
-        checks["API credentials"] = bool(configured_principals(values.get("API_TOKENS_JSON")))
+        checks["optional service credentials"] = (not values.get("API_TOKENS_JSON") or
+                                                  bool(configured_principals(values.get("API_TOKENS_JSON"))))
     except ValueError:
-        checks["API credentials"] = False
+        checks["optional service credentials"] = False
     provider = (values.get("LLM_PROVIDER") or "").lower()
     provider_field = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY",
                       "openrouter": "OPENROUTER_API_KEY"}.get(provider)

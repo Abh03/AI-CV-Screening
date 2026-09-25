@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # Security & Encryption
     ENCRYPTION_SECRET_KEY: Optional[str] = None
     API_TOKENS_JSON: Optional[str] = None
+    JWT_SECRET_KEY: Optional[str] = None
+    JWT_ACCESS_MINUTES: int = Field(default=30, ge=5, le=120)
     PDF_MAX_BYTES: int = Field(default=10 * 1024 * 1024, ge=1)
     CAMPAIGN_ARCHIVE_MAX_BYTES: int = Field(default=256 * 1024 * 1024, ge=1)
     CAMPAIGN_UNCOMPRESSED_MAX_BYTES: int = Field(default=1024 * 1024 * 1024, ge=1)
@@ -85,8 +87,10 @@ class Settings(BaseSettings):
                "openrouter": self.OPENROUTER_API_KEY}[self.LLM_PROVIDER.lower()]
         if not key:
             raise ValueError("Production LLM provider key is missing")
-        if not configured_principals(self.API_TOKENS_JSON):
-            raise ValueError("Production API_TOKENS_JSON is missing or empty")
+        if not self.JWT_SECRET_KEY or len(self.JWT_SECRET_KEY.encode("utf-8")) < 32:
+            raise ValueError("Production JWT_SECRET_KEY must contain at least 32 bytes")
+        if self.API_TOKENS_JSON:
+            configured_principals(self.API_TOKENS_JSON)
         validate_encryption_configuration()
 
     GROQ_MODEL: str = "openai/gpt-oss-120b"

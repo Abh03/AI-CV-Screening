@@ -276,15 +276,30 @@ attempt budget remains. Apply Alembic migrations before starting workers.
 
 ## Phase 9 deployment and operations
 
-This release supports one organization. Each production API call needs a bearer
-token. `API_TOKENS_JSON` is a JSON list of `{id,role,token}` with roles `admin`
-or `recruiter`; tokens must contain at least 32 characters. Recruiters can read
-their own runs and update only their own jobs. Admins can access all jobs and
-runs, including records created before ownership was introduced. The system has
-no tenant isolation, so do not share an installation between organizations.
+This release supports one organization. Recruiters sign in with an assigned
+email or username and password. Passwords use Argon2id hashes. The API issues
+30-minute JWT access tokens in Secure, HttpOnly, SameSite cookies and requires
+a CSRF header for cookie-authenticated writes. `JWT_SECRET_KEY` must be a
+secret-manager value of at least 32 bytes. Provision accounts after migrations:
+
+```sh
+python -m scripts.recruiter_users create recruiter@example.com recruiter
+python -m scripts.recruiter_users reset-password recruiter@example.com
+python -m scripts.recruiter_users disable recruiter@example.com
+```
+
+The command prompts for passwords; never pass them on the command line. Five
+failed logins lock an account for 15 minutes. Disabling or resetting an account
+invalidates its existing JWTs. Recruiters can access only their own campaigns
+and runs. Admins can access all jobs and runs, including records created before
+ownership was introduced. `API_TOKENS_JSON` remains optional for legacy service
+callers and must never be sent to the browser. The system has no tenant isolation,
+so do not share an installation between organizations. The authorization layer
+uses a stable internal user ID and role; a future OIDC adapter should map the
+provider's issuer and subject to that ID before returning the same `Principal`.
 
 Supply the variables listed in `.env.example` from a deployment secret manager:
-a Fernet key, PostgreSQL password and URL, API credentials, and a live LLM
+a Fernet key, PostgreSQL password and URL, JWT signing key, and a live LLM
 provider key. URL encode special characters in the database password. No local
 secret file is needed. Run from the repository root:
 
@@ -370,7 +385,7 @@ control worker dispatches bounded Stage 3 work and beat recovers expired leases.
 The image's `/ready` health probe applies to `web`; worker services disable it.
 Check `docker compose -f docker/docker-compose.yml ps` for all five workers and
 beat before uploading a campaign. `GET /ready` checks PostgreSQL at Alembic
-revision `ab925e1c3d70`, Redis, and production model directories.
+revision `c3e9a72d1860`, Redis, and production model directories.
 
 For one JD, `jobs.json` can contain the single object below in an array. Add
 more objects with distinct `job_id` values for multiple openings; the same

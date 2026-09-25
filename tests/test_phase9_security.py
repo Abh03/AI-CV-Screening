@@ -87,6 +87,7 @@ def test_production_rejects_mock_and_missing_configuration(monkeypatch):
     monkeypatch.setattr(settings, "STAGE2_BACKEND", "postgres")
     monkeypatch.setattr(settings, "LLM_PROVIDER", "mock")
     monkeypatch.setattr(settings, "API_TOKENS_JSON", json.dumps([{"id": "admin", "role": "admin", "token": ADMIN}]))
+    monkeypatch.setattr(settings, "JWT_SECRET_KEY", "test-only-signing-key-with-at-least-32-bytes")
     with pytest.raises(ValueError, match="live LLM"):
         settings.validate_production()
     monkeypatch.setattr(settings, "LLM_PROVIDER", "gemini")
