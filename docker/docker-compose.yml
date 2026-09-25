@@ -93,6 +93,8 @@ services:
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "ocr"]
     environment: *runtime
+    healthcheck:
+      disable: true
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -105,6 +107,8 @@ services:
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "control"]
     environment: *runtime
+    healthcheck:
+      disable: true
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -117,6 +121,8 @@ services:
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "retrieval"]
     environment: *runtime
+    healthcheck:
+      disable: true
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -129,6 +135,8 @@ services:
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "evaluation"]
     environment: *runtime
+    healthcheck:
+      disable: true
     depends_on:
       migrate:
         condition: service_completed_successfully

@@ -92,8 +92,8 @@ unsupported evidence cannot trigger an automatic favorable or adverse decision.
 Batch order is SUCCESS, REVIEW_REQUIRED, EVALUATION_FAILED, then descending score,
 then case-sensitive candidate ID ascending. The API leaderboard contains only
 SUCCESS results (including valid Tier 3 decisions). `review_candidates` contains
-Stage 1 and Stage 3 reviews, identified by `stage`; `failed_candidates` contains
-Stage 3 errors. Stage 1 reviews stop before retrieval and are not rejections.
+Stage 3 evidence reviews; `failed_candidates` contains Stage 3 errors. Stage 1
+reviews continue to retrieval and may produce a scored, provisional SUCCESS.
 
 `stage3_evaluated` counts attempted evaluations and equals `stage3_succeeded` +
 `stage3_review_required` + `stage3_failed`. Stage 1 processed candidates split into
@@ -219,10 +219,10 @@ higher level with a different degree's field. The legacy parsed `degree` value i
 informational only and cannot bypass CV evidence checks.
 
 All results contain rule checks with stable codes, messages, policy version, and
-attribute sources. Stage 1 reviews stop before Stage 2 and remain separate from
-rejections. Stage 3 outcomes also carry `stage1_filter_details`, persisted in the
-existing outcome JSON. Run audit records now persist Stage 1 reviews and
-rejections alongside every later candidate outcome.
+attribute sources. Stage 1 reviews continue through Stage 2; a valid Stage 3
+score is provisional until those rule facts are verified. Stage 3 outcomes also
+carry `stage1_filter_details`, persisted in the existing outcome JSON. Run audit
+records retain Stage 1 checks alongside every later candidate outcome.
 # PDF ingestion and privacy policy
 
 Production screening accepts PDFs through `POST /api/v1/screening/run-pdf`
@@ -332,23 +332,22 @@ automatic deletion is not enabled because historical outcomes may need manual
 retention. Decide and implement the final erasure policy before claiming a
 retention service-level commitment.
 
-Acceptance assumptions are 50 CVs per batch, five concurrent API users,
-submission p95 under 2 seconds, and a rough 120 second processing target on
-4 CPU cores and 8 GB RAM. The production PDF API currently creates one run per
-CV, so a 50 CV workload means 50 submissions. Run a representative trial with
-`python scripts/load_test.py --pdf sample.pdf --job job.json --count 50
---concurrency 5` and `API_TOKEN` in the environment. The script reports p95
-submission time, total elapsed time, unfinished runs, and request errors; it
-does not store PDF contents in its report. Run the labeled quality report with
+The older 50 single-PDF submission assumption and 120 second estimate are not
+campaign capacity guarantees. `scripts/load_test.py` still measures the legacy
+one-PDF-per-run route. Use the campaign capacity trial below for the bulk API;
+no turnaround target is claimed without a representative run on the intended
+infrastructure. Run the labeled quality report with
 `python scripts/acceptance_benchmark.py labels.json --cutoff 30`. The JSON
 input contains query `relevant_ids` and `ranked_ids`, plus candidate `label`
 and `decision`; see the script header. It reports recall@k, shortlist precision
 and recall, review rate, and error rate. No quality gate is set until labeled
 data and thresholds are agreed. CI separates unit, PostgreSQL/Redis and worker,
 image/model, and manually dispatched live-provider checks.
-## Campaign intake (Phase 3)
+## Campaign operations
 
-Create a campaign with one or more structured JDs, then upload a ZIP of PDFs. Stage 0 and per-JD Stage 1/2 screening run asynchronously. The Stage 3 evaluation and final ranking APIs are added in Phase 5.
+Create a campaign with one or more structured JDs, then upload a ZIP of PDFs.
+Stage 0 runs once per accepted PDF. Every accepted candidate is checked against
+every JD. Each JD shortlists at most 30 Stage 2 survivors for Stage 3.
 
 ```bash
 curl -H "Authorization: Bearer $API_TOKEN" -H "Content-Type: application/json" \
@@ -365,3 +364,78 @@ The upload response reports accepted candidates and rejected ZIP members in arch
 For files already on the server, put the structured JD array in `jobs.json` and run `python scripts/import_campaign_folder.py /path/to/pdfs jobs.json --owner OWNER_ID --idempotency-key campaign-key` from the project root. The owner must match an API credential ID for subsequent owner-scoped reads.
 
 Compose runs legacy screening on `screening`, PDF extraction on `ocr`, retrieval on `retrieval`, and coordination/recovery on `control`, each with a single worker process. Status reads query PostgreSQL directly. Keep the control worker and beat service running to recover interrupted Stage 0 and pair tasks. Pair dispatch is bounded by `CAMPAIGN_RETRIEVAL_INFLIGHT` per campaign and `CAMPAIGN_RETRIEVAL_GLOBAL_INFLIGHT` overall. A JD becomes `SHORTLISTED` only when all its accepted CVs have a terminal extraction/Stage 1/Stage 2 outcome; Stage 2 scores are ranked globally by descending score and candidate ID, and at most the JD cap (30 by default) is selected. Retrieval failures are retried up to `RUN_MAX_ATTEMPTS`; failed attempts remain visible as `PROCESSING_FAILED`.
+
+Run the `evaluation-worker` too. It consumes only the `evaluation` queue; the
+control worker dispatches bounded Stage 3 work and beat recovers expired leases.
+The image's `/ready` health probe applies to `web`; worker services disable it.
+Check `docker compose -f docker/docker-compose.yml ps` for all five workers and
+beat before uploading a campaign. `GET /ready` checks PostgreSQL at Alembic
+revision `ab925e1c3d70`, Redis, and production model directories.
+
+For one JD, `jobs.json` can contain the single object below in an array. Add
+more objects with distinct `job_id` values for multiple openings; the same
+candidate can appear in several final rankings.
+
+```json
+[{"job_id":"ops","title":"Operations Manager","jd_category_queries":{"EXPERIENCE":"operations management"},"hard_filter_rules":{"require_work_authorization":false}}]
+```
+
+Use the API commands above with this array as `job_profiles`. The folder import
+accepts the same JSON array:
+
+```sh
+python scripts/import_campaign_folder.py /srv/cvs jobs.json --owner recruiter-id --idempotency-key autumn-2026
+```
+
+Poll `GET /api/v1/campaigns/{campaign_id}` for `counts` and Stage 0 progress,
+then `GET /api/v1/campaigns/{campaign_id}/jds` for each JD's status. Read
+`GET /api/v1/campaigns/{campaign_id}/jds/{jd_key}/rankings?limit=30&offset=0`
+for score-ordered `SUCCESS` results. `provisional=true` and
+`verification_reasons` mean a human must verify Stage 1 facts before using the
+decision. Stage 3 evidence reviews and failures are separate:
+
+```text
+GET /api/v1/campaigns/{campaign_id}/jds/{jd_key}/outcomes?status=REVIEW_REQUIRED&limit=30&offset=0
+GET /api/v1/campaigns/{campaign_id}/jds/{jd_key}/outcomes?status=EVALUATION_FAILED&limit=30&offset=0
+```
+
+The same endpoint supports `FILTER_REJECTED`, `PROCESSING_FAILED`,
+`CUTOFF_EXCLUDED`, and `EXTRACTION_FAILED`. A selected place is a Stage 3
+attempt; review and failed evaluations are not silently replaced. These reads
+are owner scoped and omit raw CV text. Uploads have a 256 MiB compressed, 1 GiB
+uncompressed, 2,000 member, 100 JD, and 10 MiB per PDF default limit. The
+future UI should show upload rejections and every JD's review and failure queues.
+
+### Capacity trial and recovery
+
+Prepare a ZIP of representative PDFs and a JSON JD array. Run the trial against
+a migrated PostgreSQL/Redis deployment with all workers subscribed:
+
+```sh
+API_TOKEN=... python scripts/campaign_load_test.py --archive cvs.zip --jobs jobs.json --report campaign-load-report.json --timeout 7200
+```
+
+Use `--env-file docker/.env` if `API_TOKEN` is not exported. Set `DATABASE_URL`
+and `REDIS_URL` in the command environment for attempt,
+database load, and queue depth samples; add `--docker-stats` for container CPU
+and memory samples. Run a small campaign first, then the target 1,000 PDF/four
+JD trial. The report checks 4,000 pair rows and at most 120 selected pairs for
+that target. It records intake, Stage 0 completion, Stage 1/2 shortlist barrier,
+overall duration, status counts, queue peaks, and per-JD ranking counts. Samples
+bound stage timings by the polling interval. Current records do not expose exact
+per-task queue wait or provider request/token/billing usage; the attempt counter
+counts worker attempts, which can differ from provider requests. Do not treat synthetic or mock-provider timing
+as a live provider capacity claim.
+
+Use `python -m alembic upgrade head` before starting workers, then `/ready` and
+`python -m scripts.production_smoke` for the existing PDF route. Check `ps`,
+worker logs, queue depths, and `stage3_retry_waiting` if a campaign stops moving.
+Control and beat must remain running; expired Stage 0, retrieval, and Stage 3
+leases are recovered automatically. A provider rate limit parks the selected
+pair for delayed retry; `PROVIDER_RATE_LIMIT_EXHAUSTED` needs operator review.
+Preserve PostgreSQL backups and the encryption key separately before upgrades.
+Raw PDF bytes are purged after Stage 0; redacted text and outcomes remain
+sensitive. The proposed 30 day pending/90 day outcome retention targets are not
+automatically enforced, so schedule manual erasure under your organization policy.
+Provider request and token budgets, Stage 3 inflight work, retrieval inflight
+work, and worker count must be set for the measured host and provider quota.
