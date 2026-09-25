@@ -166,6 +166,8 @@ class CampaignModel(Base):
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="INTAKE")
     idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    archive_hash: Mapped[str | None] = mapped_column(String(64))
+    intake_report: Mapped[dict | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

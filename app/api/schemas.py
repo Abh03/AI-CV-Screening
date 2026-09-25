@@ -16,6 +16,23 @@ class JobProfileInputSchema(StrictModel):
     jd_category_queries: Dict[str, str]
     hard_filter_rules: HardFilterRules = Field(default_factory=HardFilterRules)
 
+class CampaignCreateSchema(StrictModel):
+    job_profiles: List[JobProfileInputSchema] = Field(min_length=1)
+    idempotency_key: Optional[str] = Field(default=None, min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def unique_jds(self):
+        ids = [job.job_id for job in self.job_profiles]
+        if len(ids) != len(set(ids)):
+            raise ValueError("JD IDs must be distinct")
+        for job in self.job_profiles:
+            if not job.job_id.strip() or len(job.job_id) > 64 or not job.title.strip() or len(job.title) > 255:
+                raise ValueError("JD ID and title must be nonempty and within length limits")
+            if not job.jd_category_queries or any(not key.strip() or not value.strip()
+                                                   for key, value in job.jd_category_queries.items()):
+                raise ValueError("At least one nonempty category query is required")
+        return self
+
 
 class ScreeningRequestSchema(StrictModel):
     job_profile: JobProfileInputSchema

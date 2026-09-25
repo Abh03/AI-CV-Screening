@@ -29,3 +29,8 @@ def decrypt_payload(token: bytes) -> str:
     cipher = _get_fernet_cipher()
     decrypted_bytes = cipher.decrypt(token)
     return decrypted_bytes.decode("utf-8")
+
+
+def decrypt_bytes(token: bytes) -> bytes:
+    """Decrypt a binary PDF staged for Stage 0."""
+    return _get_fernet_cipher().decrypt(token)

@@ -19,6 +19,9 @@ from app.orchestrator import run_end_to_end_screening_pipeline
 from app.workers.celery_app import celery_app
 from app.stage3_evaluation.llm_client import llm_client
 from app.core.security import decrypt_payload
+from app.core.security import decrypt_bytes
+from app.models.database import CampaignCVModel, CampaignModel, CampaignPairModel
+from app.campaigns.persistence import finish_stage0
 from app.stage0_extraction.pipeline import ingest_pdf
 logger = logging.getLogger("cv_screening")
 
@@ -176,3 +179,88 @@ async def find_recoverable_runs():
 def recover_runs():
     for run_id in asyncio.run(find_recoverable_runs()):
         screening_task.delay(run_id)
+
+
+async def execute_campaign_stage0(cv_id):
+    """Claim one document version; completed redaction is reused on redelivery."""
+    await engine.dispose()
+    try:
+        async with AsyncSessionLocal() as db:
+            async with db.begin():
+                cv = (await db.execute(select(CampaignCVModel).where(
+                    CampaignCVModel.id == cv_id).with_for_update())).scalar_one_or_none()
+                if cv is None or cv.stage0_status in {"SUCCEEDED", "FAILED"}:
+                    return "ALREADY_COMPLETE"
+                now = datetime.now(timezone.utc)
+                if cv.stage0_status == "RUNNING" and _utc(cv.updated_at) > now - timedelta(seconds=settings.RUN_TIMEOUT_SECONDS + 35):
+                    return "ALREADY_RUNNING"
+                if cv.encrypted_pdf is None:
+                    cv.stage0_status = "FAILED"
+                    cv.extraction_error_code = "PDF_MISSING"
+                    pairs = (await db.execute(select(CampaignPairModel).where(
+                        CampaignPairModel.cv_id == cv.id).with_for_update())).scalars().all()
+                    for pair in pairs:
+                        if pair.status == "PENDING":
+                            pair.status = "EXTRACTION_FAILED"
+                            pair.failure_code = "PDF_MISSING"
+                    return "PDF_MISSING"
+                cv.stage0_status = "RUNNING"
+                cv.updated_at = now
+                campaign_id = cv.campaign_id
+                candidate_id = cv.candidate_id
+                encrypted = cv.encrypted_pdf
+            owner_id = (await db.get(CampaignModel, campaign_id)).owner_id
+        try:
+            pdf = decrypt_bytes(encrypted)
+            del encrypted
+            view = await asyncio.wait_for(asyncio.to_thread(ingest_pdf, pdf),
+                                          timeout=settings.RUN_TIMEOUT_SECONDS)
+            del pdf
+            async with AsyncSessionLocal() as db:
+                if view.status == "success":
+                    await finish_stage0(db, campaign_id=campaign_id, owner_id=owner_id,
+                                        candidate_id=candidate_id, redacted_text=view.redacted_text,
+                                        source_locations=view.pages)
+                else:
+                    await finish_stage0(db, campaign_id=campaign_id, owner_id=owner_id,
+                                        candidate_id=candidate_id, error_code=view.code)
+            return view.code
+        except (asyncio.TimeoutError, TimeoutError, OperationalError):
+            raise
+        except Exception:
+            async with AsyncSessionLocal() as db:
+                await finish_stage0(db, campaign_id=campaign_id, owner_id=owner_id,
+                                    candidate_id=candidate_id, error_code="PDF_PROCESSING_FAILED")
+            return "PDF_PROCESSING_FAILED"
+    finally:
+        await engine.dispose()
+
+
+@celery_app.task(name="campaign.stage0", bind=True, max_retries=settings.RUN_MAX_ATTEMPTS - 1)
+def campaign_stage0_task(self, cv_id):
+    try:
+        return asyncio.run(execute_campaign_stage0(cv_id))
+    except (asyncio.TimeoutError, TimeoutError, OperationalError) as exc:
+        if self.request.retries >= self.max_retries:
+            raise
+        raise self.retry(exc=exc, countdown=min(60, 2 ** (self.request.retries + 1)))
+
+
+@celery_app.task(name="campaign.recover_stage0")
+def recover_campaign_stage0():
+    async def find():
+        await engine.dispose()
+        try:
+            async with AsyncSessionLocal() as db:
+                stale = datetime.now(timezone.utc) - timedelta(seconds=settings.RUN_TIMEOUT_SECONDS + 35)
+                rows = (await db.execute(select(CampaignCVModel.id).join(
+                    CampaignModel, CampaignModel.id == CampaignCVModel.campaign_id).where(
+                    CampaignModel.status == "RUNNING",
+                    or_(CampaignCVModel.stage0_status == "PENDING",
+                        (CampaignCVModel.stage0_status == "RUNNING") &
+                        (CampaignCVModel.updated_at < stale))).limit(100))).scalars().all()
+                return rows
+        finally:
+            await engine.dispose()
+    for cv_id in asyncio.run(find()):
+        campaign_stage0_task.delay(cv_id)

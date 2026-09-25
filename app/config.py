@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     ENCRYPTION_SECRET_KEY: Optional[str] = None
     API_TOKENS_JSON: Optional[str] = None
     PDF_MAX_BYTES: int = Field(default=10 * 1024 * 1024, ge=1)
+    CAMPAIGN_ARCHIVE_MAX_BYTES: int = Field(default=256 * 1024 * 1024, ge=1)
+    CAMPAIGN_UNCOMPRESSED_MAX_BYTES: int = Field(default=1024 * 1024 * 1024, ge=1)
+    CAMPAIGN_MAX_MEMBERS: int = Field(default=2000, ge=1)
+    CAMPAIGN_MAX_JDS: int = Field(default=100, ge=1)
     PDF_MAX_PAGES: int = Field(default=20, ge=1)
     PDF_MAX_PAGE_PIXELS: int = Field(default=4_000_000, ge=1)
     PDF_OCR_TIMEOUT_SECONDS: int = Field(default=15, ge=1)

@@ -70,10 +70,34 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "screening"]
     environment: *runtime
     healthcheck:
       disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  ocr-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "ocr"]
+    environment: *runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  control-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "control"]
+    environment: *runtime
     depends_on:
       migrate:
         condition: service_completed_successfully

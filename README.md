@@ -346,3 +346,22 @@ and `decision`; see the script header. It reports recall@k, shortlist precision
 and recall, review rate, and error rate. No quality gate is set until labeled
 data and thresholds are agreed. CI separates unit, PostgreSQL/Redis and worker,
 image/model, and manually dispatched live-provider checks.
+## Campaign intake (Phase 3)
+
+Create a campaign with one or more structured JDs, then upload a ZIP of PDFs. Stage 0 runs asynchronously; candidate/JD screening and rankings are added in later phases.
+
+```bash
+curl -H "Authorization: Bearer $API_TOKEN" -H "Content-Type: application/json" \
+  -d '{"idempotency_key":"autumn-2026","job_profiles":[{"job_id":"ops","title":"Operations Manager","jd_category_queries":{"EXPERIENCE":"operations management"}}]}' \
+  http://localhost:8000/api/v1/campaigns
+curl -H "Authorization: Bearer $API_TOKEN" -H "Content-Type: application/zip" \
+  --data-binary @cvs.zip http://localhost:8000/api/v1/campaigns/CAMPAIGN_ID/archive
+curl -H "Authorization: Bearer $API_TOKEN" \
+  http://localhost:8000/api/v1/campaigns/CAMPAIGN_ID
+```
+
+The upload response reports accepted candidates and rejected ZIP members in archive order. Repeating the same upload returns the stored report. PDF bytes are encrypted while queued and removed after Stage 0. The default limits are 256 MiB compressed, 1 GiB uncompressed, 2,000 members, 100 JDs, and the existing 10 MiB per PDF; configure `CAMPAIGN_*` and `PDF_MAX_BYTES` to change them. The ZIP upload uses a temporary spool that is deleted when the request ends.
+
+For files already on the server, put the structured JD array in `jobs.json` and run `python scripts/import_campaign_folder.py /path/to/pdfs jobs.json --owner OWNER_ID --idempotency-key campaign-key` from the project root. The owner must match an API credential ID for subsequent owner-scoped reads.
+
+Compose runs legacy screening on `screening`, PDF extraction on `ocr`, and recovery on `control`, each with a single worker process. Status reads query PostgreSQL directly. Keep the control worker and beat service running to republish pending or interrupted Stage 0 tasks.
