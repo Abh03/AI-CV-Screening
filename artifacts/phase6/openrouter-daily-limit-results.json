@@ -1,0 +1,26 @@
+{
+  "input": {
+    "model": "openrouter/free",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Reply OK"
+      }
+    ],
+    "max_tokens": 32
+  },
+  "output": {
+    "http_status": 429,
+    "rate_limit_headers": {
+      "x-ratelimit-limit": "50",
+      "x-ratelimit-remaining": "0",
+      "x-ratelimit-reset": "1790467200000"
+    },
+    "error": {
+      "message": "Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day",
+      "code": "429"
+    },
+    "usage": null,
+    "resolved_model": null
+  }
+}

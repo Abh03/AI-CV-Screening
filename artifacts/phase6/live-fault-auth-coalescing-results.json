@@ -1,0 +1,84 @@
+{
+  "provider_calls": 0,
+  "events": [
+    {
+      "step": "unauthorized",
+      "input": "missing",
+      "http_status": 401,
+      "output": {
+        "detail": "Authentication required"
+      }
+    },
+    {
+      "step": "unauthorized",
+      "input": "invalid token",
+      "http_status": 401,
+      "output": {
+        "detail": "Authentication required"
+      }
+    },
+    {
+      "step": "cross_owner",
+      "input": "/api/v1/auth/me",
+      "http_status": 200,
+      "output": {
+        "user": {
+          "id": "capacity-probe-497b4798a43245e4",
+          "email": "capacity-probe-497b4798a43245e4@example.invalid",
+          "username": "capacity-probe-497b4798a43245e4",
+          "role": "recruiter"
+        }
+      }
+    },
+    {
+      "step": "cross_owner",
+      "input": "/api/v1/campaigns/0dcf5e5a-2dcb-4042-9e1f-51288a1687ba",
+      "http_status": 404,
+      "output": {
+        "detail": "Campaign not found"
+      }
+    },
+    {
+      "step": "cross_owner",
+      "input": "/api/v1/jds/approved",
+      "http_status": 200,
+      "output": {
+        "jds": []
+      }
+    },
+    {
+      "step": "injected_429",
+      "input": {
+        "retry_after_seconds": 120
+      },
+      "output": {
+        "first": "RATE_LIMITED",
+        "duplicate": "LEASE_LOST",
+        "status": "SHORTLISTED",
+        "attempts": 1,
+        "remaining_wait_seconds": 119.323
+      }
+    },
+    {
+      "step": "retry_and_duplicate",
+      "output": {
+        "retry": "SUCCESS",
+        "duplicate": "LEASE_LOST",
+        "stored_pairs": 1,
+        "attempts": 2,
+        "injected_calls": 2
+      }
+    },
+    {
+      "step": "coalesced_wakeups",
+      "input": {
+        "waiting_pair_notifications": 120
+      },
+      "output": {
+        "scheduled_timers": 1,
+        "redis_ttl_seconds": 60
+      }
+    }
+  ],
+  "isolated_records_removed": true
+}

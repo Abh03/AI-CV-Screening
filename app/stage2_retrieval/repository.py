@@ -16,7 +16,7 @@ from app.stage2_retrieval.embeddings import (EMBEDDING_MODEL_NAME, EMBEDDING_MOD
 from app.stage2_retrieval.hybrid_search import compute_rrf_score
 
 CHUNKING_VERSION = "structural-v2"
-REDACTION_VERSION = "pii-mask-v1"
+REDACTION_VERSION = "pii-mask-v4"
 
 
 def digest(value):

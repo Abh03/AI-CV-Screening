@@ -1,0 +1,362 @@
+{
+  "input": "C:\\Abhyudit_Files\\Infinite\\CV-Benchmark-Dataset-Generator\\output\\jds\\JD04.pdf",
+  "method": "POST /api/v1/jds/extract",
+  "http_status": 200,
+  "seconds": 3.218,
+  "output": {
+    "draft_id": "0418273ded13448e852bda22f1a2e489",
+    "status": "REVIEW",
+    "pages": [
+      {
+        "page_number": 1,
+        "ocr_used": false,
+        "blocks": [
+          {
+            "block_number": 0,
+            "text": "Data Engineer",
+            "bbox": [
+              42.0,
+              40.66999816894531,
+              169.75601196289062,
+              66.83300018310547
+            ]
+          },
+          {
+            "block_number": 1,
+            "text": "Technical role | Engineering and delivery",
+            "bbox": [
+              42.0,
+              68.4000015258789,
+              186.35997009277344,
+              79.39199829101562
+            ]
+          },
+          {
+            "block_number": 2,
+            "text": "TEAM AND CONTEXT",
+            "bbox": [
+              42.0,
+              115.16000366210938,
+              165.99600219726562,
+              131.6840057373047
+            ]
+          },
+          {
+            "block_number": 3,
+            "text": "Join a cross-functional logistics team supporting business-critical services. The role includes design reviews,\ndelivery and a shared support rotation.",
+            "bbox": [
+              42.0,
+              138.25,
+              521.0398559570312,
+              165.99000549316406
+            ]
+          },
+          {
+            "block_number": 4,
+            "text": "RESPONSIBILITIES",
+            "bbox": [
+              42.0,
+              176.16000366210938,
+              153.36000061035156,
+              192.6840057373047
+            ]
+          },
+          {
+            "block_number": 5,
+            "text": "Build incremental shipment-event ingestion and curated warehouse tables.",
+            "bbox": [
+              42.0,
+              199.25,
+              372.14990234375,
+              212.99000549316406
+            ]
+          },
+          {
+            "block_number": 6,
+            "text": "Implement backfills, source reconciliation and data quality monitoring.",
+            "bbox": [
+              42.0,
+              218.25,
+              349.3399353027344,
+              231.99000549316406
+            ]
+          },
+          {
+            "block_number": 7,
+            "text": "Tune batch workloads and document lineage, retention and access controls.",
+            "bbox": [
+              42.0,
+              237.25,
+              379.3899230957031,
+              250.99000549316406
+            ]
+          },
+          {
+            "block_number": 8,
+            "text": "REQUIRED TECHNICAL SKILLS",
+            "bbox": [
+              42.0,
+              261.1600036621094,
+              224.00401306152344,
+              277.6839904785156
+            ]
+          },
+          {
+            "block_number": 9,
+            "text": "Python",
+            "bbox": [
+              42.0,
+              284.25,
+              73.1300048828125,
+              297.989990234375
+            ]
+          },
+          {
+            "block_number": 10,
+            "text": "SQL",
+            "bbox": [
+              42.0,
+              303.25,
+              62.01000213623047,
+              316.989990234375
+            ]
+          },
+          {
+            "block_number": 11,
+            "text": "Apache Spark or PySpark",
+            "bbox": [
+              42.0,
+              322.2499694824219,
+              157.04998779296875,
+              335.9899597167969
+            ]
+          },
+          {
+            "block_number": 12,
+            "text": "Airflow or ETL",
+            "bbox": [
+              42.0,
+              341.2499694824219,
+              104.79000854492188,
+              354.9899597167969
+            ]
+          },
+          {
+            "block_number": 13,
+            "text": "PREFERRED SKILLS",
+            "bbox": [
+              42.0,
+              365.15997314453125,
+              162.01199340820312,
+              381.6839599609375
+            ]
+          },
+          {
+            "block_number": 14,
+            "text": "Kafka",
+            "bbox": [
+              42.0,
+              388.2499694824219,
+              67.56999969482422,
+              401.9899597167969
+            ]
+          },
+          {
+            "block_number": 15,
+            "text": "AWS",
+            "bbox": [
+              42.0,
+              407.2499694824219,
+              64.77999877929688,
+              420.9899597167969
+            ]
+          },
+          {
+            "block_number": 16,
+            "text": "Azure",
+            "bbox": [
+              42.0,
+              426.2499694824219,
+              68.1199951171875,
+              439.9899597167969
+            ]
+          },
+          {
+            "block_number": 17,
+            "text": "Databricks",
+            "bbox": [
+              42.0,
+              445.2499694824219,
+              89.2300033569336,
+              458.9899597167969
+            ]
+          },
+          {
+            "block_number": 18,
+            "text": "dbt",
+            "bbox": [
+              42.0,
+              464.2499694824219,
+              55.900001525878906,
+              477.9899597167969
+            ]
+          },
+          {
+            "block_number": 19,
+            "text": "EXPERIENCE",
+            "bbox": [
+              42.0,
+              488.15997314453125,
+              119.35200500488281,
+              504.6839599609375
+            ]
+          },
+          {
+            "block_number": 20,
+            "text": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is\nexpected.",
+            "bbox": [
+              42.0,
+              511.25,
+              527.2198486328125,
+              538.989990234375
+            ]
+          },
+          {
+            "block_number": 21,
+            "text": "EDUCATION",
+            "bbox": [
+              42.0,
+              549.1599731445312,
+              113.3280029296875,
+              565.6840209960938
+            ]
+          },
+          {
+            "block_number": 22,
+            "text": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+            "bbox": [
+              42.0,
+              572.25,
+              444.9498596191406,
+              585.989990234375
+            ]
+          },
+          {
+            "block_number": 23,
+            "text": "SELECTION CRITERIA",
+            "bbox": [
+              42.0,
+              596.1599731445312,
+              170.67599487304688,
+              612.6840209960938
+            ]
+          },
+          {
+            "block_number": 24,
+            "text": "Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking\nsignals, not mandatory filters.",
+            "bbox": [
+              42.0,
+              619.25,
+              522.789794921875,
+              646.989990234375
+            ]
+          },
+          {
+            "block_number": 25,
+            "text": "1",
+            "bbox": [
+              548.8275756835938,
+              812.289794921875,
+              553.2755737304688,
+              823.2817993164062
+            ]
+          }
+        ]
+      }
+    ],
+    "profile": {
+      "schema_version": "jd-v1",
+      "title": "Data Engineer",
+      "must_have_skills": [
+        {
+          "canonical": "Python",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Apache Spark",
+          "aliases": [
+            "PySpark"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "Airflow",
+          "aliases": [
+            "ETL"
+          ],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Kafka",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "AWS",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Azure",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Databricks",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "dbt",
+          "aliases": [],
+          "substitutes": []
+        }
+      ],
+      "hard_filter_rules": {
+        "min_years_experience": 3.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "jd_category_queries": {
+        "SKILLS": "Python, SQL, Apache Spark, PySpark, Airflow, ETL, Kafka, AWS, Azure, Databricks, dbt",
+        "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "No explicit requirement",
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter."
+      },
+      "uncertainties": [
+        "Work authorization requirement not specified",
+        "Ambiguity whether \"ETL\" refers to a specific tool or a generic process"
+      ]
+    },
+    "error_code": null,
+    "expires_at": "2026-10-03T09:34:06.941891+00:00",
+    "provenance": {
+      "pdf_hash": "c3d054efb2b175ffc8cad2d67c35a3ac372551c3c0c4fe2f512e581a09c50a75",
+      "schema_version": "jd-v1",
+      "extraction_version": "jd-pdf-v1",
+      "prompt_version": "jd-prompt-v1",
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "processing_started_at": "2026-09-26T09:34:06.942031+00:00",
+      "attempt_token": "1472122db9b94518b739b55d89ce4d80"
+    }
+  }
+}

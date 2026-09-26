@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import time
+from itertools import combinations
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -97,6 +98,8 @@ async def run(args):
     jobs = json.loads(args.jobs.read_text(encoding="utf-8"))
     if not isinstance(jobs, list) or not jobs or any(not isinstance(job, str) or not job for job in jobs):
         raise ValueError("jobs file must contain a nonempty JSON array of approved JD IDs")
+    if args.expected_jds is not None and len(jobs) != args.expected_jds:
+        raise ValueError("JD input count differs from the required target")
     if not args.archive.is_file():
         raise ValueError("archive does not exist")
     token = os.environ.get("API_TOKEN")
@@ -118,37 +121,64 @@ async def run(args):
     async with httpx.AsyncClient(base_url=args.url, headers=headers, timeout=timeout) as client:
         ready = await client.get("/ready")
         ready.raise_for_status()
-        key = args.idempotency_key or f"capacity-{uuid4()}"
-        created = await client.post("/api/v1/campaigns", json={
-            "approved_jd_ids": jobs, "idempotency_key": key})
-        created.raise_for_status()
-        campaign_id = created.json()["campaign_id"]
-        report["campaign_id"] = campaign_id
-        before_upload = time.monotonic()
-        async def archive_chunks():
-            with args.archive.open("rb") as archive:
-                while chunk := archive.read(1024 * 1024):
-                    yield chunk
+        if args.resume:
+            saved = json.loads(args.report.read_text(encoding="utf-8"))
+            report = saved
+            campaign_id = saved["campaign_id"]
+            intake = {"accepted_count": saved["accepted_count"]}
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(saved["started_at"])).total_seconds()
+            started = time.monotonic() - age
+            print(json.dumps({"step": "resume", "campaign_id": campaign_id}), flush=True)
+        else:
+            key = args.idempotency_key or f"capacity-{uuid4()}"
+            created = await client.post("/api/v1/campaigns", json={
+                "approved_jd_ids": jobs, "idempotency_key": key})
+            created.raise_for_status()
+            campaign_id = created.json()["campaign_id"]
+            report["campaign_id"] = campaign_id
+            print(json.dumps({"step": "create", "input": {"approved_jd_ids": jobs, "idempotency_key": key},
+                              "http_status": created.status_code, "output": created.json()}), flush=True)
+            before_upload = time.monotonic()
+            async def archive_chunks():
+                with args.archive.open("rb") as archive:
+                    while chunk := archive.read(1024 * 1024):
+                        yield chunk
 
-        uploaded = await client.post(f"/api/v1/campaigns/{campaign_id}/archive",
-                                     content=archive_chunks(),
-                                     headers={"Content-Type": "application/zip"})
-        uploaded.raise_for_status()
-        intake = uploaded.json()
-        report["intake_seconds"] = round(time.monotonic() - before_upload, 3)
-        report["accepted_count"] = intake["accepted_count"]
-        report["rejected_count"] = intake["rejected_count"]
-        report["rejection_codes"] = dict(Counter(item["code"] for item in intake["rejected"]))
-        if not intake["accepted_count"]:
-            raise RuntimeError("Archive accepted no PDFs")
-        milestones = {}
+            uploaded = await client.post(f"/api/v1/campaigns/{campaign_id}/archive",
+                                         content=archive_chunks(),
+                                         headers={"Content-Type": "application/zip"})
+            uploaded.raise_for_status()
+            intake = uploaded.json()
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.with_suffix(".intake.json").write_text(json.dumps(intake, indent=2) + "\n", encoding="utf-8")
+            print(json.dumps({"step": "archive", "input": str(args.archive), "http_status": uploaded.status_code,
+                              "output": {**intake, "accepted": intake.get("accepted", [])[:5],
+                                         "rejected": intake.get("rejected", [])[:5]}}), flush=True)
+            report["intake_seconds"] = round(time.monotonic() - before_upload, 3)
+            report["accepted_count"] = intake["accepted_count"]
+            report["rejected_count"] = intake["rejected_count"]
+            report["rejection_codes"] = dict(Counter(item["code"] for item in intake["rejected"]))
+            if not intake["accepted_count"]:
+                raise RuntimeError("Archive accepted no PDFs")
+        if args.expected_cvs is not None and intake["accepted_count"] != args.expected_cvs:
+            raise RuntimeError("Accepted PDF count differs from the required target")
+        milestones = report.get("milestones", {})
         last_status = None
         while True:
-            status_response, jds_response = await asyncio.gather(
-                client.get(f"/api/v1/campaigns/{campaign_id}"),
-                client.get(f"/api/v1/campaigns/{campaign_id}/jds"))
-            status_response.raise_for_status()
-            jds_response.raise_for_status()
+            try:
+                status_response, jds_response = await asyncio.gather(
+                    client.get(f"/api/v1/campaigns/{campaign_id}"),
+                    client.get(f"/api/v1/campaigns/{campaign_id}/jds"))
+                status_response.raise_for_status()
+                jds_response.raise_for_status()
+            except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500:
+                    raise
+                if time.monotonic() - started >= args.timeout:
+                    raise
+                print(json.dumps({"step": "poll_retry", "error_type": type(exc).__name__}), flush=True)
+                await asyncio.sleep(args.poll)
+                continue
             status, jds = status_response.json(), jds_response.json()
             last_status = status["status"]
             elapsed = round(time.monotonic() - started, 3)
@@ -171,6 +201,10 @@ async def run(args):
             if args.docker_stats:
                 sample["containers"] = await docker_resources()
             report["samples"].append(sample)
+            print(json.dumps({"step": "poll", "output": sample}), flush=True)
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(json.dumps({**report, "accounting": accounting,
+                                              "milestones": milestones}, indent=2) + "\n", encoding="utf-8")
             if last_status in ("COMPLETED", "FAILED") or elapsed >= args.timeout:
                 break
             await asyncio.sleep(args.poll)
@@ -185,11 +219,28 @@ async def run(args):
                 report["limitations"].append("Database attempt sampling failed")
         if last_status == "COMPLETED":
             rankings = {}
+            ranking_outputs = {}
             for jd in jds["jds"]:
-                response = await client.get(f"/api/v1/campaigns/{campaign_id}/jds/{jd['jd_key']}/rankings")
+                response = await client.get(f"/api/v1/campaigns/{campaign_id}/jds/{jd['jd_key']}/rankings?limit=100")
                 response.raise_for_status()
                 rankings[jd["jd_key"]] = response.json()["total"]
+                ranking_outputs[jd["jd_key"]] = response.json()
             report["ranking_counts"] = rankings
+            ranking_ids = {}
+            ranking_checks = {}
+            for key, output in ranking_outputs.items():
+                rows = output["results"]
+                ids = [row["candidate_id"] for row in rows]
+                ranking_ids[key] = set(ids)
+                ranking_checks[key] = (output["jd_key"] == key and output["campaign_id"] == campaign_id
+                    and len(rows) == output["total"] and len(ids) == len(set(ids))
+                    and all(row["status"] == "SUCCESS" for row in rows)
+                    and rows == sorted(rows, key=lambda row: (-row["score"], row["candidate_id"]))
+                    and [row["rank"] for row in rows] == list(range(1, len(rows) + 1)))
+            report["ranking_checks"] = ranking_checks
+            report["ranking_overlap_counts"] = {f"{a}|{b}": len(ranking_ids[a] & ranking_ids[b])
+                                                 for a, b in combinations(ranking_ids, 2)}
+            args.report.with_suffix(".rankings.json").write_text(json.dumps(ranking_outputs, indent=2) + "\n", encoding="utf-8")
         if report["samples"]:
             depths = [sample["queue_depths"] for sample in report["samples"] if "queue_depths" in sample]
             if depths:
@@ -200,6 +251,8 @@ async def run(args):
     print(json.dumps({key: value for key, value in report.items() if key != "samples"}, indent=2))
     if last_status != "COMPLETED" or accounting["terminal_pairs"] != accounting["expected_pairs"]:
         raise SystemExit(1)
+    if not all(report.get("ranking_checks", {}).values()):
+        raise SystemExit(1)
 
 
 def main():
@@ -208,6 +261,9 @@ def main():
     parser.add_argument("--jobs", type=Path, required=True, help="JSON array of approved JD version IDs")
     parser.add_argument("--url", default="http://127.0.0.1:8000")
     parser.add_argument("--idempotency-key")
+    parser.add_argument("--resume", action="store_true", help="Resume polling the campaign in the existing report")
+    parser.add_argument("--expected-cvs", type=int, help="Fail if intake differs from this target")
+    parser.add_argument("--expected-jds", type=int, help="Fail if JD inputs differ from this target")
     parser.add_argument("--env-file", type=Path, help="Read the first API token from a local Compose env file")
     parser.add_argument("--report", type=Path, default=Path("campaign-load-report.json"))
     parser.add_argument("--poll", type=float, default=5)

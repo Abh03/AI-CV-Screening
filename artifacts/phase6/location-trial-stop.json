@@ -1,0 +1,17 @@
+{
+  "input": {
+    "campaign_id": "f6486035-18da-4f53-a4ab-26dd4290ee9a",
+    "reason": "Privacy trial superseded after contact-location leaks were measured"
+  },
+  "output": {
+    "before": {
+      "PENDING": 3189,
+      "STAGE2_READY": 810,
+      "RUNNING": 1
+    },
+    "accounted_pairs": 4000,
+    "closed_unresolved_pairs": 4000,
+    "purged_unprocessed_pdfs": 498,
+    "retained_existing_results": true
+  }
+}

@@ -7,6 +7,11 @@ x-runtime: &runtime
   JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY}
   API_TOKENS_JSON: ${API_TOKENS_JSON:-}
   LLM_PROVIDER: ${LLM_PROVIDER:?Set LLM_PROVIDER}
+  GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+  GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+  OPENROUTER_MODEL: ${OPENROUTER_MODEL:-meta-llama/llama-3.3-70b-instruct:free}
+  OPENROUTER_MAX_TOKENS: ${OPENROUTER_MAX_TOKENS:-8192}
+  PROVIDER_TIMEOUT_SECONDS: ${PROVIDER_TIMEOUT_SECONDS:-45}
   GEMINI_API_KEY: ${GEMINI_API_KEY:-}
   GROQ_API_KEY: ${GROQ_API_KEY:-}
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
@@ -122,8 +127,11 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "retrieval"]
-    environment: *runtime
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=${RETRIEVAL_WORKER_CONCURRENCY:-1}", "-Q", "retrieval"]
+    environment:
+      <<: *runtime
+      OMP_NUM_THREADS: ${RETRIEVAL_CPU_THREADS:-8}
+      MKL_NUM_THREADS: ${RETRIEVAL_CPU_THREADS:-8}
     healthcheck:
       disable: true
     depends_on:
@@ -136,7 +144,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "evaluation"]
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=${EVALUATION_WORKER_CONCURRENCY:-1}", "-Q", "evaluation"]
     environment: *runtime
     healthcheck:
       disable: true

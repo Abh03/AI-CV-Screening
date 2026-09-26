@@ -1,0 +1,10 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+    "fields": "pair identity, outcomes, ranks, scores, attempts and complete snapshots"
+  },
+  "output": {
+    "pairs": 4000,
+    "sha256": "37a908765b29aee9f192504601ef4a07573cf14bc2154d16cf0bac753b2e4ae3"
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "method": "POST /api/v1/jds/drafts/84f2a38b0b6b43c3bc1cbb9d303c82bd/approve",
+  "input": {
+    "schema_version": "jd-v1",
+    "title": "C# / .NET Backend Engineer",
+    "must_have_skills": [
+      {
+        "canonical": "C#",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": ".NET",
+        "aliases": [
+          "ASP.NET Core"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "Web API",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "SQL Server",
+        "aliases": [
+          "Entity Framework"
+        ],
+        "substitutes": []
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Azure",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Docker",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Git",
+        "aliases": [],
+        "substitutes": []
+      }
+    ],
+    "hard_filter_rules": {
+      "min_years_experience": 3.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "jd_category_queries": {
+      "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+      "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+      "PROJECTS": "Build claims workflow APIs and background processing services; maintain database migrations, audit records and access controls; support staged cloud releases and diagnose production incidents.",
+      "SKILLS": "C#; .NET or ASP.NET Core; Web API; SQL Server or Entity Framework; Azure; Docker; Git"
+    },
+    "uncertainties": [
+      "Work authorization requirement not specified"
+    ]
+  },
+  "http_status": 200,
+  "output": {
+    "approved_jd_id": "a038c776c96041c49e171040fdf8fd1a",
+    "profile": {
+      "job_id": "a038c776c96041c49e171040fdf8fd1a",
+      "title": "C# / .NET Backend Engineer",
+      "jd_category_queries": {
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+        "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "Build claims workflow APIs and background processing services; maintain database migrations, audit records and access controls; support staged cloud releases and diagnose production incidents.",
+        "SKILLS": "C#; .NET or ASP.NET Core; Web API; SQL Server or Entity Framework; Azure; Docker; Git"
+      },
+      "hard_filter_rules": {
+        "min_years_experience": 3.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "must_have_skills": [
+        {
+          "canonical": "C#",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": ".NET",
+          "aliases": [
+            "ASP.NET Core"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "Web API",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL Server",
+          "aliases": [
+            "Entity Framework"
+          ],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Azure",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Docker",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Git",
+          "aliases": [],
+          "substitutes": []
+        }
+      ]
+    }
+  }
+}

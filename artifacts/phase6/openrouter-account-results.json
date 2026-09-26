@@ -1,0 +1,23 @@
+{
+  "input": {
+    "endpoint": "GET /api/v1/key",
+    "provider": "openrouter",
+    "configured_model": "openrouter/free"
+  },
+  "output": {
+    "http_status": 200,
+    "account": {
+      "is_free_tier": true,
+      "limit": 100,
+      "limit_remaining": 100,
+      "usage_daily": 0,
+      "usage": 0,
+      "rate_limit": {
+        "requests": -1,
+        "interval": "10s",
+        "note": "This field is deprecated and safe to ignore."
+      }
+    }
+  },
+  "model_requests": 0
+}

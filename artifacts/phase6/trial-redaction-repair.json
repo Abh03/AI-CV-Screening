@@ -1,0 +1,36 @@
+{
+  "input": {
+    "campaign_ids": [
+      "0dcf5e5a-2dcb-4042-9e1f-51288a1687ba",
+      "9b5edd3c-36d5-4d3a-b0c1-4dae0d9d61e1",
+      "ec8bbc11-e38c-4d06-99ec-adeecf426c33"
+    ]
+  },
+  "output": {
+    "repaired_documents": 2215,
+    "removed_stale_retrieval_documents": 1673,
+    "examples": [
+      {
+        "campaign_id": "0dcf5e5a-2dcb-4042-9e1f-51288a1687ba",
+        "file": "CV0155.pdf"
+      },
+      {
+        "campaign_id": "0dcf5e5a-2dcb-4042-9e1f-51288a1687ba",
+        "file": "CV0160.pdf"
+      },
+      {
+        "campaign_id": "9b5edd3c-36d5-4d3a-b0c1-4dae0d9d61e1",
+        "file": "CV0373.pdf"
+      },
+      {
+        "campaign_id": "0dcf5e5a-2dcb-4042-9e1f-51288a1687ba",
+        "file": "CV0182.pdf"
+      },
+      {
+        "campaign_id": "0dcf5e5a-2dcb-4042-9e1f-51288a1687ba",
+        "file": "CV0341.pdf"
+      }
+    ],
+    "existing_pair_outcomes_retained": true
+  }
+}

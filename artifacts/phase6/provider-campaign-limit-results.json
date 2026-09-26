@@ -1,0 +1,30 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+    "pair_id": "e5124d02-ce0a-4e85-98e2-eb5775812c99",
+    "jd_key": "a038c776c96041c49e171040fdf8fd1a",
+    "model": "openai/gpt-oss-120b",
+    "completion_limit": "provider default",
+    "stored_evidence_used": true
+  },
+  "output": {
+    "http_status": 429,
+    "rate_limit_headers": {
+      "retry-after": "1493",
+      "x-ratelimit-limit-requests": "1000",
+      "x-ratelimit-limit-tokens": "8000",
+      "x-ratelimit-remaining-requests": "948",
+      "x-ratelimit-remaining-tokens": "8000",
+      "x-ratelimit-reset-requests": "1h14m52.8s",
+      "x-ratelimit-reset-tokens": "1ms"
+    },
+    "error": {
+      "message": "Rate limit reached for model `openai/gpt-oss-120b` in organization `[ACCOUNT]` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199796, Requested 3658. Please try again in 24m52.128s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing",
+      "type": "tokens",
+      "code": "rate_limit_exceeded"
+    },
+    "usage": null
+  },
+  "provider_requests": 1,
+  "evaluation_persisted": false
+}

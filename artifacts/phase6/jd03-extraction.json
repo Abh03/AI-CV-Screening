@@ -1,0 +1,337 @@
+{
+  "input": "C:\\Abhyudit_Files\\Infinite\\CV-Benchmark-Dataset-Generator\\output\\jds\\JD03.pdf",
+  "method": "POST /api/v1/jds/extract",
+  "http_status": 200,
+  "seconds": 2.844,
+  "output": {
+    "draft_id": "fa051654a382422bb27fdffa9fcc9834",
+    "status": "REVIEW",
+    "pages": [
+      {
+        "page_number": 1,
+        "ocr_used": false,
+        "blocks": [
+          {
+            "block_number": 0,
+            "text": "Test Automation Engineer",
+            "bbox": [
+              42.0,
+              40.66999816894531,
+              278.4739685058594,
+              66.83300018310547
+            ]
+          },
+          {
+            "block_number": 1,
+            "text": "Technical role | Engineering and delivery",
+            "bbox": [
+              42.0,
+              68.4000015258789,
+              186.35997009277344,
+              79.39199829101562
+            ]
+          },
+          {
+            "block_number": 2,
+            "text": "TEAM AND CONTEXT",
+            "bbox": [
+              42.0,
+              115.16000366210938,
+              165.99600219726562,
+              131.6840057373047
+            ]
+          },
+          {
+            "block_number": 3,
+            "text": "Join a cross-functional retail fulfilment team supporting business-critical services. The role includes design reviews,\ndelivery and a shared support rotation.",
+            "bbox": [
+              42.0,
+              138.25,
+              549.9398803710938,
+              165.99000549316406
+            ]
+          },
+          {
+            "block_number": 4,
+            "text": "RESPONSIBILITIES",
+            "bbox": [
+              42.0,
+              176.16000366210938,
+              153.36000061035156,
+              192.6840057373047
+            ]
+          },
+          {
+            "block_number": 5,
+            "text": "Develop reliable browser and API regression suites for checkout and fulfilment.",
+            "bbox": [
+              42.0,
+              199.25,
+              391.0299377441406,
+              212.99000549316406
+            ]
+          },
+          {
+            "block_number": 6,
+            "text": "Design test data, investigate flaky checks and report reproducible defects.",
+            "bbox": [
+              42.0,
+              218.25,
+              368.8199462890625,
+              231.99000549316406
+            ]
+          },
+          {
+            "block_number": 7,
+            "text": "Integrate smoke packs into CI and assess release risk with product teams.",
+            "bbox": [
+              42.0,
+              237.25,
+              371.0199279785156,
+              250.99000549316406
+            ]
+          },
+          {
+            "block_number": 8,
+            "text": "REQUIRED TECHNICAL SKILLS",
+            "bbox": [
+              42.0,
+              261.1600036621094,
+              224.00401306152344,
+              277.6839904785156
+            ]
+          },
+          {
+            "block_number": 9,
+            "text": "Selenium or Playwright or Cypress",
+            "bbox": [
+              42.0,
+              284.25,
+              195.3699951171875,
+              297.989990234375
+            ]
+          },
+          {
+            "block_number": 10,
+            "text": "API Testing or Postman",
+            "bbox": [
+              42.0,
+              303.25,
+              147.60000610351562,
+              316.989990234375
+            ]
+          },
+          {
+            "block_number": 11,
+            "text": "SQL",
+            "bbox": [
+              42.0,
+              322.2499694824219,
+              62.01000213623047,
+              335.9899597167969
+            ]
+          },
+          {
+            "block_number": 12,
+            "text": "JUnit or TestNG or Python or Java",
+            "bbox": [
+              42.0,
+              341.2499694824219,
+              194.82998657226562,
+              354.9899597167969
+            ]
+          },
+          {
+            "block_number": 13,
+            "text": "PREFERRED SKILLS",
+            "bbox": [
+              42.0,
+              365.15997314453125,
+              162.01199340820312,
+              381.6839599609375
+            ]
+          },
+          {
+            "block_number": 14,
+            "text": "Jenkins",
+            "bbox": [
+              42.0,
+              388.2499694824219,
+              75.9000015258789,
+              401.9899597167969
+            ]
+          },
+          {
+            "block_number": 15,
+            "text": "Docker",
+            "bbox": [
+              42.0,
+              407.2499694824219,
+              73.66999816894531,
+              420.9899597167969
+            ]
+          },
+          {
+            "block_number": 16,
+            "text": "Jira",
+            "bbox": [
+              42.0,
+              426.2499694824219,
+              58.11000061035156,
+              439.9899597167969
+            ]
+          },
+          {
+            "block_number": 17,
+            "text": "EXPERIENCE",
+            "bbox": [
+              42.0,
+              450.15997314453125,
+              119.35200500488281,
+              466.6839599609375
+            ]
+          },
+          {
+            "block_number": 18,
+            "text": "At least 2 years of relevant professional experience. Evidence of implementation and operational ownership is\nexpected.",
+            "bbox": [
+              42.0,
+              473.2499694824219,
+              527.2198486328125,
+              500.9899597167969
+            ]
+          },
+          {
+            "block_number": 19,
+            "text": "EDUCATION",
+            "bbox": [
+              42.0,
+              511.1600036621094,
+              113.3280029296875,
+              527.6840209960938
+            ]
+          },
+          {
+            "block_number": 20,
+            "text": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+            "bbox": [
+              42.0,
+              534.25,
+              444.9498596191406,
+              547.989990234375
+            ]
+          },
+          {
+            "block_number": 21,
+            "text": "SELECTION CRITERIA",
+            "bbox": [
+              42.0,
+              558.1599731445312,
+              170.67599487304688,
+              574.6840209960938
+            ]
+          },
+          {
+            "block_number": 22,
+            "text": "Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking\nsignals, not mandatory filters.",
+            "bbox": [
+              42.0,
+              581.25,
+              522.789794921875,
+              608.989990234375
+            ]
+          },
+          {
+            "block_number": 23,
+            "text": "1",
+            "bbox": [
+              548.8275756835938,
+              812.289794921875,
+              553.2755737304688,
+              823.2817993164062
+            ]
+          }
+        ]
+      }
+    ],
+    "profile": {
+      "schema_version": "jd-v1",
+      "title": "Test Automation Engineer",
+      "must_have_skills": [
+        {
+          "canonical": "Selenium",
+          "aliases": [
+            "Playwright",
+            "Cypress"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "API Testing",
+          "aliases": [
+            "Postman"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "JUnit",
+          "aliases": [
+            "TestNG",
+            "Python",
+            "Java"
+          ],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Jenkins",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Docker",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Jira",
+          "aliases": [],
+          "substitutes": []
+        }
+      ],
+      "hard_filter_rules": {
+        "min_years_experience": 2.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "jd_category_queries": {
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+        "EXPERIENCE": "At least 2 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "No explicit requirement",
+        "SKILLS": "Selenium, Playwright, Cypress, API Testing, Postman, SQL, JUnit, TestNG, Python, Java, Jenkins, Docker, Jira"
+      },
+      "uncertainties": [
+        "Degree requirement is optional; no hard filter applied.",
+        "Work authorization requirement not specified."
+      ]
+    },
+    "error_code": null,
+    "expires_at": "2026-10-03T09:34:04.090923+00:00",
+    "provenance": {
+      "pdf_hash": "90c08b55dc919e30dc61b62980e79baf4d387b256ecf675e4fc691e9556b22f1",
+      "schema_version": "jd-v1",
+      "extraction_version": "jd-pdf-v1",
+      "prompt_version": "jd-prompt-v1",
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "processing_started_at": "2026-09-26T09:34:04.091028+00:00",
+      "attempt_token": "4c260b0f84f2419182a8658cb223db17"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "JD01": {
+    "expected_stage1_counts": {
+      "PASS": 60,
+      "FAIL": 666,
+      "REVIEW": 274
+    },
+    "selected_expected_stage1_counts": {
+      "PASS": 15,
+      "REVIEW": 9,
+      "FAIL": 6
+    },
+    "selected_expected_bands": {
+      "high": 15,
+      "moderate": 11,
+      "low": 4
+    },
+    "high_relevance_total": 60,
+    "high_relevance_selected": 15
+  },
+  "JD02": {
+    "expected_stage1_counts": {
+      "FAIL": 763,
+      "REVIEW": 135,
+      "PASS": 102
+    },
+    "selected_expected_stage1_counts": {
+      "PASS": 11,
+      "FAIL": 14,
+      "REVIEW": 5
+    },
+    "selected_expected_bands": {
+      "high": 11,
+      "moderate": 7,
+      "unrelated": 12
+    },
+    "high_relevance_total": 102,
+    "high_relevance_selected": 11
+  },
+  "JD03": {
+    "expected_stage1_counts": {
+      "REVIEW": 558,
+      "FAIL": 351,
+      "PASS": 91
+    },
+    "selected_expected_stage1_counts": {
+      "REVIEW": 11,
+      "FAIL": 5,
+      "PASS": 14
+    },
+    "selected_expected_bands": {
+      "moderate": 15,
+      "high": 14,
+      "low": 1
+    },
+    "high_relevance_total": 91,
+    "high_relevance_selected": 14
+  },
+  "JD04": {
+    "expected_stage1_counts": {
+      "REVIEW": 377,
+      "FAIL": 553,
+      "PASS": 70
+    },
+    "selected_expected_stage1_counts": {
+      "REVIEW": 13,
+      "PASS": 13,
+      "FAIL": 4
+    },
+    "selected_expected_bands": {
+      "moderate": 16,
+      "high": 13,
+      "low": 1
+    },
+    "high_relevance_total": 70,
+    "high_relevance_selected": 13
+  }
+}

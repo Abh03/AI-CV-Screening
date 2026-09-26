@@ -1,0 +1,349 @@
+{
+  "input": "C:\\Abhyudit_Files\\Infinite\\CV-Benchmark-Dataset-Generator\\output\\jds\\JD01.pdf",
+  "method": "POST /api/v1/jds/extract",
+  "http_status": 200,
+  "seconds": 3.156,
+  "output": {
+    "draft_id": "0eabaab9a4f2467f9608a01a9bf480c0",
+    "status": "REVIEW",
+    "pages": [
+      {
+        "page_number": 1,
+        "ocr_used": false,
+        "blocks": [
+          {
+            "block_number": 0,
+            "text": "Java Backend Engineer",
+            "bbox": [
+              42.0,
+              40.66999816894531,
+              255.31297302246094,
+              66.83300018310547
+            ]
+          },
+          {
+            "block_number": 1,
+            "text": "Technical role | Engineering and delivery",
+            "bbox": [
+              42.0,
+              68.4000015258789,
+              186.35997009277344,
+              79.39199829101562
+            ]
+          },
+          {
+            "block_number": 2,
+            "text": "TEAM AND CONTEXT",
+            "bbox": [
+              42.0,
+              115.16000366210938,
+              165.99600219726562,
+              131.6840057373047
+            ]
+          },
+          {
+            "block_number": 3,
+            "text": "Join a cross-functional digital banking team supporting business-critical services. The role includes design reviews,\ndelivery and a shared support rotation.",
+            "bbox": [
+              42.0,
+              138.25,
+              549.3998413085938,
+              165.99000549316406
+            ]
+          },
+          {
+            "block_number": 4,
+            "text": "RESPONSIBILITIES",
+            "bbox": [
+              42.0,
+              176.16000366210938,
+              153.36000061035156,
+              192.6840057373047
+            ]
+          },
+          {
+            "block_number": 5,
+            "text": "Deliver secure account and payment APIs with explicit transaction boundaries.",
+            "bbox": [
+              42.0,
+              199.25,
+              388.8099365234375,
+              212.99000549316406
+            ]
+          },
+          {
+            "block_number": 6,
+            "text": "Integrate event consumers with replay, retry and duplicate protection.",
+            "bbox": [
+              42.0,
+              218.25,
+              348.24993896484375,
+              231.99000549316406
+            ]
+          },
+          {
+            "block_number": 7,
+            "text": "Review database access plans, service metrics and operational runbooks.",
+            "bbox": [
+              42.0,
+              237.25,
+              369.9099426269531,
+              250.99000549316406
+            ]
+          },
+          {
+            "block_number": 8,
+            "text": "REQUIRED TECHNICAL SKILLS",
+            "bbox": [
+              42.0,
+              261.1600036621094,
+              224.00401306152344,
+              277.6839904785156
+            ]
+          },
+          {
+            "block_number": 9,
+            "text": "Java",
+            "bbox": [
+              42.0,
+              284.25,
+              63.12000274658203,
+              297.989990234375
+            ]
+          },
+          {
+            "block_number": 10,
+            "text": "Spring Boot",
+            "bbox": [
+              42.0,
+              303.25,
+              94.25000762939453,
+              316.989990234375
+            ]
+          },
+          {
+            "block_number": 11,
+            "text": "REST APIs",
+            "bbox": [
+              42.0,
+              322.2499694824219,
+              92.57000732421875,
+              335.9899597167969
+            ]
+          },
+          {
+            "block_number": 12,
+            "text": "SQL or PostgreSQL",
+            "bbox": [
+              42.0,
+              341.2499694824219,
+              130.9300079345703,
+              354.9899597167969
+            ]
+          },
+          {
+            "block_number": 13,
+            "text": "PREFERRED SKILLS",
+            "bbox": [
+              42.0,
+              365.15997314453125,
+              162.01199340820312,
+              381.6839599609375
+            ]
+          },
+          {
+            "block_number": 14,
+            "text": "Kafka",
+            "bbox": [
+              42.0,
+              388.2499694824219,
+              67.56999969482422,
+              401.9899597167969
+            ]
+          },
+          {
+            "block_number": 15,
+            "text": "Docker",
+            "bbox": [
+              42.0,
+              407.2499694824219,
+              73.66999816894531,
+              420.9899597167969
+            ]
+          },
+          {
+            "block_number": 16,
+            "text": "Kubernetes",
+            "bbox": [
+              42.0,
+              426.2499694824219,
+              93.13999938964844,
+              439.9899597167969
+            ]
+          },
+          {
+            "block_number": 17,
+            "text": "JUnit",
+            "bbox": [
+              42.0,
+              445.2499694824219,
+              64.7800064086914,
+              458.9899597167969
+            ]
+          },
+          {
+            "block_number": 18,
+            "text": "EXPERIENCE",
+            "bbox": [
+              42.0,
+              469.15997314453125,
+              119.35200500488281,
+              485.6839599609375
+            ]
+          },
+          {
+            "block_number": 19,
+            "text": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is\nexpected.",
+            "bbox": [
+              42.0,
+              492.25,
+              527.2198486328125,
+              519.989990234375
+            ]
+          },
+          {
+            "block_number": 20,
+            "text": "EDUCATION",
+            "bbox": [
+              42.0,
+              530.1599731445312,
+              113.3280029296875,
+              546.6840209960938
+            ]
+          },
+          {
+            "block_number": 21,
+            "text": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+            "bbox": [
+              42.0,
+              553.25,
+              444.9498596191406,
+              566.989990234375
+            ]
+          },
+          {
+            "block_number": 22,
+            "text": "SELECTION CRITERIA",
+            "bbox": [
+              42.0,
+              577.1599731445312,
+              170.67599487304688,
+              593.6840209960938
+            ]
+          },
+          {
+            "block_number": 23,
+            "text": "Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking\nsignals, not mandatory filters.",
+            "bbox": [
+              42.0,
+              600.25,
+              522.789794921875,
+              627.989990234375
+            ]
+          },
+          {
+            "block_number": 24,
+            "text": "1",
+            "bbox": [
+              548.8275756835938,
+              812.289794921875,
+              553.2755737304688,
+              823.2817993164062
+            ]
+          }
+        ]
+      }
+    ],
+    "profile": {
+      "schema_version": "jd-v1",
+      "title": "Java Backend Engineer",
+      "must_have_skills": [
+        {
+          "canonical": "Java",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Spring Boot",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "REST APIs",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "PostgreSQL",
+          "aliases": [],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Kafka",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Docker",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Kubernetes",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "JUnit",
+          "aliases": [],
+          "substitutes": []
+        }
+      ],
+      "hard_filter_rules": {
+        "min_years_experience": 3.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "jd_category_queries": {
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+        "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "No explicit requirement",
+        "SKILLS": "Java, Spring Boot, REST APIs, SQL, PostgreSQL, Kafka, Docker, Kubernetes, JUnit"
+      },
+      "uncertainties": [
+        "Ambiguity whether SQL or PostgreSQL is required; either may satisfy the requirement.",
+        "Degree requirement is unclear; statement indicates no degree filter but also mentions a degree.",
+        "Work authorization requirement is not specified."
+      ]
+    },
+    "error_code": null,
+    "expires_at": "2026-10-03T09:33:58.304500+00:00",
+    "provenance": {
+      "pdf_hash": "18aca14127b1aa090ddfe0635ba460121a5b41d0621e7cd019b3134452618706",
+      "schema_version": "jd-v1",
+      "extraction_version": "jd-pdf-v1",
+      "prompt_version": "jd-prompt-v1",
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "processing_started_at": "2026-09-26T09:33:58.309453+00:00",
+      "attempt_token": "6cd9383941b548dcbfc4c2b01e816057"
+    }
+  }
+}

@@ -1,10 +1,40 @@
 from celery import Celery
-from celery.signals import after_setup_logger, after_setup_task_logger
+import logging
+import time
+from celery.signals import (after_setup_logger, after_setup_task_logger,
+                            before_task_publish, task_prerun, task_postrun)
 
 from app.config import settings
 from app.core.logging import SafeJSONFormatter, setup_logging
 settings.validate_production()
 setup_logging()
+
+
+@before_task_publish.connect
+def stamp_publication(headers=None, **_kwargs):
+    if headers is not None:
+        headers["campaign_published_at"] = time.time()
+
+
+@task_prerun.connect
+def measure_queue_wait(task_id=None, task=None, **_kwargs):
+    if task is None:
+        return
+    task.request.capacity_started = time.monotonic()
+    published = (task.request.headers or {}).get("campaign_published_at")
+    if isinstance(published, (int, float)) and not isinstance(published, bool):
+        logging.getLogger("cv_screening").info("Task started", extra={
+            "event": "task_started", "run_id": task_id, "stage": task.name,
+            "queue_wait_ms": round(max(0, time.time() - published) * 1000, 3)})
+
+
+@task_postrun.connect
+def measure_task_runtime(task_id=None, task=None, state=None, **_kwargs):
+    started = getattr(task.request, "capacity_started", None) if task else None
+    if started is not None:
+        logging.getLogger("cv_screening").info("Task finished", extra={
+            "event": "task_finished", "run_id": task_id, "stage": task.name,
+            "status": state, "task_runtime_ms": round((time.monotonic() - started) * 1000, 3)})
 
 
 @after_setup_logger.connect

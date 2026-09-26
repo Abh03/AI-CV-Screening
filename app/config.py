@@ -94,7 +94,9 @@ class Settings(BaseSettings):
         validate_encryption_configuration()
 
     GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct:free"
+    OPENROUTER_MAX_TOKENS: int = Field(default=8192, ge=128)
 
     @model_validator(mode="after")
     def validate_worker_timeouts(self):

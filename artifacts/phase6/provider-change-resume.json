@@ -1,0 +1,59 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+    "provider": "openrouter",
+    "model": "openrouter/free",
+    "reason": "Authorized provider change; release Groq cooldowns and retry model-forwarding failures"
+  },
+  "output": {
+    "accounted_pairs": 4000,
+    "released_waiting_selections": 62,
+    "model_forwarding_failures_requeued": 2,
+    "attempt_counts_preserved": true,
+    "failed_attempt_evidence": [
+      {
+        "pair_id": "1d6ddfaa-03b3-4116-b66d-86c54221a7e9",
+        "attempts": 1,
+        "failed_snapshot": {
+          "candidate_id": "09c9346b-147f-5a3d-8ed0-43346268ccc8",
+          "evaluation_status": "EVALUATION_FAILED",
+          "scoring_policy_version": "stage3-v1.1.0",
+          "composite_score": null,
+          "tier": null,
+          "category_scores": {},
+          "llm_raw_output": null,
+          "verified_citations": [],
+          "invalid_citations": [],
+          "has_critical_flags": false,
+          "review_reasons": [],
+          "error_code": "PROVIDER_ERROR",
+          "error_message": "Evaluation failed: provider request could not complete.",
+          "evidence_verification": null,
+          "is_mock": false
+        }
+      },
+      {
+        "pair_id": "b39b078a-c052-4289-9cf7-c408f739e1f2",
+        "attempts": 1,
+        "failed_snapshot": {
+          "candidate_id": "9dd17df7-a951-5596-a82c-8e85be5bd113",
+          "evaluation_status": "EVALUATION_FAILED",
+          "scoring_policy_version": "stage3-v1.1.0",
+          "composite_score": null,
+          "tier": null,
+          "category_scores": {},
+          "llm_raw_output": null,
+          "verified_citations": [],
+          "invalid_citations": [],
+          "has_critical_flags": false,
+          "review_reasons": [],
+          "error_code": "PROVIDER_ERROR",
+          "error_message": "Evaluation failed: provider request could not complete.",
+          "evidence_verification": null,
+          "is_mock": false
+        }
+      }
+    ],
+    "completed_results_retained": true
+  }
+}

@@ -40,3 +40,22 @@ def test_unreadable_ocr_still_blocks_jd(monkeypatch):
         doc.new_page()
         result = ingest_pdf(doc.tobytes(), redact=False)
     assert result.code == "EXTRACTION_UNRELIABLE"
+
+
+def test_readable_specialized_cv_preserves_evidence_without_ocr(monkeypatch):
+    monkeypatch.setattr("app.stage0_extraction.pipeline._ocr_page",
+                        lambda page: pytest.fail("Readable CV must not trigger OCR"))
+    with fitz.open() as doc:
+        doc.new_page().insert_text((40, 40), "SKILLS\n" + DOMAIN_JD)
+        result = ingest_pdf(doc.tobytes())
+    assert result.status == "success"
+    assert "tokenization" in result.redacted_text
+    assert not result.pages[0]["ocr_used"]
+
+
+def test_corrupt_cv_still_requires_ocr_and_rejects_corrupt_ocr(monkeypatch):
+    monkeypatch.setattr("app.stage0_extraction.pipeline._ocr_page", lambda page: "\ufffd" * 200)
+    with fitz.open() as doc:
+        doc.new_page().insert_text((40, 40), "x" * 100)
+        result = ingest_pdf(doc.tobytes())
+    assert result.code == "EXTRACTION_UNRELIABLE"

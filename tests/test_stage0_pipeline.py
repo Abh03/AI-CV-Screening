@@ -25,7 +25,7 @@ def make_pdf(*, scan=False, pages=1):
 
 
 def test_pdf_success_redaction_and_provenance(monkeypatch):
-    monkeypatch.setattr(pipeline, "assess_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
+    monkeypatch.setattr(pipeline, "assess_readable_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
     result = pipeline.ingest_pdf(make_pdf())
     assert result.status == "success"
     assert result.pages[0]["blocks"][0]["block_number"] == 0
@@ -44,7 +44,7 @@ def test_pdf_success_redaction_and_provenance(monkeypatch):
 def test_scan_ocr_only_when_required(monkeypatch):
     seen = []
     monkeypatch.setattr(pipeline, "_ocr_page", lambda page: seen.append(page.number) or "software engineer with experience in python and java systems")
-    monkeypatch.setattr(pipeline, "assess_extraction_integrity", lambda text, **kwargs: {"requires_ocr": not bool(text), "passed": bool(text)})
+    monkeypatch.setattr(pipeline, "assess_readable_extraction_integrity", lambda text, **kwargs: {"requires_ocr": not bool(text), "passed": bool(text)})
     result = pipeline.ingest_pdf(make_pdf(scan=True))
     assert result.status == "success"
     assert result.pages[0]["ocr_used"] is True
@@ -93,3 +93,34 @@ def test_encryption_requires_real_fernet_key(monkeypatch):
         encrypt_payload("private")
     monkeypatch.setattr(settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
     assert decrypt_payload(encrypt_payload("private")) == "private"
+
+
+@pytest.mark.parametrize("name", ["Dr. Marisol O'Neil", "Mrs. Alana-Marie Jones", "Mr. David Smith Jr."])
+def test_first_line_name_is_masked_in_merged_block_with_section_heading(monkeypatch, name):
+    # OCR may return a single block containing both the name and body headings;
+    # the header flag has already switched to body before this fallback runs.
+    monkeypatch.setattr(pipeline, "mask_body_zone", lambda value: value)
+    monkeypatch.setattr(pipeline, "mask_header_zone", lambda value: value)
+    with fitz.open() as doc:
+        doc.new_page().insert_text((40, 40), name + "\nPROFILE\n"
+            "Software engineer with experience building Python and Java database services.")
+        result = pipeline.ingest_pdf(doc.tobytes())
+    assert result.status == "success"
+    assert name not in result.redacted_text
+    assert "[REDACTED_NAME]" in result.redacted_text
+    assert "Python and Java" in result.redacted_text
+
+
+def test_repeated_page_header_name_is_masked_even_when_ner_misses_it(monkeypatch):
+    monkeypatch.setattr(pipeline, "mask_body_zone", lambda value: value)
+    monkeypatch.setattr(pipeline, "mask_header_zone", lambda value: value)
+    with fitz.open() as doc:
+        for _ in range(2):
+            page = doc.new_page()
+            page.insert_text((40, 40), "Marisol Jones")
+            page.insert_text((40, 80), "EXPERIENCE")
+            page.insert_text((40, 110), "Software engineer with Python and Java database service experience.")
+        result = pipeline.ingest_pdf(doc.tobytes())
+    assert result.status == "success"
+    assert "Marisol Jones" not in result.redacted_text
+    assert all(page["blocks"][0]["text"] == "[REDACTED_NAME]" for page in result.pages)

@@ -13,8 +13,10 @@ EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\
 
 # Handles Nepal formats (+977-98XXXXXXXX, 98XXXXXXXX, 97XXXXXXXX, 01-XXXXXXX) & international patterns
 PHONE_PATTERN = re.compile(
-    r"(?:\+?977[-.\s]?)?(?:9[78]\d{8}|0\d{1,2}[-.\s]?\d{6,7})\b|"
-    r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b"
+    r"(?<!\d)(?:(?:\+?977[-.\s]?)?(?:9[78]\d{8}|0\d{1,2}[-.\s]?\d{6,7})|"
+    r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4})"
+    r"(?!\d)(?:\s*(?:x|ext\.?|extension)\s*\d+)?",
+    re.IGNORECASE,
 )
 
 # Nepal administrative regions, districts, and urban division keywords
@@ -33,6 +35,13 @@ GRADUATION_YEAR_PATTERN = re.compile(
 SECTION_SPLIT_PATTERN = re.compile(
     r"(?i)\n(?=(?:summary|professional\s+summary|experience|work\s+history|education|skills|technical\s+skills)\b)"
 )
+
+
+def mask_contact_lines(text: str) -> str:
+    """Remove the entire contact line, including unrecognized cities/addresses."""
+    return "".join("[REDACTED_CONTACT]" + ("\n" if line.endswith("\n") else "")
+                   if EMAIL_PATTERN.search(line) or PHONE_PATTERN.search(line) else line
+                   for line in text.splitlines(keepends=True))
 
 
 def extract_header_and_body(text: str) -> tuple[str, str]:

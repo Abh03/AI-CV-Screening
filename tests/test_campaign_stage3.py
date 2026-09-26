@@ -13,7 +13,7 @@ from app.campaigns.provider_limit import retry_delay
 from app.config import settings
 from app.main import app
 from app.models.database import Base, CampaignModel, CampaignPairModel, CampaignJDModel, get_db
-from app.stage3_evaluation.llm_client import ProviderRateLimited, retry_after_seconds
+from app.stage3_evaluation.llm_client import ProviderRateLimited, ProviderTransientFailure, retry_after_seconds
 from app.stage3_evaluation.scoring import failed_evaluation
 from app.stage3_evaluation.evaluator import compute_deterministic_tier
 from app.stage3_evaluation.llm_client import LLMClientWrapper
@@ -66,7 +66,8 @@ async def test_stage3_dispatch_waits_for_retry_and_completes_each_jd():
 
 
 @pytest.mark.asyncio
-async def test_stage3_worker_rate_limit_is_durable_and_fenced(monkeypatch):
+@pytest.mark.parametrize('failure_kind,worker_result',[(ProviderRateLimited,'RATE_LIMITED'),(ProviderTransientFailure,'TRANSIENT_RETRY')])
+async def test_stage3_worker_rate_limit_is_durable_and_fenced(monkeypatch,failure_kind,worker_result):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -88,7 +89,7 @@ async def test_stage3_worker_rate_limit_is_durable_and_fenced(monkeypatch):
     calls = []
     async def rate_limited(*args, **kwargs):
         calls.append(1)
-        raise ProviderRateLimited(120)
+        raise failure_kind(120)
     monkeypatch.setattr(tasks, "evaluate_single_candidate_async", rate_limited)
     try:
         async with sessions() as db:
@@ -107,23 +108,23 @@ async def test_stage3_worker_rate_limit_is_durable_and_fenced(monkeypatch):
             pair.result_snapshot = {"stage2_evidence": {"candidate_id": "a", "evidence_by_category": {}}}
             await db.commit()
             pair_id, token = (await dispatch_stage3(db, campaign.id))[0]
-        assert await tasks.execute_campaign_stage3(pair_id, token) == "RATE_LIMITED"
+        assert await tasks.execute_campaign_stage3(pair_id, token) == worker_result
         assert await tasks.execute_campaign_stage3(pair_id, token) == "LEASE_LOST"
         async with sessions() as db:
             pair = await db.get(CampaignPairModel, pair_id)
             assert pair.status == "SHORTLISTED"
-            assert pair.failure_code == "PROVIDER_RATE_LIMITED"
+            assert pair.failure_code == failure_kind.failure_code
             assert pair.stage3_attempt_count == 1
             assert tasks._utc(pair.lease_until) > datetime.now(timezone.utc) + timedelta(seconds=100)
             pair.lease_until = datetime.now(timezone.utc) - timedelta(seconds=1)
             pair.stage3_attempt_count = settings.CAMPAIGN_STAGE3_MAX_ATTEMPTS - 1
             await db.commit()
             _, token = (await dispatch_stage3(db, campaign.id))[0]
-        assert await tasks.execute_campaign_stage3(pair_id, token) == "RATE_LIMITED"
+        assert await tasks.execute_campaign_stage3(pair_id, token) == worker_result
         async with sessions() as db:
             pair = await db.get(CampaignPairModel, pair_id)
             assert pair.status == "EVALUATION_FAILED"
-            assert pair.failure_code == "PROVIDER_RATE_LIMIT_EXHAUSTED"
+            assert pair.failure_code == failure_kind.exhausted_code
             assert pair.stage3_attempt_count == settings.CAMPAIGN_STAGE3_MAX_ATTEMPTS
             assert len(calls) == 2
     finally:

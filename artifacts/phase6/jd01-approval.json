@@ -1,0 +1,132 @@
+{
+  "method": "POST /api/v1/jds/drafts/0eabaab9a4f2467f9608a01a9bf480c0/approve",
+  "input": {
+    "schema_version": "jd-v1",
+    "title": "Java Backend Engineer",
+    "must_have_skills": [
+      {
+        "canonical": "Java",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Spring Boot",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "REST APIs",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "SQL",
+        "aliases": [
+          "PostgreSQL"
+        ],
+        "substitutes": []
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Kafka",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Docker",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Kubernetes",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "JUnit",
+        "aliases": [],
+        "substitutes": []
+      }
+    ],
+    "hard_filter_rules": {
+      "min_years_experience": 3.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "jd_category_queries": {
+      "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+      "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+      "PROJECTS": "No explicit requirement",
+      "SKILLS": "Java, Spring Boot, REST APIs, SQL, PostgreSQL, Kafka, Docker, Kubernetes, JUnit"
+    },
+    "uncertainties": [
+      "Work authorization requirement is not specified."
+    ]
+  },
+  "http_status": 200,
+  "output": {
+    "approved_jd_id": "d89c10d5f4c84639a46000c04324d301",
+    "profile": {
+      "job_id": "d89c10d5f4c84639a46000c04324d301",
+      "title": "Java Backend Engineer",
+      "jd_category_queries": {
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+        "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "No explicit requirement",
+        "SKILLS": "Java, Spring Boot, REST APIs, SQL, PostgreSQL, Kafka, Docker, Kubernetes, JUnit"
+      },
+      "hard_filter_rules": {
+        "min_years_experience": 3.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "must_have_skills": [
+        {
+          "canonical": "Java",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Spring Boot",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "REST APIs",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL",
+          "aliases": [
+            "PostgreSQL"
+          ],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Kafka",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Docker",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Kubernetes",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "JUnit",
+          "aliases": [],
+          "substitutes": []
+        }
+      ]
+    }
+  }
+}

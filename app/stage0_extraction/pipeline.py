@@ -1,6 +1,7 @@
 """Bounded, ephemeral PDF ingestion. Only redacted blocks leave this module."""
 from dataclasses import dataclass, field
 import subprocess
+import re
 from threading import BoundedSemaphore
 
 import fitz
@@ -8,9 +9,9 @@ import fitz
 from app.config import settings
 
 _ocr_slots = BoundedSemaphore(settings.OCR_CONCURRENCY_LIMIT)
-from app.stage0_extraction.integrity import assess_extraction_integrity, assess_jd_extraction_integrity
+from app.stage0_extraction.integrity import assess_readable_extraction_integrity
 from app.stage0_extraction.parser import sort_page_blocks
-from app.stage0_extraction.pii_masker import mask_header_zone, mask_body_zone
+from app.stage0_extraction.pii_masker import mask_header_zone, mask_body_zone, mask_contact_lines
 
 
 @dataclass
@@ -40,7 +41,7 @@ def _ocr_page(page: fitz.Page) -> str:
 
 
 def ingest_pdf(data: bytes, *, redact: bool = True) -> PDFIngestionResult:
-    assess_text = (lambda text: assess_extraction_integrity(text, min_density=0.35)) if redact else assess_jd_extraction_integrity
+    assess_text = assess_readable_extraction_integrity
     if not data.startswith(b"%PDF-"):
         return PDFIngestionResult("failure", "INVALID_PDF")
     if len(data) > settings.PDF_MAX_BYTES:
@@ -93,19 +94,31 @@ def ingest_pdf(data: bytes, *, redact: bool = True) -> PDFIngestionResult:
 
         redacted_pages = []
         header = True
+        candidate_name = None
         for page_number, blocks, used_ocr in raw_pages:
             redacted_blocks = []
             for block_number, block in enumerate(blocks):
                 source = block["text"]
+                if redact and page_number == 1:
+                    source = mask_contact_lines(source)
+                if redact and candidate_name:
+                    source = re.sub(r"(?<!\w)" + re.escape(candidate_name) + r"(?!\w)",
+                                    "[REDACTED_NAME]", source, flags=re.IGNORECASE)
                 if header and any(line.strip().upper() in {"SUMMARY", "EXPERIENCE", "WORK EXPERIENCE", "SKILLS", "TECHNICAL SKILLS", "EDUCATION", "PROJECTS"}
                                   for line in source.splitlines()):
                     header = False
                 redacted = (mask_header_zone(source) if header else mask_body_zone(source)) if redact else source
-                if redact and header and page_number == 1 and block_number == 0:
+                if redact and page_number == 1 and block_number == 0:
                     first_line, separator, rest = redacted.partition("\n")
-                    if ("[REDACTED" not in first_line and
-                            1 <= len(first_line.split()) <= 4 and
-                            all(part.replace("-", "").isalpha() for part in first_line.split())):
+                    source_name_line = source.splitlines()[0].strip() if source.splitlines() else ""
+                    headings = {"SUMMARY", "PROFILE", "EXPERIENCE", "WORK EXPERIENCE",
+                                "PROFESSIONAL EXPERIENCE", "SKILLS", "TECHNICAL SKILLS",
+                                "EDUCATION", "PROJECTS"}
+                    if (source_name_line.upper() not in headings and
+                            1 <= len(source_name_line.split()) <= 6 and
+                            all(re.fullmatch(r"[^\W\d_]+(?:[-'’][^\W\d_]+)*\.?", part)
+                                for part in source_name_line.split())):
+                        candidate_name = source_name_line
                         redacted = "[REDACTED_NAME]" + separator + rest
                 redacted_blocks.append({"block_number": block_number, "text": redacted,
                                         "bbox": [block[k] for k in ("x0", "y0", "x1", "y1")]})

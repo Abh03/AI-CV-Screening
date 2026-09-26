@@ -1,0 +1,1078 @@
+{
+  "started_at": "2026-09-26T09:35:06.786023+00:00",
+  "archive_bytes": 7174953,
+  "jd_count": 4,
+  "samples": [
+    {
+      "elapsed_seconds": 11.0,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 1000
+      },
+      "pairs": {
+        "PENDING": 4000
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 26.141,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 8,
+        "PENDING": 990,
+        "RUNNING": 1,
+        "SUCCEEDED": 1
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 32,
+        "PENDING": 3968
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 41.266,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 18,
+        "PENDING": 980,
+        "RUNNING": 1,
+        "SUCCEEDED": 1
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 72,
+        "PENDING": 3924,
+        "RUNNING": 4
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 56.36,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 28,
+        "PENDING": 966,
+        "RUNNING": 1,
+        "SUCCEEDED": 5
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 112,
+        "PENDING": 3880,
+        "STAGE2_READY": 8
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 71.453,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 38,
+        "PENDING": 953,
+        "RUNNING": 1,
+        "SUCCEEDED": 8
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 152,
+        "PENDING": 3829,
+        "RUNNING": 4,
+        "STAGE2_READY": 15
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 86.547,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 48,
+        "PENDING": 941,
+        "RUNNING": 1,
+        "SUCCEEDED": 10
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 192,
+        "PENDING": 3776,
+        "STAGE2_READY": 32
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 101.625,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 58,
+        "PENDING": 927,
+        "RUNNING": 1,
+        "SUCCEEDED": 14
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 232,
+        "PENDING": 3725,
+        "RUNNING": 4,
+        "STAGE2_READY": 39
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 116.719,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 69,
+        "PENDING": 913,
+        "RUNNING": 1,
+        "SUCCEEDED": 17
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 276,
+        "PENDING": 3664,
+        "STAGE2_READY": 60
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 131.797,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 79,
+        "PENDING": 901,
+        "RUNNING": 1,
+        "SUCCEEDED": 19
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 316,
+        "PENDING": 3612,
+        "RUNNING": 4,
+        "STAGE2_READY": 68
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 146.907,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "FAILED": 90,
+        "SUCCEEDED": 20,
+        "PENDING": 889
+      },
+      "pairs": {
+        "STAGE2_READY": 76,
+        "EXTRACTION_FAILED": 360,
+        "PENDING": 3564
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 162.0,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "FAILED": 100,
+        "SUCCEEDED": 22,
+        "PENDING": 877
+      },
+      "pairs": {
+        "STAGE2_READY": 85,
+        "RUNNING": 3,
+        "EXTRACTION_FAILED": 400,
+        "PENDING": 3512
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 177.11,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "FAILED": 110,
+        "SUCCEEDED": 22,
+        "PENDING": 867
+      },
+      "pairs": {
+        "STAGE2_READY": 88,
+        "EXTRACTION_FAILED": 440,
+        "PENDING": 3472
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 192.219,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "FAILED": 122,
+        "SUCCEEDED": 22,
+        "PENDING": 855
+      },
+      "pairs": {
+        "STAGE2_READY": 88,
+        "EXTRACTION_FAILED": 488,
+        "PENDING": 3424
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 207.297,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 132,
+        "PENDING": 844,
+        "RUNNING": 1,
+        "SUCCEEDED": 23
+      },
+      "pairs": {
+        "STAGE2_READY": 88,
+        "EXTRACTION_FAILED": 528,
+        "PENDING": 3384
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 222.391,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 142,
+        "PENDING": 832,
+        "RUNNING": 1,
+        "SUCCEEDED": 25
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 568,
+        "PENDING": 3332,
+        "RUNNING": 2,
+        "STAGE2_READY": 98
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 237.5,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 153,
+        "PENDING": 819,
+        "RUNNING": 1,
+        "SUCCEEDED": 27
+      },
+      "pairs": {
+        "STAGE2_READY": 100,
+        "EXTRACTION_FAILED": 612,
+        "PENDING": 3288
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 252.625,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 163,
+        "PENDING": 807,
+        "RUNNING": 1,
+        "SUCCEEDED": 29
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 652,
+        "PENDING": 3233,
+        "RUNNING": 4,
+        "STAGE2_READY": 111
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 267.75,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 175,
+        "PENDING": 795,
+        "RUNNING": 1,
+        "SUCCEEDED": 29
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 700,
+        "PENDING": 3184,
+        "STAGE2_READY": 116
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 282.844,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 185,
+        "PENDING": 782,
+        "RUNNING": 1,
+        "SUCCEEDED": 32
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 740,
+        "PENDING": 3132,
+        "RUNNING": 2,
+        "STAGE2_READY": 126
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 297.938,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 198,
+        "PENDING": 769,
+        "RUNNING": 1,
+        "SUCCEEDED": 32
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 792,
+        "PENDING": 3080,
+        "STAGE2_READY": 128
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 313.032,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 209,
+        "PENDING": 756,
+        "RUNNING": 1,
+        "SUCCEEDED": 34
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 836,
+        "PENDING": 3036,
+        "STAGE2_READY": 128
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 328.141,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 220,
+        "PENDING": 743,
+        "RUNNING": 1,
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 880,
+        "PENDING": 2992,
+        "STAGE2_READY": 128
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 343.25,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 230,
+        "PENDING": 732,
+        "SUCCEEDED": 38
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 920,
+        "PENDING": 2938,
+        "RUNNING": 4,
+        "STAGE2_READY": 138
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 358.344,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 239,
+        "PENDING": 721,
+        "RUNNING": 1,
+        "SUCCEEDED": 39
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 956,
+        "PENDING": 2888,
+        "STAGE2_READY": 156
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 373.438,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 248,
+        "PENDING": 711,
+        "RUNNING": 1,
+        "SUCCEEDED": 40
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 992,
+        "PENDING": 2848,
+        "STAGE2_READY": 160
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 388.532,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 260,
+        "PENDING": 697,
+        "RUNNING": 1,
+        "SUCCEEDED": 42
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1040,
+        "PENDING": 2800,
+        "STAGE2_READY": 160
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 403.61,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 270,
+        "PENDING": 687,
+        "RUNNING": 1,
+        "SUCCEEDED": 42
+      },
+      "pairs": {
+        "STAGE2_READY": 168,
+        "EXTRACTION_FAILED": 1080,
+        "PENDING": 2752
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 418.719,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 282,
+        "PENDING": 673,
+        "RUNNING": 1,
+        "SUCCEEDED": 44
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1128,
+        "PENDING": 2704,
+        "STAGE2_READY": 168
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 433.782,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 292,
+        "PENDING": 663,
+        "RUNNING": 1,
+        "SUCCEEDED": 44
+      },
+      "pairs": {
+        "STAGE2_READY": 176,
+        "EXTRACTION_FAILED": 1168,
+        "PENDING": 2656
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 448.86,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 302,
+        "PENDING": 652,
+        "RUNNING": 1,
+        "SUCCEEDED": 45
+      },
+      "pairs": {
+        "STAGE2_READY": 176,
+        "EXTRACTION_FAILED": 1208,
+        "PENDING": 2616
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 463.969,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 314,
+        "PENDING": 640,
+        "RUNNING": 1,
+        "SUCCEEDED": 45
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1256,
+        "PENDING": 2564,
+        "STAGE2_READY": 180
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 479.063,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 324,
+        "PENDING": 630,
+        "RUNNING": 1,
+        "SUCCEEDED": 45
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1296,
+        "PENDING": 2524,
+        "STAGE2_READY": 180
+      },
+      "containers": null
+    },
+    {
+      "elapsed_seconds": 624.368,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "PENDING": 415,
+        "RUNNING": 1,
+        "SUCCEEDED": 248
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2392,
+        "RUNNING": 4,
+        "STAGE2_READY": 260
+      }
+    },
+    {
+      "elapsed_seconds": 654.431,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "PENDING": 356,
+        "RUNNING": 1,
+        "SUCCEEDED": 307
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2355,
+        "RUNNING": 4,
+        "STAGE2_READY": 297
+      }
+    },
+    {
+      "elapsed_seconds": 684.525,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "FAILED": 336,
+        "PENDING": 296,
+        "SUCCEEDED": 367
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2328,
+        "RUNNING": 4,
+        "STAGE2_READY": 324
+      }
+    },
+    {
+      "elapsed_seconds": 744.775,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "PENDING": 245,
+        "RUNNING": 1,
+        "SUCCEEDED": 418
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2302,
+        "RUNNING": 4,
+        "STAGE2_READY": 350
+      }
+    },
+    {
+      "elapsed_seconds": 774.853,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "PENDING": 182,
+        "RUNNING": 1,
+        "SUCCEEDED": 481
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2270,
+        "RUNNING": 4,
+        "STAGE2_READY": 382
+      }
+    },
+    {
+      "elapsed_seconds": 804.915,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "PENDING": 123,
+        "RUNNING": 1,
+        "SUCCEEDED": 540
+      },
+      "pairs": {
+        "STAGE2_READY": 418,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2234
+      }
+    },
+    {
+      "elapsed_seconds": 834.946,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "PENDING": 63,
+        "SUCCEEDED": 601
+      },
+      "pairs": {
+        "STAGE2_READY": 453,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2199
+      }
+    },
+    {
+      "elapsed_seconds": 865.071,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "RUNNING": 1,
+        "SUCCEEDED": 663
+      },
+      "pairs": {
+        "STAGE2_READY": 475,
+        "RUNNING": 3,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2178
+      }
+    },
+    {
+      "elapsed_seconds": 895.118,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "STAGE2_READY": 524,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2128
+      }
+    },
+    {
+      "elapsed_seconds": 925.181,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "STAGE2_READY": 569,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2083
+      }
+    },
+    {
+      "elapsed_seconds": 955.243,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "STAGE2_READY": 619,
+        "RUNNING": 3,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 2034
+      }
+    },
+    {
+      "elapsed_seconds": 985.275,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "STAGE2_READY": 668,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1984
+      }
+    },
+    {
+      "elapsed_seconds": 1015.353,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "STAGE2_READY": 707,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1945
+      }
+    },
+    {
+      "elapsed_seconds": 1045.478,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1882,
+        "RUNNING": 4,
+        "STAGE2_READY": 770
+      }
+    },
+    {
+      "elapsed_seconds": 1075.54,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "REVIEW_REQUIRED": 3,
+        "STAGE2_READY": 192,
+        "STAGE3_RUNNING": 1,
+        "SHORTLISTED": 26,
+        "PENDING": 1796,
+        "CUTOFF_EXCLUDED": 634,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344
+      }
+    },
+    {
+      "elapsed_seconds": 1105.618,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 634,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1694,
+        "REVIEW_REQUIRED": 3,
+        "RUNNING": 4,
+        "SHORTLISTED": 27,
+        "STAGE2_READY": 294
+      }
+    },
+    {
+      "elapsed_seconds": 1135.696,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 634,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1595,
+        "REVIEW_REQUIRED": 5,
+        "RUNNING": 4,
+        "SHORTLISTED": 23,
+        "STAGE2_READY": 393,
+        "STAGE3_RUNNING": 2
+      }
+    },
+    {
+      "elapsed_seconds": 1165.79,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "REVIEW_REQUIRED": 5,
+        "STAGE2_READY": 496,
+        "SHORTLISTED": 25,
+        "PENDING": 1492,
+        "CUTOFF_EXCLUDED": 634,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344
+      }
+    },
+    {
+      "elapsed_seconds": 1195.868,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "REVIEW_REQUIRED": 8,
+        "STAGE2_READY": 611,
+        "STAGE3_RUNNING": 1,
+        "SHORTLISTED": 21,
+        "PENDING": 1377,
+        "CUTOFF_EXCLUDED": 634,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344
+      }
+    },
+    {
+      "elapsed_seconds": 1225.931,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 634,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1269,
+        "REVIEW_REQUIRED": 8,
+        "RUNNING": 3,
+        "SHORTLISTED": 22,
+        "STAGE2_READY": 720
+      }
+    },
+    {
+      "elapsed_seconds": 1256.009,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1268,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1157,
+        "REVIEW_REQUIRED": 10,
+        "RUNNING": 4,
+        "SHORTLISTED": 49,
+        "STAGE2_READY": 167,
+        "STAGE3_RUNNING": 1
+      }
+    },
+    {
+      "elapsed_seconds": 1286.056,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1268,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 1040,
+        "REVIEW_REQUIRED": 10,
+        "RUNNING": 3,
+        "SHORTLISTED": 50,
+        "STAGE2_READY": 285
+      }
+    },
+    {
+      "elapsed_seconds": 1316.15,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1268,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 906,
+        "REVIEW_REQUIRED": 12,
+        "RUNNING": 3,
+        "SHORTLISTED": 46,
+        "STAGE2_READY": 419,
+        "STAGE3_RUNNING": 2
+      }
+    },
+    {
+      "elapsed_seconds": 1346.196,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "REVIEW_REQUIRED": 12,
+        "STAGE2_READY": 552,
+        "SHORTLISTED": 48,
+        "PENDING": 773,
+        "CUTOFF_EXCLUDED": 1268,
+        "RUNNING": 3,
+        "EXTRACTION_FAILED": 1344
+      }
+    },
+    {
+      "elapsed_seconds": 1376.275,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "REVIEW_REQUIRED": 14,
+        "STAGE2_READY": 683,
+        "STAGE3_RUNNING": 2,
+        "SHORTLISTED": 43,
+        "SUCCESS": 1,
+        "PENDING": 641,
+        "CUTOFF_EXCLUDED": 1268,
+        "RUNNING": 4,
+        "EXTRACTION_FAILED": 1344
+      }
+    },
+    {
+      "elapsed_seconds": 1406.353,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1902,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 534,
+        "REVIEW_REQUIRED": 14,
+        "RUNNING": 3,
+        "SHORTLISTED": 73,
+        "STAGE2_READY": 127,
+        "STAGE3_RUNNING": 2,
+        "SUCCESS": 1
+      }
+    },
+    {
+      "elapsed_seconds": 1436.431,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1902,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 427,
+        "REVIEW_REQUIRED": 14,
+        "RUNNING": 4,
+        "SHORTLISTED": 73,
+        "STAGE2_READY": 233,
+        "STAGE3_RUNNING": 2,
+        "SUCCESS": 1
+      }
+    },
+    {
+      "elapsed_seconds": 1466.478,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1902,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 312,
+        "REVIEW_REQUIRED": 15,
+        "RUNNING": 3,
+        "SHORTLISTED": 74,
+        "STAGE2_READY": 349,
+        "SUCCESS": 1
+      }
+    },
+    {
+      "elapsed_seconds": 1496.571,
+      "status": "RUNNING",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1902,
+        "EXTRACTION_FAILED": 1344,
+        "PENDING": 190,
+        "REVIEW_REQUIRED": 15,
+        "RUNNING": 3,
+        "SHORTLISTED": 74,
+        "STAGE2_READY": 471,
+        "SUCCESS": 1
+      }
+    },
+    {
+      "elapsed_seconds": 1526.775,
+      "status": "FAILED",
+      "stage0": {
+        "FAILED": 336,
+        "SUCCEEDED": 664
+      },
+      "pairs": {
+        "CUTOFF_EXCLUDED": 1902,
+        "EVALUATION_FAILED": 74,
+        "EXTRACTION_FAILED": 1344,
+        "PROCESSING_FAILED": 664,
+        "REVIEW_REQUIRED": 15,
+        "SUCCESS": 1
+      }
+    }
+  ],
+  "limitations": [
+    "Stage boundary times are sampled at the polling interval; individual queue wait is not persisted.",
+    "Provider request, token, and billing usage are not exposed by campaign records; Stage 3 attempts are worker attempts and may differ from provider requests."
+  ],
+  "campaign_id": "0dcf5e5a-2dcb-4042-9e1f-51288a1687ba",
+  "intake_seconds": 10.719,
+  "accepted_count": 1000,
+  "rejected_count": 0,
+  "rejection_codes": {},
+  "accounting": {
+    "expected_pairs": 4000,
+    "actual_pairs": 4000,
+    "terminal_pairs": 4000,
+    "selected_pairs": 90,
+    "pair_statuses": {
+      "CUTOFF_EXCLUDED": 1902,
+      "EVALUATION_FAILED": 74,
+      "EXTRACTION_FAILED": 1344,
+      "PROCESSING_FAILED": 664,
+      "REVIEW_REQUIRED": 15,
+      "SUCCESS": 1
+    },
+    "jds": [
+      {
+        "jd_key": "42a7509a9ecd4fc3876a6367e93225fc",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 30,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "a038c776c96041c49e171040fdf8fd1a",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 30,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "cefbdecad0d84d969d6747a6846371fe",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 30,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "d89c10d5f4c84639a46000c04324d301",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 0,
+        "cap": 30,
+        "reconciled": true
+      }
+    ],
+    "reconciled": true
+  },
+  "elapsed_seconds": 1526.775,
+  "status": "FAILED",
+  "milestones": {
+    "stage0_terminal_seconds": 895.118,
+    "all_jds_shortlisted_seconds": 1526.775
+  }
+}

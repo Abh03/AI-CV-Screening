@@ -9,7 +9,7 @@ from app.config import settings
 from app.stage3_evaluation.evidence import build_evidence_registry
 from app.stage3_evaluation.evaluator import compute_deterministic_tier
 from app.stage3_evaluation.llm_client import (
-    LLMClientWrapper, MockLLMProvider, ProviderRateLimited,
+    LLMClientWrapper, MockLLMProvider, ProviderRateLimited, ProviderTransientFailure,
     evaluate_single_candidate_async, llm_client,
 )
 from app.stage3_evaluation.prompts import SYSTEM_PROMPT_STAGE3, build_stage3_user_prompt
@@ -275,7 +275,7 @@ async def test_single_provider_attempt_does_not_hide_extra_requests():
                               json={"choices": [{"message": {"content": "{}"}}]})
     llm_client.http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     try:
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(ProviderTransientFailure):
             await llm_client._execute_openai_compatible_http(
                 "https://example.test", {}, {}, "test", "candidate", max_provider_attempts=1)
         assert len(attempts) == 1

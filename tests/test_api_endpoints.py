@@ -294,7 +294,7 @@ async def test_pdf_api_passes_only_redacted_provenance_to_screening(monkeypatch,
     page.insert_text((40, 110), "software engineer with experience in python and java systems")
     pdf = doc.tobytes()
     doc.close()
-    monkeypatch.setattr(pdf_pipeline, "assess_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
+    monkeypatch.setattr(pdf_pipeline, "assess_readable_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
     observed = {}
 
     async def fake_screening(**kwargs):
@@ -365,7 +365,7 @@ async def test_binary_pdf_upload_has_structured_outcomes(monkeypatch):
     page.insert_text((40, 110), "software engineer with experience in python and java systems")
     pdf = doc.tobytes()
     doc.close()
-    monkeypatch.setattr(pdf_pipeline, "assess_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
+    monkeypatch.setattr(pdf_pipeline, "assess_readable_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         good = await client.post("/api/v1/screening/ingest-pdf", content=pdf,
                                  headers={"Content-Type": "application/pdf"})

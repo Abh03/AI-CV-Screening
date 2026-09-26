@@ -1,0 +1,22 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+    "worker_stopped": true,
+    "reason": "Deploy whole-request deadline"
+  },
+  "output": {
+    "accounted_pairs": 4000,
+    "interrupted_leases_requeued": [
+      {
+        "pair_id": "e5124d02-ce0a-4e85-98e2-eb5775812c99",
+        "attempt_count": 2
+      },
+      {
+        "pair_id": "b1398d10-2ab2-4934-b14c-27461e0cf198",
+        "attempt_count": 2
+      }
+    ],
+    "attempt_counts_preserved": true,
+    "completed_results_retained": true
+  }
+}

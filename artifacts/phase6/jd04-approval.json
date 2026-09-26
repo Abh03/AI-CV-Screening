@@ -1,0 +1,147 @@
+{
+  "method": "POST /api/v1/jds/drafts/0418273ded13448e852bda22f1a2e489/approve",
+  "input": {
+    "schema_version": "jd-v1",
+    "title": "Data Engineer",
+    "must_have_skills": [
+      {
+        "canonical": "Python",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "SQL",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Apache Spark",
+        "aliases": [
+          "PySpark"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "Airflow",
+        "aliases": [
+          "ETL"
+        ],
+        "substitutes": []
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Kafka",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "AWS",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Azure",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Databricks",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "dbt",
+        "aliases": [],
+        "substitutes": []
+      }
+    ],
+    "hard_filter_rules": {
+      "min_years_experience": 3.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "jd_category_queries": {
+      "SKILLS": "Python, SQL, Apache Spark, PySpark, Airflow, ETL, Kafka, AWS, Azure, Databricks, dbt",
+      "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+      "PROJECTS": "No explicit requirement",
+      "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter."
+    },
+    "uncertainties": [
+      "Work authorization requirement not specified",
+      "Ambiguity whether \"ETL\" refers to a specific tool or a generic process"
+    ]
+  },
+  "http_status": 200,
+  "output": {
+    "approved_jd_id": "42a7509a9ecd4fc3876a6367e93225fc",
+    "profile": {
+      "job_id": "42a7509a9ecd4fc3876a6367e93225fc",
+      "title": "Data Engineer",
+      "jd_category_queries": {
+        "SKILLS": "Python, SQL, Apache Spark, PySpark, Airflow, ETL, Kafka, AWS, Azure, Databricks, dbt",
+        "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "No explicit requirement",
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter."
+      },
+      "hard_filter_rules": {
+        "min_years_experience": 3.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "must_have_skills": [
+        {
+          "canonical": "Python",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Apache Spark",
+          "aliases": [
+            "PySpark"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "Airflow",
+          "aliases": [
+            "ETL"
+          ],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Kafka",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "AWS",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Azure",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Databricks",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "dbt",
+          "aliases": [],
+          "substitutes": []
+        }
+      ]
+    }
+  }
+}

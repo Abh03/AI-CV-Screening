@@ -14,7 +14,9 @@ class SafeJSONFormatter(logging.Formatter):
                  "level": record.levelname, "logger": record.name,
                  "event": getattr(record, "event", "log"),
                  "correlation_id": correlation_id.get()}
-        for field in ("route", "status", "latency_ms", "run_id", "stage", "count", "error_code"):
+        for field in ("route", "status", "latency_ms", "run_id", "stage", "count", "error_code",
+                      "queue_wait_ms", "task_runtime_ms", "provider", "model",
+                      "input_tokens", "output_tokens", "total_tokens", "cost", "resolved_model"):
             value = getattr(record, field, None)
             if value is not None:
                 event[field] = value

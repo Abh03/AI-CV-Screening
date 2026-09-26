@@ -1,0 +1,8 @@
+{
+  "input": "C:\\Abhyudit_Files\\Infinite\\CV-Benchmark-Dataset-Generator\\output\\candidates.json",
+  "output": {
+    "phone_formats_checked": 1000,
+    "numbers_with_unmasked_digits": 0,
+    "first_failures": []
+  }
+}

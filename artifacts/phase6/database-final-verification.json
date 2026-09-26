@@ -1,0 +1,192 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98"
+  },
+  "output": {
+    "campaign": {
+      "status": "COMPLETED",
+      "created_at": "2026-09-26 10:33:32.427802+00:00",
+      "completed_at": "2026-09-26 12:45:27.875168+00:00"
+    },
+    "pairs": 4000,
+    "terminal_pairs": 4000,
+    "unique_pair_ids": 4000,
+    "unique_candidate_jd_pairs": 4000,
+    "legacy_evaluation_rows_in_campaign_window": 0,
+    "extraction": {
+      "extracted_pages": 1634,
+      "ocr_pages": 43
+    },
+    "jds": {
+      "a038c776c96041c49e171040fdf8fd1a": {
+        "pairs": 1000,
+        "selected": 30,
+        "selected_cap_pass": true,
+        "unique_candidate_pairs": true,
+        "complete_stage2_ranks": true,
+        "deterministic_stage2_order": true,
+        "selected_exact_top30": true,
+        "statuses": {
+          "REVIEW_REQUIRED": 24,
+          "CUTOFF_EXCLUDED": 970,
+          "SUCCESS": 4,
+          "EVALUATION_FAILED": 2
+        },
+        "stage3_attempts": 40
+      },
+      "cefbdecad0d84d969d6747a6846371fe": {
+        "pairs": 1000,
+        "selected": 30,
+        "selected_cap_pass": true,
+        "unique_candidate_pairs": true,
+        "complete_stage2_ranks": true,
+        "deterministic_stage2_order": true,
+        "selected_exact_top30": true,
+        "statuses": {
+          "REVIEW_REQUIRED": 25,
+          "CUTOFF_EXCLUDED": 970,
+          "EVALUATION_FAILED": 4,
+          "SUCCESS": 1
+        },
+        "stage3_attempts": 44
+      },
+      "d89c10d5f4c84639a46000c04324d301": {
+        "pairs": 1000,
+        "selected": 30,
+        "selected_cap_pass": true,
+        "unique_candidate_pairs": true,
+        "complete_stage2_ranks": true,
+        "deterministic_stage2_order": true,
+        "selected_exact_top30": true,
+        "statuses": {
+          "REVIEW_REQUIRED": 18,
+          "CUTOFF_EXCLUDED": 970,
+          "EVALUATION_FAILED": 9,
+          "SUCCESS": 3
+        },
+        "stage3_attempts": 65
+      },
+      "42a7509a9ecd4fc3876a6367e93225fc": {
+        "pairs": 1000,
+        "selected": 30,
+        "selected_cap_pass": true,
+        "unique_candidate_pairs": true,
+        "complete_stage2_ranks": true,
+        "deterministic_stage2_order": true,
+        "selected_exact_top30": true,
+        "statuses": {
+          "REVIEW_REQUIRED": 30,
+          "CUTOFF_EXCLUDED": 970
+        },
+        "stage3_attempts": 30
+      }
+    },
+    "selected_candidate_overlap": {
+      "a038c776c96041c49e171040fdf8fd1a|cefbdecad0d84d969d6747a6846371fe": 0,
+      "a038c776c96041c49e171040fdf8fd1a|d89c10d5f4c84639a46000c04324d301": 2,
+      "a038c776c96041c49e171040fdf8fd1a|42a7509a9ecd4fc3876a6367e93225fc": 1,
+      "cefbdecad0d84d969d6747a6846371fe|d89c10d5f4c84639a46000c04324d301": 0,
+      "cefbdecad0d84d969d6747a6846371fe|42a7509a9ecd4fc3876a6367e93225fc": 0,
+      "d89c10d5f4c84639a46000c04324d301|42a7509a9ecd4fc3876a6367e93225fc": 0
+    },
+    "successful_candidate_overlap": {
+      "a038c776c96041c49e171040fdf8fd1a|cefbdecad0d84d969d6747a6846371fe": 0,
+      "a038c776c96041c49e171040fdf8fd1a|d89c10d5f4c84639a46000c04324d301": 0,
+      "a038c776c96041c49e171040fdf8fd1a|42a7509a9ecd4fc3876a6367e93225fc": 0,
+      "cefbdecad0d84d969d6747a6846371fe|d89c10d5f4c84639a46000c04324d301": 0,
+      "cefbdecad0d84d969d6747a6846371fe|42a7509a9ecd4fc3876a6367e93225fc": 0,
+      "d89c10d5f4c84639a46000c04324d301|42a7509a9ecd4fc3876a6367e93225fc": 0
+    },
+    "shared_selected_candidate_evaluations": [
+      {
+        "candidate_id": "01bcca0b-9007-5f69-bfb5-49802abdba27",
+        "evaluations": [
+          {
+            "jd_key": "a038c776c96041c49e171040fdf8fd1a",
+            "pair_id": "aeb9f6a9-5a02-4639-8669-ffbf0ad742fe",
+            "status": "REVIEW_REQUIRED",
+            "score": 26.5,
+            "attempts": 1,
+            "has_stage3_snapshot": true
+          },
+          {
+            "jd_key": "d89c10d5f4c84639a46000c04324d301",
+            "pair_id": "b0f24fae-17ff-42e9-9f10-4a0a0b49dbce",
+            "status": "REVIEW_REQUIRED",
+            "score": 52.5,
+            "attempts": 1,
+            "has_stage3_snapshot": true
+          }
+        ]
+      },
+      {
+        "candidate_id": "0179c2b2-38c6-54e7-8a62-6b49e5c4b0d7",
+        "evaluations": [
+          {
+            "jd_key": "d89c10d5f4c84639a46000c04324d301",
+            "pair_id": "c2dcba15-ad42-44fa-afff-4534ebc3e0e8",
+            "status": "EVALUATION_FAILED",
+            "score": null,
+            "attempts": 5,
+            "has_stage3_snapshot": false
+          },
+          {
+            "jd_key": "a038c776c96041c49e171040fdf8fd1a",
+            "pair_id": "6db93b83-88d4-43b8-9fb5-ea48760381bd",
+            "status": "REVIEW_REQUIRED",
+            "score": 50.0,
+            "attempts": 1,
+            "has_stage3_snapshot": true
+          }
+        ]
+      },
+      {
+        "candidate_id": "02fdd4ec-e5af-5bbc-91f3-19902970ce61",
+        "evaluations": [
+          {
+            "jd_key": "42a7509a9ecd4fc3876a6367e93225fc",
+            "pair_id": "e9684fd9-d1cf-42bb-9735-ce93538440af",
+            "status": "REVIEW_REQUIRED",
+            "score": 54.5,
+            "attempts": 1,
+            "has_stage3_snapshot": true
+          },
+          {
+            "jd_key": "a038c776c96041c49e171040fdf8fd1a",
+            "pair_id": "5fc361f7-890b-468c-9637-3b8b13bc433f",
+            "status": "EVALUATION_FAILED",
+            "score": null,
+            "attempts": 3,
+            "has_stage3_snapshot": true
+          }
+        ]
+      }
+    ],
+    "persisted_stage3_snapshots": 114,
+    "success_or_review_without_snapshot": 0,
+    "failure_codes": {
+      "PROVIDER_RATE_LIMIT_EXHAUSTED": 1,
+      "INVALID_LLM_OUTPUT": 7,
+      "PROVIDER_ERROR": 2,
+      "PROVIDER_TRANSIENT_RETRY_EXHAUSTED": 5
+    },
+    "review_reason_counts": {
+      "MISSING_INFORMATION": 92,
+      "MISSING_CITATIONS:projects": 5,
+      "HIGH_OR_CRITICAL_FLAG_REQUIRES_REVIEW": 5,
+      "INVALID_CITATIONS:experience": 7,
+      "INVALID_CITATIONS:skills": 1,
+      "MISSING_CITATIONS:flags[0]": 3,
+      "MISSING_CITATIONS:flags[1]": 4,
+      "MISSING_CITATIONS:flags[2]": 2,
+      "INVALID_CITATIONS:flags[0]": 1,
+      "MISSING_CITATIONS:education": 1,
+      "MISSING_EVIDENCE:EDUCATION": 1
+    },
+    "failure_codes_in_snapshots": {
+      "null": 6,
+      "INVALID_LLM_OUTPUT": 7,
+      "PROVIDER_ERROR": 2
+    }
+  }
+}

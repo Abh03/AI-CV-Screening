@@ -1,0 +1,118 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+    "worker_stopped": true,
+    "reason": "Rerun Gemini transient failures after retry fix"
+  },
+  "output": {
+    "accounted_pairs": 4000,
+    "interrupted_leases_requeued": [
+      {
+        "pair_id": "9d6f19bb-40a2-4014-8615-2b5b9d1ac3b3",
+        "attempt_count": 0
+      },
+      {
+        "pair_id": "b0f24fae-17ff-42e9-9f10-4a0a0b49dbce",
+        "attempt_count": 0
+      }
+    ],
+    "provider_waits_released": [
+      {
+        "pair_id": "c2dcba15-ad42-44fa-afff-4534ebc3e0e8",
+        "attempt_count": 0,
+        "previous_failure_code": null
+      },
+      {
+        "pair_id": "36a79ea5-6403-4ab6-acd6-998384d1cf5b",
+        "attempt_count": 3,
+        "previous_failure_code": "PROVIDER_ERROR"
+      },
+      {
+        "pair_id": "274fd8ad-ba66-4e4f-8096-548850066eb7",
+        "attempt_count": 0,
+        "previous_failure_code": null
+      },
+      {
+        "pair_id": "6eaed553-6fd7-40c7-aaa9-ed077bd9ae96",
+        "attempt_count": 0,
+        "previous_failure_code": null
+      },
+      {
+        "pair_id": "86c8da53-35c7-4c93-9169-a674cf031ce1",
+        "attempt_count": 1,
+        "previous_failure_code": "PROVIDER_ERROR"
+      },
+      {
+        "pair_id": "5e79ee6d-671e-4470-a57b-49d13b1c13be",
+        "attempt_count": 1,
+        "previous_failure_code": null
+      },
+      {
+        "pair_id": "e0502f99-e144-4b6f-ad00-74231c0e91d1",
+        "attempt_count": 0,
+        "previous_failure_code": null
+      },
+      {
+        "pair_id": "b0b98f43-51e9-4d89-8c19-5d244533bec5",
+        "attempt_count": 2,
+        "previous_failure_code": null
+      },
+      {
+        "pair_id": "8f41c85e-837d-46f3-b7eb-2bc5fa21ddf9",
+        "attempt_count": 0,
+        "previous_failure_code": null
+      },
+      {
+        "pair_id": "a87ec875-ccc4-4e33-967c-63a019776818",
+        "attempt_count": 0,
+        "previous_failure_code": null
+      }
+    ],
+    "transient_failures_requeued": [
+      {
+        "pair_id": "36a79ea5-6403-4ab6-acd6-998384d1cf5b",
+        "attempt_count": 3,
+        "previous_evaluation": {
+          "candidate_id": "5d6cbf2a-6c22-5bfb-bbd4-000b3200f293",
+          "evaluation_status": "EVALUATION_FAILED",
+          "scoring_policy_version": "stage3-v1.1.0",
+          "composite_score": null,
+          "tier": null,
+          "category_scores": {},
+          "llm_raw_output": null,
+          "verified_citations": [],
+          "invalid_citations": [],
+          "has_critical_flags": false,
+          "review_reasons": [],
+          "error_code": "PROVIDER_ERROR",
+          "error_message": "Evaluation failed: provider request could not complete.",
+          "evidence_verification": null,
+          "is_mock": false
+        }
+      },
+      {
+        "pair_id": "86c8da53-35c7-4c93-9169-a674cf031ce1",
+        "attempt_count": 1,
+        "previous_evaluation": {
+          "candidate_id": "ed85580e-91de-5d80-989a-e90fb3d98395",
+          "evaluation_status": "EVALUATION_FAILED",
+          "scoring_policy_version": "stage3-v1.1.0",
+          "composite_score": null,
+          "tier": null,
+          "category_scores": {},
+          "llm_raw_output": null,
+          "verified_citations": [],
+          "invalid_citations": [],
+          "has_critical_flags": false,
+          "review_reasons": [],
+          "error_code": "PROVIDER_ERROR",
+          "error_message": "Evaluation failed: provider request could not complete.",
+          "evidence_verification": null,
+          "is_mock": false
+        }
+      }
+    ],
+    "attempt_counts_preserved": true,
+    "earlier_106_terminal_outcomes_retained": true
+  }
+}

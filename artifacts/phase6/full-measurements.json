@@ -1,0 +1,506 @@
+{
+  "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+  "status": "RUNNING",
+  "elapsed_seconds": 6954.516,
+  "accounting": {
+    "expected_pairs": 4000,
+    "actual_pairs": 4000,
+    "terminal_pairs": 3993,
+    "selected_pairs": 120,
+    "pair_statuses": {
+      "CUTOFF_EXCLUDED": 3880,
+      "EVALUATION_FAILED": 10,
+      "REVIEW_REQUIRED": 95,
+      "SHORTLISTED": 7,
+      "SUCCESS": 8
+    },
+    "jds": [
+      {
+        "jd_key": "42a7509a9ecd4fc3876a6367e93225fc",
+        "status": "COMPLETED",
+        "pairs": 1000,
+        "selected": 30,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "a038c776c96041c49e171040fdf8fd1a",
+        "status": "COMPLETED",
+        "pairs": 1000,
+        "selected": 30,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "cefbdecad0d84d969d6747a6846371fe",
+        "status": "COMPLETED",
+        "pairs": 1000,
+        "selected": 30,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "d89c10d5f4c84639a46000c04324d301",
+        "status": "SHORTLISTED",
+        "pairs": 1000,
+        "selected": 30,
+        "cap": 30,
+        "reconciled": true
+      }
+    ],
+    "reconciled": true
+  },
+  "milestones": {
+    "stage0_terminal_seconds": 814.75,
+    "all_jds_shortlisted_seconds": 1491.453
+  },
+  "duplicate_captured_events_ignored": 1242,
+  "containers": {
+    "docker-worker-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 0.297,
+        "p50": 0.3,
+        "p95": 0.46,
+        "max": 0.6
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 296.653,
+        "p50": 292.5,
+        "p95": 407.05,
+        "max": 490.8
+      }
+    },
+    "docker-ocr-worker-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 15.223,
+        "p50": 0.31,
+        "p95": 97.633,
+        "max": 368.56
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 555.233,
+        "p50": 549.7,
+        "p95": 617.9,
+        "max": 713.1
+      }
+    },
+    "docker-retrieval-worker-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 169.09,
+        "p50": 0.42,
+        "p95": 866.404,
+        "max": 950.77
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 3493.166,
+        "p50": 3614.72,
+        "p95": 3636.531,
+        "max": 3658.752
+      }
+    },
+    "docker-evaluation-worker-1": {
+      "cpu_percent": {
+        "count": 202,
+        "mean": 6.986,
+        "p50": 0.37,
+        "p95": 63.98,
+        "max": 247.83
+      },
+      "memory_mib": {
+        "count": 202,
+        "mean": 568.96,
+        "p50": 530.5,
+        "p95": 773.575,
+        "max": 1180.672
+      }
+    },
+    "docker-control-worker-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 9.856,
+        "p50": 0.41,
+        "p95": 56.381,
+        "max": 164.79
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 495.191,
+        "p50": 507.5,
+        "p95": 534.38,
+        "max": 598.7
+      }
+    },
+    "docker-beat-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 0.056,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 2.98
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 277.442,
+        "p50": 277.2,
+        "p95": 384.61,
+        "max": 463.7
+      }
+    },
+    "docker-web-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 0.99,
+        "p50": 0.82,
+        "p95": 1.778,
+        "max": 10.7
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 701.171,
+        "p50": 686.1,
+        "p95": 893.22,
+        "max": 1051.648
+      }
+    },
+    "docker-postgres-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 14.285,
+        "p50": 0.2,
+        "p95": 66.517,
+        "max": 113.46
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 191.977,
+        "p50": 181.1,
+        "p95": 270.96,
+        "max": 306.5
+      }
+    },
+    "docker-redis-1": {
+      "cpu_percent": {
+        "count": 215,
+        "mean": 2.465,
+        "p50": 1.32,
+        "p95": 7.044,
+        "max": 15.62
+      },
+      "memory_mib": {
+        "count": 215,
+        "mean": 19.581,
+        "p50": 19.94,
+        "p95": 21.893,
+        "max": 24.89
+      }
+    }
+  },
+  "total_container_memory_mib": {
+    "count": 215,
+    "mean": 6564.973,
+    "p50": 6614.9,
+    "p95": 6801.785,
+    "max": 6926.8
+  },
+  "tasks": {
+    "campaign.stage2_pair": {
+      "queue_wait_ms": {
+        "count": 4000,
+        "mean": 260.027,
+        "p50": 177.817,
+        "p95": 841.603,
+        "max": 2053.744
+      },
+      "runtime_ms": {
+        "count": 4000,
+        "mean": 1060.699,
+        "p50": 891.576,
+        "p95": 1938.778,
+        "max": 5946.919
+      }
+    },
+    "campaign.coordinate": {
+      "queue_wait_ms": {
+        "count": 5290,
+        "mean": 39526.25,
+        "p50": 140.016,
+        "p95": 57369.741,
+        "max": 3636776.612
+      },
+      "runtime_ms": {
+        "count": 5290,
+        "mean": 178.904,
+        "p50": 179.017,
+        "p95": 247.309,
+        "max": 6436.613
+      }
+    },
+    "campaign.stage0": {
+      "queue_wait_ms": {
+        "count": 1393,
+        "mean": 432652.254,
+        "p50": 544586.722,
+        "p95": 720411.118,
+        "max": 775724.514
+      },
+      "runtime_ms": {
+        "count": 1396,
+        "mean": 557.182,
+        "p50": 460.98,
+        "p95": 1821.196,
+        "max": 7979.564
+      }
+    },
+    "screening.recover_runs": {
+      "queue_wait_ms": {
+        "count": 116,
+        "mean": 70.012,
+        "p50": 5.111,
+        "p95": 155.811,
+        "max": 4106.223
+      },
+      "runtime_ms": {
+        "count": 116,
+        "mean": 150.735,
+        "p50": 48.12,
+        "p95": 104.539,
+        "max": 10460.479
+      }
+    },
+    "campaign.recover_stage0": {
+      "queue_wait_ms": {
+        "count": 116,
+        "mean": 184.393,
+        "p50": 3.479,
+        "p95": 303.6,
+        "max": 10526.313
+      },
+      "runtime_ms": {
+        "count": 116,
+        "mean": 60.003,
+        "p50": 47.755,
+        "p95": 126.759,
+        "max": 152.935
+      }
+    },
+    "campaign.stage3_pair": {
+      "queue_wait_ms": {
+        "count": 1268,
+        "mean": 1765.587,
+        "p50": 17.062,
+        "p95": 3389.252,
+        "max": 327081.903
+      },
+      "runtime_ms": {
+        "count": 1267,
+        "mean": 2802.259,
+        "p50": 100.509,
+        "p95": 5261.837,
+        "max": 327164.586
+      }
+    },
+    "jd.expire_drafts": {
+      "queue_wait_ms": {
+        "count": 1,
+        "mean": 6.944,
+        "p50": 6.944,
+        "p95": 6.944,
+        "max": 6.944
+      },
+      "runtime_ms": {
+        "count": 1,
+        "mean": 48.074,
+        "p50": 48.074,
+        "p95": 48.074,
+        "max": 48.074
+      }
+    }
+  },
+  "provider": {
+    "counts": {
+      "requests": 155,
+      "200": 111,
+      "responses_with_usage": 111,
+      "429": 28,
+      "404": 2,
+      "responses_with_cost": 49,
+      "504": 1,
+      "503": 12
+    },
+    "latency_ms": {
+      "count": 154,
+      "mean": 22224.676,
+      "p50": 4261.208,
+      "p95": 89334.343,
+      "max": 327035.691
+    },
+    "tokens": {
+      "input_tokens": 175098,
+      "output_tokens": 298276,
+      "total_tokens": 473374
+    },
+    "by_provider_model": [
+      {
+        "provider": "groq",
+        "requested_model": "openai/gpt-oss-120b",
+        "counts": {
+          "requests": 75,
+          "200": 56,
+          "responses_with_usage": 56,
+          "429": 19
+        },
+        "resolved_model_counts": {},
+        "tokens": {
+          "input_tokens": 104448,
+          "output_tokens": 77831,
+          "total_tokens": 182279
+        },
+        "latency_ms": {
+          "count": 75,
+          "mean": 2835.535,
+          "p50": 3352.598,
+          "p95": 4773.176,
+          "max": 7051.45
+        },
+        "reported_cost_sum": null,
+        "uncached_list_price_estimate_usd": 0.062366
+      },
+      {
+        "provider": "openrouter",
+        "requested_model": "meta-llama/llama-3.3-70b-instruct:free",
+        "counts": {
+          "requests": 2,
+          "404": 2
+        },
+        "resolved_model_counts": {},
+        "tokens": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "latency_ms": {
+          "count": 2,
+          "mean": 263.334,
+          "p50": 263.334,
+          "p95": 428.687,
+          "max": 447.06
+        },
+        "reported_cost_sum": null,
+        "uncached_list_price_estimate_usd": null
+      },
+      {
+        "provider": "openrouter",
+        "requested_model": "openrouter/free",
+        "counts": {
+          "requests": 60,
+          "200": 49,
+          "responses_with_usage": 49,
+          "responses_with_cost": 49,
+          "429": 9,
+          "504": 1
+        },
+        "resolved_model_counts": {
+          "dots-studio/dots-3-note-preview:free": 15,
+          "liquid/lfm-2.5-2.6b:free": 11,
+          "nvidia/nemotron-3-super-120b-a12b:free": 17,
+          "qwen/qwen3.8-27b:free": 1
+        },
+        "tokens": {
+          "input_tokens": 62881,
+          "output_tokens": 210162,
+          "total_tokens": 273043
+        },
+        "latency_ms": {
+          "count": 59,
+          "mean": 52050.028,
+          "p50": 45920.46,
+          "p95": 107102.039,
+          "max": 327035.691
+        },
+        "reported_cost_sum": 0,
+        "uncached_list_price_estimate_usd": 0
+      },
+      {
+        "provider": "gemini",
+        "requested_model": "gemini-3.6-flash",
+        "counts": {
+          "requests": 18,
+          "200": 6,
+          "responses_with_usage": 6,
+          "503": 12
+        },
+        "resolved_model_counts": {
+          "gemini-3.6-flash": 6
+        },
+        "tokens": {
+          "input_tokens": 7769,
+          "output_tokens": 10283,
+          "total_tokens": 18052
+        },
+        "latency_ms": {
+          "count": 18,
+          "mean": 7692.035,
+          "p50": 6639.844,
+          "p95": 13793.826,
+          "max": 20493.214
+        },
+        "reported_cost_sum": null,
+        "uncached_list_price_estimate_usd": 0.044388
+      }
+    ],
+    "provider_reported_cost": null,
+    "reported_partial_cost_sum": 0,
+    "uncached_list_price_estimate_usd": 0.106754,
+    "price_source": "https://console.groq.com/docs/model/openai/gpt-oss-120b",
+    "additional_price_sources": [
+      "https://ai.google.dev/gemini-api/docs/pricing",
+      "https://openrouter.ai/openrouter/free"
+    ],
+    "cost_limits": "List-price equivalent for captured usage only; actual free-plan billing is not exposed."
+  },
+  "database_and_broker": {
+    "window_start": "2026-09-26T10:33:56.321427+00:00",
+    "window_end": "2026-09-26T12:29:39.269922+00:00",
+    "counter_deltas": {
+      "xact_commit": 91623,
+      "xact_rollback": 7311,
+      "blks_read": 151536,
+      "blks_hit": 61542889,
+      "deadlocks": 0,
+      "temp_bytes": 0
+    },
+    "peak_connections": 9,
+    "peak_queue_depths": {
+      "ocr": 972,
+      "retrieval": 1,
+      "evaluation": 3,
+      "control": 113,
+      "screening": 0
+    },
+    "peak_unacked_deliveries": 132,
+    "last_privacy": [
+      {
+        "stage0_status": "SUCCEEDED",
+        "count": 1000,
+        "retained_raw_pdfs": 0
+      }
+    ],
+    "last_duplicates": [
+      {
+        "duplicate_groups": 0
+      }
+    ]
+  },
+  "measurement_limits": [
+    "Resource peaks are sampled; short spikes can be missed.",
+    "Queue wait is publication-to-start, including scheduled countdowns and redeliveries, not only broker list residence.",
+    "DB counters are global and cover the telemetry window; probes and API polls contribute load.",
+    "Worker/provider events are scoped by run time; no other active evaluation campaigns should share this window."
+  ]
+}

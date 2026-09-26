@@ -1,0 +1,1380 @@
+{
+  "started_at": "2026-09-26T10:10:41.436477+00:00",
+  "archive_bytes": 7174953,
+  "jd_count": 4,
+  "samples": [
+    {
+      "elapsed_seconds": 7.921,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 997,
+        "RUNNING": 1,
+        "SUCCEEDED": 2
+      },
+      "pairs": {
+        "PENDING": 4000
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "852.07%",
+          "memory": "1.11GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "94.53%",
+          "memory": "525.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "18.32%",
+          "memory": "509.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.36%",
+          "memory": "490.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "463.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.40%",
+          "memory": "490.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.64%",
+          "memory": "930.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "38.82%",
+          "memory": "218.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.06%",
+          "memory": "14.01MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 40.296,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 940,
+        "RUNNING": 1,
+        "SUCCEEDED": 59
+      },
+      "pairs": {
+        "PENDING": 3927,
+        "RUNNING": 4,
+        "STAGE2_READY": 69
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "954.07%",
+          "memory": "1.975GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "194.28%",
+          "memory": "583.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "20.61%",
+          "memory": "512.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.50%",
+          "memory": "490.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "463.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.49%",
+          "memory": "490.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.62%",
+          "memory": "981.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "53.62%",
+          "memory": "224.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "6.63%",
+          "memory": "14.95MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 72.656,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "SUCCEEDED": 103,
+        "PENDING": 896
+      },
+      "pairs": {
+        "PENDING": 3851,
+        "RUNNING": 4,
+        "STAGE2_READY": 145
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "621.99%",
+          "memory": "2.426GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "98.44%",
+          "memory": "552.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "29.78%",
+          "memory": "509.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.34%",
+          "memory": "482.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "460.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.21%",
+          "memory": "482.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "1.41%",
+          "memory": "982.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "60.52%",
+          "memory": "204.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.10%",
+          "memory": "12.95MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 105.031,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "SUCCEEDED": 145,
+        "PENDING": 854
+      },
+      "pairs": {
+        "PENDING": 3791,
+        "RUNNING": 4,
+        "STAGE2_READY": 205
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "822.17%",
+          "memory": "2.517GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "255.76%",
+          "memory": "616.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "33.28%",
+          "memory": "508.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.40%",
+          "memory": "481.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "459.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.32%",
+          "memory": "481.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "1.13%",
+          "memory": "982.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "43.28%",
+          "memory": "216.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.11%",
+          "memory": "12.69MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 137.125,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "SUCCEEDED": 181,
+        "PENDING": 818
+      },
+      "pairs": {
+        "PENDING": 3722,
+        "RUNNING": 4,
+        "STAGE2_READY": 274
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "953.70%",
+          "memory": "2.723GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "95.74%",
+          "memory": "565.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "24.56%",
+          "memory": "504.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.48%",
+          "memory": "477.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "455.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.20%",
+          "memory": "477.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.64%",
+          "memory": "977.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "54.93%",
+          "memory": "206.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.18%",
+          "memory": "12.02MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 169.484,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 775,
+        "RUNNING": 1,
+        "SUCCEEDED": 224
+      },
+      "pairs": {
+        "PENDING": 3654,
+        "RUNNING": 4,
+        "STAGE2_READY": 342
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "796.83%",
+          "memory": "2.867GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "95.52%",
+          "memory": "566MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "28.84%",
+          "memory": "504.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.14%",
+          "memory": "476.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "455.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.21%",
+          "memory": "476.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.67%",
+          "memory": "977MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "57.20%",
+          "memory": "196.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.16%",
+          "memory": "12.01MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 201.843,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 743,
+        "RUNNING": 1,
+        "SUCCEEDED": 256
+      },
+      "pairs": {
+        "PENDING": 3585,
+        "RUNNING": 4,
+        "STAGE2_READY": 411
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "890.27%",
+          "memory": "2.86GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "96.31%",
+          "memory": "571.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "24.85%",
+          "memory": "504.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.27%",
+          "memory": "475.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "453.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.29%",
+          "memory": "475.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.75%",
+          "memory": "971.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "47.21%",
+          "memory": "192.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.10%",
+          "memory": "12MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 234.312,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 699,
+        "RUNNING": 1,
+        "SUCCEEDED": 300
+      },
+      "pairs": {
+        "PENDING": 3525,
+        "RUNNING": 3,
+        "STAGE2_READY": 472
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "996.47%",
+          "memory": "2.966GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "96.86%",
+          "memory": "550.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "6.41%",
+          "memory": "486.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.14%",
+          "memory": "457.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "433.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.40%",
+          "memory": "458.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.89%",
+          "memory": "934.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "20.13%",
+          "memory": "239.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "1.67%",
+          "memory": "14.18MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 266.187,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 668,
+        "RUNNING": 1,
+        "SUCCEEDED": 331
+      },
+      "pairs": {
+        "PENDING": 3477,
+        "RUNNING": 4,
+        "STAGE2_READY": 519
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "890.19%",
+          "memory": "2.985GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "353.24%",
+          "memory": "597.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "39.26%",
+          "memory": "474.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.28%",
+          "memory": "445.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "421.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.28%",
+          "memory": "446.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.77%",
+          "memory": "916.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "46.51%",
+          "memory": "238.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "7.33%",
+          "memory": "14.97MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 298.765,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 638,
+        "RUNNING": 1,
+        "SUCCEEDED": 361
+      },
+      "pairs": {
+        "PENDING": 3427,
+        "RUNNING": 4,
+        "STAGE2_READY": 569
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "957.48%",
+          "memory": "3.012GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "102.62%",
+          "memory": "551.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "27.71%",
+          "memory": "472.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.59%",
+          "memory": "444.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "420.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "1.03%",
+          "memory": "445MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.75%",
+          "memory": "915.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "70.74%",
+          "memory": "243.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.08%",
+          "memory": "14.66MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 331.296,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 610,
+        "RUNNING": 1,
+        "SUCCEEDED": 389
+      },
+      "pairs": {
+        "PENDING": 3374,
+        "RUNNING": 4,
+        "STAGE2_READY": 622
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "844.09%",
+          "memory": "3.017GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "95.19%",
+          "memory": "547.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "28.50%",
+          "memory": "464.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.49%",
+          "memory": "436.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "412.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.30%",
+          "memory": "436.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "3.33%",
+          "memory": "900.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "54.32%",
+          "memory": "233.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.50%",
+          "memory": "14.96MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 363.765,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 570,
+        "RUNNING": 1,
+        "SUCCEEDED": 429
+      },
+      "pairs": {
+        "PENDING": 3309,
+        "RUNNING": 4,
+        "STAGE2_READY": 687
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "694.11%",
+          "memory": "3.056GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "93.58%",
+          "memory": "544.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "6.08%",
+          "memory": "460.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.26%",
+          "memory": "432.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "408.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.21%",
+          "memory": "432.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.63%",
+          "memory": "893.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "75.78%",
+          "memory": "235.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.84%",
+          "memory": "14.52MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 396.265,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 544,
+        "RUNNING": 1,
+        "SUCCEEDED": 455
+      },
+      "pairs": {
+        "PENDING": 3238,
+        "RUNNING": 4,
+        "STAGE2_READY": 758
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "689.44%",
+          "memory": "3.115GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "96.80%",
+          "memory": "545.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "29.00%",
+          "memory": "450.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.21%",
+          "memory": "422.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "399.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.14%",
+          "memory": "422.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.71%",
+          "memory": "874.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "56.83%",
+          "memory": "226MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.20%",
+          "memory": "14.95MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 428.375,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 503,
+        "RUNNING": 1,
+        "SUCCEEDED": 496
+      },
+      "pairs": {
+        "STAGE2_READY": 805,
+        "PENDING": 3191,
+        "RUNNING": 4
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "857.14%",
+          "memory": "3.083GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "94.78%",
+          "memory": "516.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "14.07%",
+          "memory": "617.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.40%",
+          "memory": "402MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "380.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.35%",
+          "memory": "402.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.70%",
+          "memory": "832.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "52.58%",
+          "memory": "268.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "9.49%",
+          "memory": "14MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 460.828,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 462,
+        "RUNNING": 1,
+        "SUCCEEDED": 537
+      },
+      "pairs": {
+        "STAGE2_READY": 867,
+        "PENDING": 3129,
+        "RUNNING": 4
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "836.77%",
+          "memory": "3.073GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "29.13%",
+          "memory": "672.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "45.61%",
+          "memory": "595.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.49%",
+          "memory": "386MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "365.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.45%",
+          "memory": "386.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.65%",
+          "memory": "798.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "53.73%",
+          "memory": "239MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.84%",
+          "memory": "13.23MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 493.265,
+      "status": "RUNNING",
+      "stage0": {
+        "RUNNING": 1,
+        "PENDING": 423,
+        "SUCCEEDED": 576
+      },
+      "pairs": {
+        "STAGE2_READY": 937,
+        "PENDING": 3059,
+        "RUNNING": 4
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "859.53%",
+          "memory": "3.073GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "100.34%",
+          "memory": "682.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "32.77%",
+          "memory": "583.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.39%",
+          "memory": "377.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "357.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.28%",
+          "memory": "378.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.77%",
+          "memory": "783.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "42.43%",
+          "memory": "231.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.34%",
+          "memory": "14.26MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 525.75,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 386,
+        "RUNNING": 1,
+        "SUCCEEDED": 613
+      },
+      "pairs": {
+        "STAGE2_READY": 1016,
+        "PENDING": 2981,
+        "RUNNING": 3
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "861.60%",
+          "memory": "3.056GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "97.34%",
+          "memory": "678.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "25.55%",
+          "memory": "576.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.42%",
+          "memory": "372.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "352.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.31%",
+          "memory": "373.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.67%",
+          "memory": "772.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "46.49%",
+          "memory": "262.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.35%",
+          "memory": "14.21MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 557.39,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 339,
+        "RUNNING": 1,
+        "SUCCEEDED": 660
+      },
+      "pairs": {
+        "STAGE2_READY": 1087,
+        "PENDING": 2909,
+        "RUNNING": 4
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "909.10%",
+          "memory": "3.117GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "95.33%",
+          "memory": "675.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "23.70%",
+          "memory": "571.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.52%",
+          "memory": "369.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "349.6MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.75%",
+          "memory": "369.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.64%",
+          "memory": "765.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "60.10%",
+          "memory": "261.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.77%",
+          "memory": "14.47MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 589.796,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 287,
+        "SUCCEEDED": 713
+      },
+      "pairs": {
+        "STAGE2_READY": 1156,
+        "PENDING": 2840,
+        "RUNNING": 4
+      },
+      "containers": [
+        {
+          "container": "docker-retrieval-worker-1",
+          "cpu": "872.73%",
+          "memory": "3.137GiB / 7.572GiB"
+        },
+        {
+          "container": "docker-ocr-worker-1",
+          "cpu": "94.18%",
+          "memory": "667.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-control-worker-1",
+          "cpu": "17.58%",
+          "memory": "564.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.24%",
+          "memory": "363.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "344.3MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-evaluation-worker-1",
+          "cpu": "0.31%",
+          "memory": "364.4MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.70%",
+          "memory": "755.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "42.73%",
+          "memory": "253.5MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "2.33%",
+          "memory": "14.55MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 622.171,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 257,
+        "SUCCEEDED": 743
+      },
+      "pairs": {
+        "STAGE2_READY": 1208,
+        "PENDING": 2791,
+        "RUNNING": 1
+      },
+      "containers": [
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.32%",
+          "memory": "361.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "341.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.97%",
+          "memory": "750.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "0.30%",
+          "memory": "233.7MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "4.37%",
+          "memory": "14.17MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 654.406,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 257,
+        "SUCCEEDED": 743
+      },
+      "pairs": {
+        "STAGE2_READY": 1208,
+        "PENDING": 2791,
+        "RUNNING": 1
+      },
+      "containers": [
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.08%",
+          "memory": "361.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "341.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.97%",
+          "memory": "750.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "0.31%",
+          "memory": "233.9MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "1.17%",
+          "memory": "13.99MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 686.234,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 257,
+        "SUCCEEDED": 743
+      },
+      "pairs": {
+        "STAGE2_READY": 1208,
+        "PENDING": 2791,
+        "RUNNING": 1
+      },
+      "containers": [
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.10%",
+          "memory": "361.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "341.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "1.00%",
+          "memory": "751.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "0.02%",
+          "memory": "234.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "1.12%",
+          "memory": "13.98MiB / 7.572GiB"
+        }
+      ]
+    },
+    {
+      "elapsed_seconds": 718.25,
+      "status": "FAILED",
+      "stage0": {
+        "FAILED": 257,
+        "SUCCEEDED": 743
+      },
+      "pairs": {
+        "PROCESSING_FAILED": 4000
+      },
+      "containers": [
+        {
+          "container": "docker-worker-1",
+          "cpu": "0.32%",
+          "memory": "361.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-beat-1",
+          "cpu": "0.00%",
+          "memory": "341.8MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-web-1",
+          "cpu": "0.70%",
+          "memory": "705.1MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-postgres-1",
+          "cpu": "0.03%",
+          "memory": "241.2MiB / 7.572GiB"
+        },
+        {
+          "container": "docker-redis-1",
+          "cpu": "3.64%",
+          "memory": "14.61MiB / 7.572GiB"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Stage boundary times are sampled at the polling interval; individual queue wait is not persisted.",
+    "Provider request, token, and billing usage are not exposed by campaign records; Stage 3 attempts are worker attempts and may differ from provider requests."
+  ],
+  "campaign_id": "ec8bbc11-e38c-4d06-99ec-adeecf426c33",
+  "intake_seconds": 7.547,
+  "accepted_count": 1000,
+  "rejected_count": 0,
+  "rejection_codes": {},
+  "elapsed_seconds": 718.25,
+  "status": "FAILED",
+  "milestones": {
+    "stage0_terminal_seconds": 718.25,
+    "all_jds_shortlisted_seconds": 718.25
+  },
+  "accounting": {
+    "expected_pairs": 4000,
+    "actual_pairs": 4000,
+    "terminal_pairs": 4000,
+    "selected_pairs": 0,
+    "pair_statuses": {
+      "PROCESSING_FAILED": 4000
+    },
+    "jds": [
+      {
+        "jd_key": "42a7509a9ecd4fc3876a6367e93225fc",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 0,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "a038c776c96041c49e171040fdf8fd1a",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 0,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "cefbdecad0d84d969d6747a6846371fe",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 0,
+        "cap": 30,
+        "reconciled": true
+      },
+      {
+        "jd_key": "d89c10d5f4c84639a46000c04324d301",
+        "status": "FAILED",
+        "pairs": 1000,
+        "selected": 0,
+        "cap": 30,
+        "reconciled": true
+      }
+    ],
+    "reconciled": true
+  }
+}

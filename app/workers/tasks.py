@@ -26,7 +26,9 @@ from app.models.database import CampaignCVModel, CampaignJDModel, CampaignModel,
 from app.campaigns.persistence import finish_stage0
 from app.campaigns.coordinator import dispatch_pairs, finalize_ready_jds, dispatch_stage3, finalize_campaign
 from app.campaigns.provider_limit import admit, release, retry_delay
-from app.stage3_evaluation.llm_client import ProviderRateLimited, evaluate_single_candidate_async
+from app.campaigns.broker_recovery import queued_stage0_ids
+from app.campaigns.wakeup import schedule_wakeup
+from app.stage3_evaluation.llm_client import ProviderRateLimited, ProviderTransientFailure, evaluate_single_candidate_async
 from app.stage3_evaluation.scoring import failed_evaluation
 from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
 from app.stage1_rules.contracts import AttributeSource, AuthorizationStatus, resolve_hard_filters
@@ -280,17 +282,30 @@ def campaign_stage0_task(self, cv_id):
 def recover_campaign_stage0():
     async def find():
         await engine.dispose()
+        redis = Redis.from_url(settings.REDIS_URL, socket_connect_timeout=2, socket_timeout=2)
         try:
+            queued = await queued_stage0_ids(redis)
             async with AsyncSessionLocal() as db:
-                stale = datetime.now(timezone.utc) - timedelta(seconds=settings.RUN_TIMEOUT_SECONDS + 35)
+                now = datetime.now(timezone.utc)
+                stale = now - timedelta(seconds=settings.RUN_TIMEOUT_SECONDS + 35)
                 rows = (await db.execute(select(CampaignCVModel.id).join(
                     CampaignModel, CampaignModel.id == CampaignCVModel.campaign_id).where(
                     CampaignModel.status == "RUNNING",
-                    or_(CampaignCVModel.stage0_status == "PENDING",
+                    CampaignCVModel.id.not_in(queued),
+                    or_((CampaignCVModel.stage0_status == "PENDING") &
+                        (CampaignCVModel.updated_at < now - timedelta(seconds=settings.QUEUE_RECOVERY_SECONDS)),
                         (CampaignCVModel.stage0_status == "RUNNING") &
-                        (CampaignCVModel.updated_at < stale))).limit(100))).scalars().all()
+                        (CampaignCVModel.updated_at < stale))).limit(100)
+                    .with_for_update(skip_locked=True))).scalars().all()
+                # Throttle repeat recovery publications if a publish fails or races
+                # with a consumer between the broker snapshot and this transaction.
+                for cv_id in rows:
+                    cv = await db.get(CampaignCVModel, cv_id)
+                    cv.updated_at = now
+                await db.commit()
                 return rows
         finally:
+            await redis.aclose()
             await engine.dispose()
     for cv_id in asyncio.run(find()):
         campaign_stage0_task.delay(cv_id)
@@ -479,10 +494,7 @@ async def execute_campaign_stage3(pair_id, lease_owner):
                         pair.status = "SHORTLISTED"
                         pair.lease_owner = None
                         pair.lease_until = datetime.now(timezone.utc) + timedelta(seconds=wait)
-            try:
-                campaign_coordinate_task.apply_async(args=[campaign_id], countdown=wait)
-            except Exception:
-                pass  # Beat will recover the delayed claim.
+            await schedule_wakeup(redis, campaign_id, wait, campaign_coordinate_task.apply_async)
             return "ADMISSION_DELAYED"
         async with AsyncSessionLocal() as db:
             async with db.begin():
@@ -499,7 +511,7 @@ async def execute_campaign_stage3(pair_id, lease_owner):
                 result = await evaluate_single_candidate_async(
                     evidence, job, max_retries=0, raise_rate_limits=True,
                     max_provider_attempts=1)
-        except ProviderRateLimited as exc:
+        except (ProviderRateLimited, ProviderTransientFailure) as exc:
             delay = retry_delay(attempt, exc.retry_after)
             async with AsyncSessionLocal() as db:
                 async with db.begin():
@@ -511,18 +523,15 @@ async def execute_campaign_stage3(pair_id, lease_owner):
                     if attempt >= settings.CAMPAIGN_STAGE3_MAX_ATTEMPTS:
                         pair.status = "EVALUATION_FAILED"
                         pair.stage3_status = "EVALUATION_FAILED"
-                        pair.failure_code = "PROVIDER_RATE_LIMIT_EXHAUSTED"
+                        pair.failure_code = exc.exhausted_code
                         pair.lease_until = None
                     else:
                         pair.status = "SHORTLISTED"
-                        pair.failure_code = "PROVIDER_RATE_LIMITED"
+                        pair.failure_code = exc.failure_code
                         pair.lease_until = datetime.now(timezone.utc) + timedelta(seconds=delay)
             if attempt < settings.CAMPAIGN_STAGE3_MAX_ATTEMPTS:
-                try:
-                    campaign_coordinate_task.apply_async(args=[campaign_id], countdown=delay)
-                except Exception:
-                    pass  # Beat will recover the delayed claim.
-            return "RATE_LIMITED"
+                await schedule_wakeup(redis, campaign_id, delay, campaign_coordinate_task.apply_async)
+            return "RATE_LIMITED" if isinstance(exc,ProviderRateLimited) else "TRANSIENT_RETRY"
         async with AsyncSessionLocal() as db:
             async with db.begin():
                 pair = (await db.execute(select(CampaignPairModel).where(

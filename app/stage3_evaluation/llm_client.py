@@ -1,6 +1,7 @@
 import json
 import logging
 import asyncio
+import time
 import httpx
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
@@ -16,8 +17,19 @@ logger = logging.getLogger("cv_screening")
 
 
 class ProviderRateLimited(Exception):
+    failure_code = 'PROVIDER_RATE_LIMITED'
+    exhausted_code = 'PROVIDER_RATE_LIMIT_EXHAUSTED'
     def __init__(self, retry_after: float | None = None):
         super().__init__("Provider rate limited")
+        self.retry_after = retry_after
+
+
+class ProviderTransientFailure(Exception):
+    failure_code = 'PROVIDER_TRANSIENT_FAILURE'
+    exhausted_code = 'PROVIDER_TRANSIENT_RETRY_EXHAUSTED'
+
+    def __init__(self, retry_after: float | None = None):
+        super().__init__('Transient provider failure')
         self.retry_after = retry_after
 
 
@@ -74,7 +86,8 @@ class LLMClientWrapper:
             api_key = settings.GEMINI_API_KEY
             if not api_key or api_key == "mock_key_for_now":
                 raise ValueError("GEMINI_API_KEY must be configured in .env when LLM_PROVIDER='gemini'")
-            self.gemini_client = genai.Client(api_key=api_key)
+            self.gemini_client = genai.Client(api_key=api_key,
+                http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=1)))
             logger.info("Initialized Gemini LLM Client via Google AI Studio.")
 
         elif self.provider == "groq":
@@ -120,6 +133,9 @@ class LLMClientWrapper:
                            max_provider_attempts: int = 3) -> Dict[str, Any]:
         for attempt in range(max_provider_attempts):
             try:
+                started = time.monotonic()
+                logger.info('Provider request', extra={'event':'provider_request',
+                    'provider':'Gemini','model':settings.GEMINI_MODEL})
                 config = types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     response_mime_type="application/json",
@@ -129,8 +145,24 @@ class LLMClientWrapper:
 
                 response = await asyncio.wait_for(
                     self.gemini_client.aio.models.generate_content(
-                        model="gemini-3.6-flash", contents=user_prompt, config=config),
+                        model=settings.GEMINI_MODEL, contents=user_prompt, config=config),
                     timeout=settings.PROVIDER_TIMEOUT_SECONDS)
+
+                metrics = {'event':'provider_response','provider':'Gemini','model':settings.GEMINI_MODEL,
+                    'status':200,'latency_ms':round((time.monotonic()-started)*1000,3)}
+                usage = getattr(response,'usage_metadata',None)
+                for source,target in (('prompt_token_count','input_tokens'),('total_token_count','total_tokens')):
+                    value = getattr(usage,source,None)
+                    if isinstance(value,int) and not isinstance(value,bool) and value >= 0:
+                        metrics[target]=value
+                candidate_tokens=getattr(usage,'candidates_token_count',None)
+                thought_tokens=getattr(usage,'thoughts_token_count',None)
+                if isinstance(candidate_tokens,int) and not isinstance(candidate_tokens,bool) and candidate_tokens >= 0:
+                    metrics['output_tokens']=candidate_tokens+(thought_tokens if isinstance(thought_tokens,int) and thought_tokens>=0 else 0)
+                resolved_model=getattr(response,'model_version',None)
+                if isinstance(resolved_model,str) and len(resolved_model)<=200 and not any(char.isspace() for char in resolved_model):
+                    metrics['resolved_model']=resolved_model
+                logger.info('Provider response',extra=metrics)
 
                 if not response.text:
                     raise ValueError("Empty response received from Gemini API.")
@@ -139,6 +171,11 @@ class LLMClientWrapper:
 
             except Exception as e:
                 status_code = getattr(e, "code", None) or getattr(e, "status_code", None)
+                # Successful HTTP responses were already recorded, even if their JSON is invalid.
+                if not isinstance(e,(json.JSONDecodeError,ValueError)) or isinstance(e,asyncio.TimeoutError):
+                    logger.info('Provider failure',extra={'event':'provider_response','provider':'Gemini',
+                        'model':settings.GEMINI_MODEL,'status':status_code or ('TIMEOUT' if isinstance(e,asyncio.TimeoutError) else 'TRANSPORT_ERROR'),
+                        'latency_ms':round((time.monotonic()-started)*1000,3)})
                 if str(status_code) == "429":
                     headers = (getattr(e, "headers", None) or
                                getattr(getattr(e, "response", None), "headers", None) or {})
@@ -151,6 +188,8 @@ class LLMClientWrapper:
                     await asyncio.sleep(wait_time)
                 else:
                     logger.error(f"Gemini API call failed ({type(e).__name__})")
+                    if str(status_code) in {'500','502','503','504'} or isinstance(e,(TimeoutError,asyncio.TimeoutError)):
+                        raise ProviderTransientFailure() from e
                     raise e
 
     async def _call_groq(self, system_prompt: str, user_prompt: str, candidate_id: str,
@@ -184,6 +223,7 @@ class LLMClientWrapper:
         }
         payload = {
             "model": settings.OPENROUTER_MODEL,
+            "max_tokens": settings.OPENROUTER_MAX_TOKENS,
             "messages": [{"role": "system", "content": system_prompt},
                          {"role": "user", "content": user_prompt}],
             "temperature": 0.1,
@@ -205,7 +245,36 @@ class LLMClientWrapper:
         client = self.http_client
         for attempt in range(max_provider_attempts):
             try:
-                response = await client.post(url, headers=headers, json=payload)
+                started = time.monotonic()
+                logger.info("Provider request", extra={"event": "provider_request",
+                            "provider": provider_name, "model": payload.get("model")})
+                try:
+                    response = await asyncio.wait_for(
+                        client.post(url, headers=headers, json=payload),
+                        timeout=settings.PROVIDER_TIMEOUT_SECONDS)
+                except (asyncio.TimeoutError, httpx.TimeoutException):
+                    logger.info("Provider deadline", extra={"event":"provider_response",
+                        "provider":provider_name,"model":payload.get('model'),"status":"TIMEOUT",
+                        "error_code":"PROVIDER_TIMEOUT","latency_ms":round((time.monotonic()-started)*1000,3)})
+                    raise
+                metrics = {"event": "provider_response", "provider": provider_name,
+                           "model": payload.get("model"), "status": response.status_code,
+                           "latency_ms": round((time.monotonic() - started) * 1000, 3)}
+                if response.status_code < 400:
+                    try:
+                        usage = response.json().get("usage", {})
+                        resolved_model = response.json().get('model')
+                        if isinstance(resolved_model,str) and len(resolved_model)<=200 and not any(char.isspace() for char in resolved_model):
+                            metrics['resolved_model']=resolved_model
+                        for source, target in (("prompt_tokens", "input_tokens"),
+                                               ("completion_tokens", "output_tokens"),
+                                               ("total_tokens", "total_tokens"), ("cost", "cost")):
+                            value = usage.get(source)
+                            if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                                metrics[target] = value
+                    except (ValueError, AttributeError, TypeError):
+                        pass
+                logger.info("Provider response", extra=metrics)
                 if response.status_code == 429:
                     raise ProviderRateLimited(retry_after_seconds(response.headers.get("retry-after")))
                 if response.status_code >= 400:
@@ -219,7 +288,7 @@ class LLMClientWrapper:
                     raise
                 retryable = ((isinstance(exc, httpx.HTTPStatusError) and
                               exc.response.status_code in (429, 500, 502, 503, 504)) or
-                             isinstance(exc, (httpx.TimeoutException, httpx.TransportError)))
+                             isinstance(exc, (httpx.TimeoutException, httpx.TransportError, asyncio.TimeoutError)))
                 if retryable and attempt < max_provider_attempts - 1:
                     wait_time = min(8, 2 ** attempt)
                     logger.warning("%s transient failure for %s; retrying in %ss", provider_name,
@@ -227,6 +296,9 @@ class LLMClientWrapper:
                     await asyncio.sleep(wait_time)
                 else:
                     logger.error("%s API call failed (%s)", provider_name, type(exc).__name__)
+                    if retryable:
+                        headers = getattr(getattr(exc,'response',None),'headers',{})
+                        raise ProviderTransientFailure(retry_after_seconds(headers.get('retry-after'))) from exc
                     raise
 
     def _clean_json_text(self, text: str) -> str:
@@ -342,6 +414,10 @@ async def evaluate_single_candidate_async(
         except (json.JSONDecodeError, ValidationError) as exc:
             if attempt == max_retries:
                 return failed_evaluation(candidate_id, "INVALID_LLM_OUTPUT", "Evaluation failed: invalid provider response.", is_mock=is_mock)
+        except ProviderTransientFailure:
+            if raise_rate_limits:
+                raise
+            return failed_evaluation(candidate_id, 'PROVIDER_ERROR', 'Evaluation failed: provider request could not complete.', is_mock=is_mock)
         except ProviderRateLimited as exc:
             if raise_rate_limits:
                 raise

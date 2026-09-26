@@ -97,21 +97,28 @@ def assess_extraction_integrity(
     }
 
 
-def assess_jd_extraction_integrity(text: str) -> dict:
+def assess_readable_extraction_integrity(text: str) -> dict:
     """Check text quality without treating domain vocabulary as corruption.
 
-    JDs routinely contain terms absent from the small CV vocabulary. Keep the
+    CVs and JDs contain terms absent from the small vocabulary. Keep the
     entropy gate and require usable words with few decoding/control artifacts.
     This is an extraction check; recruiters still review the JD's meaning.
     """
-    assessment = assess_extraction_integrity(text, min_density=0)
+    # Case variation in headings, tools and short education pages adds entropy
+    # without indicating font corruption. Assess the normalized text only;
+    # retain the original text for extraction, redaction and evidence.
+    assessment = assess_extraction_integrity(text.casefold(), min_density=0)
     words = re.findall(r"[^\W\d_]+", text, flags=re.UNICODE)
     artifacts = sum(char == "\ufffd" or (not char.isprintable() and not char.isspace()
                     and char not in {"\u200b", "\u200c", "\u200d", "\ufeff"}) for char in text)
-    usable = (len(words) >= 5 and sum(len(word) for word in words) >= 30
+    usable = (len(words) >= 4 and sum(len(word) for word in words) >= 25
               and artifacts / max(len(text), 1) <= 0.01)
     if not usable:
         assessment["failure_reasons"].append("Insufficient readable text or excessive decoding artifacts")
     assessment["passed"] = assessment["passed"] and usable
     assessment["requires_ocr"] = not assessment["passed"]
     return assessment
+
+
+# Retain the public JD helper for existing callers.
+assess_jd_extraction_integrity = assess_readable_extraction_integrity

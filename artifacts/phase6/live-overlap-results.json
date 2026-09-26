@@ -1,0 +1,140 @@
+{
+  "input": {
+    "controlled_scores": [
+      {
+        "jd": "fixture-A",
+        "candidate": "shared-1",
+        "score": 90
+      },
+      {
+        "jd": "fixture-A",
+        "candidate": "shared-2",
+        "score": 70
+      },
+      {
+        "jd": "fixture-B",
+        "candidate": "shared-1",
+        "score": 60
+      },
+      {
+        "jd": "fixture-B",
+        "candidate": "shared-2",
+        "score": 80
+      }
+    ]
+  },
+  "output": {
+    "fixture-A": {
+      "campaign_id": "92beae98-b771-482c-ae12-9474ea583ced",
+      "jd_key": "fixture-A",
+      "jd_status": "COMPLETED",
+      "total": 2,
+      "limit": 30,
+      "offset": 0,
+      "results": [
+        {
+          "candidate_id": "shared-1",
+          "source_filename": "shared-1.pdf",
+          "status": "SUCCESS",
+          "rank": 1,
+          "stage2_rank": 1,
+          "stage2_score": null,
+          "score": 90.0,
+          "tier": "TIER_1",
+          "category_scores": {},
+          "provisional": false,
+          "verification_required": false,
+          "verification_reasons": [],
+          "stage1_decision": null,
+          "stage1_checks": [],
+          "review_reasons": [],
+          "failure_code": null,
+          "error_message": null,
+          "is_mock": false,
+          "evidence": []
+        },
+        {
+          "candidate_id": "shared-2",
+          "source_filename": "shared-2.pdf",
+          "status": "SUCCESS",
+          "rank": 2,
+          "stage2_rank": 2,
+          "stage2_score": null,
+          "score": 70.0,
+          "tier": "TIER_1",
+          "category_scores": {},
+          "provisional": false,
+          "verification_required": false,
+          "verification_reasons": [],
+          "stage1_decision": null,
+          "stage1_checks": [],
+          "review_reasons": [],
+          "failure_code": null,
+          "error_message": null,
+          "is_mock": false,
+          "evidence": []
+        }
+      ]
+    },
+    "fixture-B": {
+      "campaign_id": "92beae98-b771-482c-ae12-9474ea583ced",
+      "jd_key": "fixture-B",
+      "jd_status": "COMPLETED",
+      "total": 2,
+      "limit": 30,
+      "offset": 0,
+      "results": [
+        {
+          "candidate_id": "shared-2",
+          "source_filename": "shared-2.pdf",
+          "status": "SUCCESS",
+          "rank": 1,
+          "stage2_rank": 1,
+          "stage2_score": null,
+          "score": 80.0,
+          "tier": "TIER_1",
+          "category_scores": {},
+          "provisional": false,
+          "verification_required": false,
+          "verification_reasons": [],
+          "stage1_decision": null,
+          "stage1_checks": [],
+          "review_reasons": [],
+          "failure_code": null,
+          "error_message": null,
+          "is_mock": false,
+          "evidence": []
+        },
+        {
+          "candidate_id": "shared-1",
+          "source_filename": "shared-1.pdf",
+          "status": "SUCCESS",
+          "rank": 2,
+          "stage2_rank": 2,
+          "stage2_score": null,
+          "score": 60.0,
+          "tier": "TIER_1",
+          "category_scores": {},
+          "provisional": false,
+          "verification_required": false,
+          "verification_reasons": [],
+          "stage1_decision": null,
+          "stage1_checks": [],
+          "review_reasons": [],
+          "failure_code": null,
+          "error_message": null,
+          "is_mock": false,
+          "evidence": []
+        }
+      ]
+    }
+  },
+  "checks": {
+    "independent_reverse_order": true,
+    "overlapping_candidates": 2,
+    "stored_pairs": 4,
+    "raw_evidence_hidden": true
+  },
+  "provider_calls": 0,
+  "fixture_only": true
+}

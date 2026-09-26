@@ -1,0 +1,62 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+    "action": "read retry deadlines and failure counts"
+  },
+  "output": [
+    {
+      "status": "EVALUATION_FAILED",
+      "failure_code": "INVALID_LLM_OUTPUT",
+      "pairs": 7,
+      "min_attempts": 1,
+      "max_attempts": 2,
+      "earliest_deadline": null,
+      "latest_deadline": null
+    },
+    {
+      "status": "EVALUATION_FAILED",
+      "failure_code": "PROVIDER_ERROR",
+      "pairs": 2,
+      "min_attempts": 1,
+      "max_attempts": 3,
+      "earliest_deadline": null,
+      "latest_deadline": null
+    },
+    {
+      "status": "EVALUATION_FAILED",
+      "failure_code": "PROVIDER_RATE_LIMIT_EXHAUSTED",
+      "pairs": 1,
+      "min_attempts": 5,
+      "max_attempts": 5,
+      "earliest_deadline": null,
+      "latest_deadline": null
+    },
+    {
+      "status": "EVALUATION_FAILED",
+      "failure_code": "PROVIDER_TRANSIENT_RETRY_EXHAUSTED",
+      "pairs": 2,
+      "min_attempts": 5,
+      "max_attempts": 5,
+      "earliest_deadline": null,
+      "latest_deadline": null
+    },
+    {
+      "status": "SHORTLISTED",
+      "failure_code": "PROVIDER_TRANSIENT_FAILURE",
+      "pairs": 2,
+      "min_attempts": 2,
+      "max_attempts": 3,
+      "earliest_deadline": "2026-09-26 12:37:17.271186+00:00",
+      "latest_deadline": "2026-09-26 12:37:44.407015+00:00"
+    },
+    {
+      "status": "SHORTLISTED",
+      "failure_code": null,
+      "pairs": 1,
+      "min_attempts": 0,
+      "max_attempts": 0,
+      "earliest_deadline": "2026-09-26 12:36:57.949764+00:00",
+      "latest_deadline": "2026-09-26 12:36:57.949764+00:00"
+    }
+  ]
+}

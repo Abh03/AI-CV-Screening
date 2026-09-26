@@ -1,0 +1,7 @@
+{
+  "utc": "2026-09-26T12:35:18.453786+00:00",
+  "provider": "gemini",
+  "model": "gemini-3.7-flash",
+  "timeout_seconds": 180,
+  "global_inflight": 2
+}

@@ -1,0 +1,428 @@
+{
+  "input": {
+    "campaign_id": "c2f3123a-ebec-4e69-a26b-ad123c82fb98",
+    "source_file": "CV0888.pdf",
+    "candidate_id": "1dc58d82-2426-500c-8726-b62d088bd87a",
+    "jd": {
+      "job_id": "42a7509a9ecd4fc3876a6367e93225fc",
+      "title": "Data Engineer",
+      "jd_category_queries": {
+        "SKILLS": "Python, SQL, Apache Spark, PySpark, Airflow, ETL, Kafka, AWS, Azure, Databricks, dbt",
+        "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "No explicit requirement",
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter."
+      },
+      "hard_filter_rules": {
+        "min_years_experience": 3.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "must_have_skills": [
+        {
+          "canonical": "Python",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Apache Spark",
+          "aliases": [
+            "PySpark"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "Airflow",
+          "aliases": [
+            "ETL"
+          ],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Kafka",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "AWS",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Azure",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Databricks",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "dbt",
+          "aliases": [],
+          "substitutes": []
+        }
+      ]
+    }
+  },
+  "output": {
+    "stage0": {
+      "status": "SUCCEEDED",
+      "first_600_redacted_characters": "[REDACTED_NAME]\n\n[REDACTED_CONTACT]\n\nPROFILE\n\n[REDACTED_LOCATION], SQL, [REDACTED_NAME] practitioner with 2.33 years\nof industry experience. Recent work: pipeline\nobservability. I value clear interfaces, reproducible tests\nand useful operational documentation.\n\nTECHNICAL SKILLS\n\nApache Spark | SQL | [REDACTED_NAME] | Apache Airflow | ETL |\nData Warehousing | [REDACTED_NAME] | Python | Snowflake | dbt |\nAWS | Azure | [REDACTED_NAME] | EF Core | MS SQL\nServer\n\nPROFESSIONAL EXPERIENCE\n\nJunior ETL Developer | Davidson-Noble\n\n2024 - 2026\n\n- Maintained workflow dependencies, retries and\n\nfreshness a",
+      "raw_pdf_retained": false
+    },
+    "stage1": {
+      "decision": "REVIEW",
+      "details": {
+        "status": "REVIEW",
+        "policy_version": "stage1-v1.1.0",
+        "checks": [
+          {
+            "rule": "authorization",
+            "status": "PASS",
+            "code": "AUTHORIZATION_NOT_REQUIRED",
+            "message": "JD does not require an authorization filter."
+          },
+          {
+            "rule": "experience",
+            "status": "REVIEW",
+            "code": "EXPERIENCE_UNKNOWN",
+            "message": "Years of experience are unknown."
+          },
+          {
+            "rule": "education",
+            "status": "PASS",
+            "code": "EDUCATION_NOT_REQUIRED",
+            "message": "JD has no degree requirement."
+          },
+          {
+            "rule": "skill",
+            "status": "PASS",
+            "code": "REQUIRED_SKILL_FOUND",
+            "message": "Python: term found in CV",
+            "canonical": "Python",
+            "matched_term": "Python",
+            "excerpt": "| [REDACTED_NAME] | Apache Airflow | ETL |\nData Warehousing | [REDACTED_NAME] | Python | Snowflake | dbt |\nAWS | Azure | [REDACTED_NAME] | EF Core | MS SQL\nServer\n\nPR",
+            "match_weight": 1.0,
+            "negated": false,
+            "source": "cv_extracted"
+          },
+          {
+            "rule": "skill",
+            "status": "PASS",
+            "code": "REQUIRED_SKILL_FOUND",
+            "message": "SQL: term found in CV",
+            "canonical": "SQL",
+            "matched_term": "SQL",
+            "excerpt": "[REDACTED_NAME]\n\n[REDACTED_CONTACT]\n\nPROFILE\n\n[REDACTED_LOCATION], SQL, [REDACTED_NAME] practitioner with 2.33 years\nof industry experience. Recent wo",
+            "match_weight": 1.0,
+            "negated": false,
+            "source": "cv_extracted"
+          },
+          {
+            "rule": "skill",
+            "status": "PASS",
+            "code": "REQUIRED_SKILL_FOUND",
+            "message": "Apache Spark: term found in CV",
+            "canonical": "Apache Spark",
+            "matched_term": "Apache Spark",
+            "excerpt": "es, reproducible tests\nand useful operational documentation.\n\nTECHNICAL SKILLS\n\nApache Spark | SQL | [REDACTED_NAME] | Apache Airflow | ETL |\nData Warehousing | [REDACTED_N",
+            "match_weight": 1.0,
+            "negated": false,
+            "source": "cv_extracted"
+          },
+          {
+            "rule": "skill",
+            "status": "PASS",
+            "code": "REQUIRED_SKILL_FOUND",
+            "message": "Airflow: term found in CV",
+            "canonical": "Airflow",
+            "matched_term": "Airflow",
+            "excerpt": "documentation.\n\nTECHNICAL SKILLS\n\nApache Spark | SQL | [REDACTED_NAME] | Apache Airflow | ETL |\nData Warehousing | [REDACTED_NAME] | Python | Snowflake | dbt |\nAWS | A",
+            "match_weight": 1.0,
+            "negated": false,
+            "source": "cv_extracted"
+          }
+        ],
+        "failed_reasons": [],
+        "review_notes": [
+          "Years of experience are unknown."
+        ],
+        "metrics": {
+          "candidate_yoe": null,
+          "min_required_yoe": 3.0,
+          "work_authorized": "unknown",
+          "require_work_authorization": false,
+          "experience_source": "unknown",
+          "authorization_source": "unknown",
+          "parsed_degrees": [
+            {
+              "level_key": "B.SC",
+              "level_rank": 4,
+              "matched_text": "BSc Computer Science | Lakeview University | 2024",
+              "is_in_progress": false,
+              "is_ambiguous": false,
+              "full_context": "BSc Computer Science | Lakeview University | 2024"
+            }
+          ]
+        },
+        "input_provenance": {
+          "reported_experience_source": "unknown",
+          "reported_authorization_source": "unknown",
+          "document_version": 1
+        }
+      }
+    },
+    "stage2": {
+      "score": 1.5075,
+      "rank": 1,
+      "first_snippet_per_category": {
+        "SKILLS": [
+          {
+            "chunk_id": "chunk:8588a7c11823098ce1b4ae9cd6025cfd08ecaa74546e7e1e538657e5ca2e54db",
+            "document_id": "doc:06e20c28244698498f075ebbb854f61838099daea138129c3e422300d0aa3b8d",
+            "candidate_id": "1dc58d82-2426-500c-8726-b62d088bd87a",
+            "category": "SKILLS",
+            "section": "SKILLS",
+            "chunk_index": 0,
+            "text": "[Section: SKILLS] Apache Spark | SQL | [REDACTED_NAME] | Apache Airflow | ETL |\nData Warehousing | [REDACTED_NAME] | Python | Snowflake | dbt |\nAWS | Azure | [REDACTED_NAME] | EF Core | MS SQL\nServer",
+            "source_location": {
+              "page_number": 1,
+              "block_index": 5,
+              "bbox": [
+                36.0,
+                215.25,
+                285.7799987792969,
+                267.989990234375
+              ],
+              "section": "SKILLS",
+              "chunk_index": 0
+            },
+            "rrf_score": 0.016393,
+            "dense_rank": 1,
+            "sparse_rank": null,
+            "rerank_score": 5.025
+          }
+        ],
+        "EXPERIENCE": [
+          {
+            "chunk_id": "chunk:4658af30a0dccc61864443cc88991798aa4573ee44800600811dd1e0b2a9b782",
+            "document_id": "doc:06e20c28244698498f075ebbb854f61838099daea138129c3e422300d0aa3b8d",
+            "candidate_id": "1dc58d82-2426-500c-8726-b62d088bd87a",
+            "category": "EXPERIENCE",
+            "section": "SUMMARY",
+            "chunk_index": 0,
+            "text": "[Section: SUMMARY] [REDACTED_LOCATION], SQL, [REDACTED_NAME] practitioner with 2.33 years\nof industry experience. Recent work: pipeline\nobservability. I value clear interfaces, reproducible tests\nand useful operational documentation.",
+            "source_location": {
+              "page_number": 1,
+              "block_index": 3,
+              "bbox": [
+                36.0,
+                131.25,
+                281.64996337890625,
+                183.99000549316406
+              ],
+              "section": "SUMMARY",
+              "chunk_index": 0
+            },
+            "rrf_score": 0.016393,
+            "dense_rank": 1,
+            "sparse_rank": null,
+            "rerank_score": -3.0885
+          }
+        ],
+        "PROJECTS": [
+          {
+            "chunk_id": "chunk:42fe3884e415009e5e9efdc842940cbf0d2966059cf3c293b0886add4a80c70d",
+            "document_id": "doc:06e20c28244698498f075ebbb854f61838099daea138129c3e422300d0aa3b8d",
+            "candidate_id": "1dc58d82-2426-500c-8726-b62d088bd87a",
+            "category": "EXPERIENCE",
+            "section": "EXPERIENCE",
+            "chunk_index": 0,
+            "text": "[Section: EXPERIENCE] 2024 - 2026",
+            "source_location": {
+              "page_number": 1,
+              "block_index": 8,
+              "bbox": [
+                36.0,
+                318.3249816894531,
+                84.03300476074219,
+                330.69097900390625
+              ],
+              "section": "EXPERIENCE",
+              "chunk_index": 0
+            },
+            "rrf_score": 0.015873,
+            "dense_rank": 3,
+            "sparse_rank": null,
+            "rerank_score": -11.2411
+          }
+        ],
+        "EDUCATION": [
+          {
+            "chunk_id": "chunk:38d6c2a6160843970f25ce19846fbf3318fea38435f40c03a361384266ddbe8e",
+            "document_id": "doc:06e20c28244698498f075ebbb854f61838099daea138129c3e422300d0aa3b8d",
+            "candidate_id": "1dc58d82-2426-500c-8726-b62d088bd87a",
+            "category": "EDUCATION",
+            "section": "EDUCATION",
+            "chunk_index": 0,
+            "text": "[Section: EDUCATION] BSc Computer Science | Lakeview University | 2024",
+            "source_location": {
+              "page_number": 1,
+              "block_index": 30,
+              "bbox": [
+                36.0,
+                731.25,
+                266.27996826171875,
+                744.989990234375
+              ],
+              "section": "EDUCATION",
+              "chunk_index": 0
+            },
+            "rrf_score": 0.016393,
+            "dense_rank": 1,
+            "sparse_rank": null,
+            "rerank_score": -10.867
+          }
+        ]
+      }
+    },
+    "stage3": {
+      "candidate_id": "1dc58d82-2426-500c-8726-b62d088bd87a",
+      "evaluation_status": "REVIEW_REQUIRED",
+      "scoring_policy_version": "stage3-v1.1.0",
+      "composite_score": 66.5,
+      "tier": null,
+      "category_scores": {
+        "skills": 95.0,
+        "experience": 45.0,
+        "projects": 30.0,
+        "education": 90.0
+      },
+      "llm_raw_output": {
+        "skills": {
+          "score": 95.0,
+          "rationale": "Candidate lists all required skills (Python, SQL, Apache Spark, Apache Airflow, ETL) and several nice\u2011to\u2011have skills (AWS, Azure, dbt). No required skill is missing.",
+          "citations": [
+            "SKILLS:1"
+          ]
+        },
+        "experience": {
+          "score": 45.0,
+          "rationale": "Candidate reports 2.33 years of industry experience (EXPERIENCE:1) and an employment period of 2024\u20112026 (EXPERIENCE:2), which is below the 3\u2011year minimum. No explicit evidence of implementation and operational ownership is provided.",
+          "citations": [
+            "EXPERIENCE:1",
+            "EXPERIENCE:2"
+          ]
+        },
+        "projects": {
+          "score": 30.0,
+          "rationale": "Project snippets contain only a date range and a redacted contact, offering no details about project scope, complexity, or outcomes.",
+          "citations": [
+            "PROJECTS:1",
+            "PROJECTS:2"
+          ]
+        },
+        "education": {
+          "score": 90.0,
+          "rationale": "Candidate holds a BSc in Computer Science (EDUCATION:1), satisfying the degree requirement.",
+          "citations": [
+            "EDUCATION:1"
+          ]
+        },
+        "flags": [
+          {
+            "type": "MISSING_INFORMATION",
+            "severity": "LOW",
+            "description": "Project details are absent, preventing assessment of project complexity.",
+            "citations": [
+              "PROJECTS:1",
+              "PROJECTS:2"
+            ]
+          }
+        ],
+        "executive_summary": "The candidate demonstrates a strong match on required technical skills, covering all must\u2011have items and several nice\u2011to\u2011have technologies. However, the documented experience (\u22482.3\u202fyears) falls short of the 3\u2011year requirement, and there is no evidence of operational ownership of data pipelines. Project information is missing, limiting evaluation of project complexity. Education meets the stated criteria. Overall, the candidate is a moderate fit, strong on skills but weak on experience depth and project evidence."
+      },
+      "verified_citations": [
+        "EDUCATION:1",
+        "EXPERIENCE:1",
+        "EXPERIENCE:2",
+        "PROJECTS:1",
+        "PROJECTS:2",
+        "SKILLS:1"
+      ],
+      "invalid_citations": [],
+      "has_critical_flags": false,
+      "review_reasons": [
+        "MISSING_INFORMATION"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "evidence_verification": {
+        "checks": [
+          {
+            "field": "skills",
+            "citation": "SKILLS:1",
+            "valid": true,
+            "reason": null
+          },
+          {
+            "field": "experience",
+            "citation": "EXPERIENCE:1",
+            "valid": true,
+            "reason": null
+          },
+          {
+            "field": "experience",
+            "citation": "EXPERIENCE:2",
+            "valid": true,
+            "reason": null
+          },
+          {
+            "field": "projects",
+            "citation": "PROJECTS:1",
+            "valid": true,
+            "reason": null
+          },
+          {
+            "field": "projects",
+            "citation": "PROJECTS:2",
+            "valid": true,
+            "reason": null
+          },
+          {
+            "field": "education",
+            "citation": "EDUCATION:1",
+            "valid": true,
+            "reason": null
+          },
+          {
+            "field": "flags[0]",
+            "citation": "PROJECTS:1",
+            "valid": true,
+            "reason": null
+          },
+          {
+            "field": "flags[0]",
+            "citation": "PROJECTS:2",
+            "valid": true,
+            "reason": null
+          }
+        ],
+        "review_reasons": [],
+        "verified_flag_indices": [
+          0
+        ],
+        "injection_signals": []
+      },
+      "is_mock": false
+    }
+  }
+}

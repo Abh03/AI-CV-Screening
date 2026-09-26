@@ -1,0 +1,23 @@
+{
+  "input": {
+    "archive": "C:\\Abhyudit_Files\\Infinite\\CV-Benchmark-Dataset-Generator\\output\\cvs\\CV_1000.zip",
+    "campaign_id": "f6486035-18da-4f53-a4ab-26dd4290ee9a"
+  },
+  "output": {
+    "documents": 1000,
+    "successful_documents": 442,
+    "metadata_name_checks": 442,
+    "metadata_email_checks": 442,
+    "metadata_location_checks": 442,
+    "metadata_location_leaks": 261,
+    "metadata_phone_checks": 442,
+    "source_name_checks": 428,
+    "source_email_checks": 428,
+    "image_only_name_checks_unavailable": 14
+  },
+  "leak_examples_without_pii": [],
+  "limits": [
+    "Native PDF comparisons require a text layer; supplied metadata also checks image-only names and contacts.",
+    "Exact source locations are audited separately; work/project locations may intentionally remain. This is not complete anonymization."
+  ]
+}

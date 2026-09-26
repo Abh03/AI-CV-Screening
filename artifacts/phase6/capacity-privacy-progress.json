@@ -1,0 +1,22 @@
+{
+  "input": {
+    "archive": "C:\\Abhyudit_Files\\Infinite\\CV-Benchmark-Dataset-Generator\\output\\cvs\\CV_1000.zip",
+    "campaign_id": "ec8bbc11-e38c-4d06-99ec-adeecf426c33"
+  },
+  "output": {
+    "documents": 1000,
+    "successful_documents": 463,
+    "metadata_name_checks": 463,
+    "metadata_email_checks": 463,
+    "metadata_phone_checks": 463,
+    "source_name_checks": 446,
+    "source_email_checks": 446,
+    "metadata_phone_leaks": 227,
+    "image_only_name_checks_unavailable": 17
+  },
+  "leak_examples_without_pii": [],
+  "limits": [
+    "Source-name comparison covers PDFs with a text layer; image-only names need manual review.",
+    "This checks raw PDF retention, names and emails, not complete anonymization."
+  ]
+}

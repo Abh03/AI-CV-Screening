@@ -1,0 +1,136 @@
+{
+  "method": "POST /api/v1/jds/drafts/fa051654a382422bb27fdffa9fcc9834/approve",
+  "input": {
+    "schema_version": "jd-v1",
+    "title": "Test Automation Engineer",
+    "must_have_skills": [
+      {
+        "canonical": "Selenium",
+        "aliases": [
+          "Playwright",
+          "Cypress"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "API Testing",
+        "aliases": [
+          "Postman"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "SQL",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "JUnit",
+        "aliases": [
+          "TestNG",
+          "Python",
+          "Java"
+        ],
+        "substitutes": []
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Jenkins",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Docker",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Jira",
+        "aliases": [],
+        "substitutes": []
+      }
+    ],
+    "hard_filter_rules": {
+      "min_years_experience": 2.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "jd_category_queries": {
+      "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+      "EXPERIENCE": "At least 2 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+      "PROJECTS": "No explicit requirement",
+      "SKILLS": "Selenium, Playwright, Cypress, API Testing, Postman, SQL, JUnit, TestNG, Python, Java, Jenkins, Docker, Jira"
+    },
+    "uncertainties": [
+      "Work authorization requirement not specified."
+    ]
+  },
+  "http_status": 200,
+  "output": {
+    "approved_jd_id": "cefbdecad0d84d969d6747a6846371fe",
+    "profile": {
+      "job_id": "cefbdecad0d84d969d6747a6846371fe",
+      "title": "Test Automation Engineer",
+      "jd_category_queries": {
+        "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+        "EXPERIENCE": "At least 2 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+        "PROJECTS": "No explicit requirement",
+        "SKILLS": "Selenium, Playwright, Cypress, API Testing, Postman, SQL, JUnit, TestNG, Python, Java, Jenkins, Docker, Jira"
+      },
+      "hard_filter_rules": {
+        "min_years_experience": 2.0,
+        "degree_requirement": null,
+        "require_work_authorization": false
+      },
+      "must_have_skills": [
+        {
+          "canonical": "Selenium",
+          "aliases": [
+            "Playwright",
+            "Cypress"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "API Testing",
+          "aliases": [
+            "Postman"
+          ],
+          "substitutes": []
+        },
+        {
+          "canonical": "SQL",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "JUnit",
+          "aliases": [
+            "TestNG",
+            "Python",
+            "Java"
+          ],
+          "substitutes": []
+        }
+      ],
+      "nice_to_have_skills": [
+        {
+          "canonical": "Jenkins",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Docker",
+          "aliases": [],
+          "substitutes": []
+        },
+        {
+          "canonical": "Jira",
+          "aliases": [],
+          "substitutes": []
+        }
+      ]
+    }
+  }
+}

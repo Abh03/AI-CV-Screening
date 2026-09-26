@@ -1,0 +1,36 @@
+{
+  "input": {
+    "model": "gemini-3.6-flash",
+    "contents": "Reply OK",
+    "max_output_tokens": 32
+  },
+  "output": {
+    "status": 429,
+    "error_status": "RESOURCE_EXHAUSTED",
+    "quota_limits_in_message": [
+      "20"
+    ],
+    "quota_violations": [
+      {
+        "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+        "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
+      }
+    ],
+    "retry_delays": [
+      "23s"
+    ]
+  },
+  "alternative_model": {
+    "input": "GET models/gemini-3.7-flash",
+    "output": {
+      "name": "models/gemini-3.7-flash",
+      "supported_actions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ]
+    },
+    "inference_requests": 0
+  }
+}
