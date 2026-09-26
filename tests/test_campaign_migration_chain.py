@@ -12,7 +12,7 @@ def test_campaign_is_the_only_head_and_no_revision_file_is_orphaned():
     scripts = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
     revisions = list(scripts.walk_revisions())
     files = list((ROOT / "alembic" / "versions").glob("*.py"))
-    assert scripts.get_heads() == ["c3e9a72d1860"]
+    assert scripts.get_heads() == ["d91a2b3c4e50"]
     assert len(revisions) == len(files)
     assert all(current.down_revision == following.revision
                for current, following in zip(revisions, revisions[1:]))

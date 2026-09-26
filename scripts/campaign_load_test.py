@@ -95,8 +95,8 @@ async def docker_resources():
 
 async def run(args):
     jobs = json.loads(args.jobs.read_text(encoding="utf-8"))
-    if not isinstance(jobs, list) or not jobs:
-        raise ValueError("jobs file must contain a nonempty JSON array")
+    if not isinstance(jobs, list) or not jobs or any(not isinstance(job, str) or not job for job in jobs):
+        raise ValueError("jobs file must contain a nonempty JSON array of approved JD IDs")
     if not args.archive.is_file():
         raise ValueError("archive does not exist")
     token = os.environ.get("API_TOKEN")
@@ -120,7 +120,7 @@ async def run(args):
         ready.raise_for_status()
         key = args.idempotency_key or f"capacity-{uuid4()}"
         created = await client.post("/api/v1/campaigns", json={
-            "job_profiles": jobs, "idempotency_key": key})
+            "approved_jd_ids": jobs, "idempotency_key": key})
         created.raise_for_status()
         campaign_id = created.json()["campaign_id"]
         report["campaign_id"] = campaign_id
@@ -205,7 +205,7 @@ async def run(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
-    parser.add_argument("--jobs", type=Path, required=True, help="JSON array of structured JDs")
+    parser.add_argument("--jobs", type=Path, required=True, help="JSON array of approved JD version IDs")
     parser.add_argument("--url", default="http://127.0.0.1:8000")
     parser.add_argument("--idempotency-key")
     parser.add_argument("--env-file", type=Path, help="Read the first API token from a local Compose env file")

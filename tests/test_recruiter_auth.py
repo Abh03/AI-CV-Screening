@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from tests.jd_helpers import approved_jobs
 from app.config import settings
 from app.core.auth import AUDIENCE, ISSUER, hash_password
 from app.main import app
@@ -54,7 +55,7 @@ async def test_recruiter_login_csrf_ownership_and_revocation(monkeypatch):
             no_csrf = await alice.post("/api/v1/campaigns", json={"job_profiles": JOBS})
             assert no_csrf.status_code == 403
             csrf = alice.cookies["cv_csrf"]
-            created = await alice.post("/api/v1/campaigns", json={"job_profiles": JOBS},
+            created = await alice.post("/api/v1/campaigns", json={"approved_jd_ids": await approved_jobs(sessions, JOBS, "alice")},
                                        headers={"X-CSRF-Token": csrf})
             assert created.status_code == 201
             campaign_id = created.json()["campaign_id"]

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from tests.jd_helpers import approved_jobs
 from app.config import settings
 from app.main import app
 from app.models.database import Base, CampaignCVModel, CampaignPairModel, get_db
@@ -68,7 +69,7 @@ async def test_zip_intake_stage0_reuse_and_rejections(monkeypatch):
     content = archive([("one.pdf", pdf), ("nested/two.pdf", pdf), ("two.pdf", pdf),
                        ("../attack.pdf", pdf), ("note.txt", b"hello"), ("bad.pdf", b"wrong")])
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/v1/campaigns", json={"job_profiles": JOBS, "idempotency_key": "intake"})
+        created = await client.post("/api/v1/campaigns", json={"approved_jd_ids": await approved_jobs(TestingSessionLocal, JOBS), "idempotency_key": "intake"})
         assert created.status_code == 201
         campaign_id = created.json()["campaign_id"]
         uploaded = await client.post(created.json()["upload_url"], content=content,
@@ -107,7 +108,7 @@ async def test_campaign_jd_validation_and_archive_limits(monkeypatch):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         for jobs in ([], [JOBS[0], JOBS[0]], [{**JOBS[0], "jd_category_queries": {}}]):
             assert (await client.post("/api/v1/campaigns", json={"job_profiles": jobs})).status_code == 422
-        created = (await client.post("/api/v1/campaigns", json={"job_profiles": JOBS})).json()
+        created = (await client.post("/api/v1/campaigns", json={"approved_jd_ids": await approved_jobs(TestingSessionLocal, JOBS)})).json()
         monkeypatch.setattr(settings, "CAMPAIGN_ARCHIVE_MAX_BYTES", 10)
         assert (await client.post(created["upload_url"], content=b"x" * 11,
                                   headers={"Content-Type": "application/zip"})).status_code == 413
@@ -123,7 +124,7 @@ async def test_campaign_owner_scope_and_queue_routes(monkeypatch):
         {"id": "alice", "role": "recruiter", "token": "a" * 32},
         {"id": "bob", "role": "recruiter", "token": "b" * 32}]))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/v1/campaigns", json={"job_profiles": JOBS},
+        created = await client.post("/api/v1/campaigns", json={"approved_jd_ids": await approved_jobs(TestingSessionLocal, JOBS, "alice")},
                                     headers={"Authorization": "Bearer " + "a" * 32})
         assert created.status_code == 201
         url = "/api/v1/campaigns/" + created.json()["campaign_id"]
@@ -155,7 +156,7 @@ async def test_campaign_owner_scope_and_queue_routes(monkeypatch):
 async def test_zero_accepted_report_survives_reload(monkeypatch):
     monkeypatch.setattr(settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = (await client.post("/api/v1/campaigns", json={"job_profiles": JOBS})).json()
+        created = (await client.post("/api/v1/campaigns", json={"approved_jd_ids": await approved_jobs(TestingSessionLocal, JOBS)})).json()
         campaign_id = created["campaign_id"]
         response = await client.post(created["upload_url"], content=archive([("note.txt", b"synthetic")]),
                                      headers={"Content-Type": "application/zip"})

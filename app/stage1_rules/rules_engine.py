@@ -7,7 +7,7 @@ from app.stage1_rules.contracts import (
 )
 from app.stage2_retrieval.chunker import SECTION_HEADER_PATTERN
 
-STAGE1_POLICY_VERSION = "stage1-v1.0.0"
+STAGE1_POLICY_VERSION = "stage1-v1.1.0"
 EDUCATION_CONTEXT_ANCHORS = re.compile(
     r"(?i)\b(?:university|college|campus|institute|gpa|cgpa|graduated|degree|faculty|board|school|passed|major|specialization)\b"
 )
@@ -105,6 +105,7 @@ def evaluate_stage1_hard_filters(
     *,
     experience_source: AttributeSource = AttributeSource.UNKNOWN,
     authorization_source: AttributeSource = AttributeSource.UNKNOWN,
+    required_skills: list[dict] | None = None,
 ) -> dict[str, Any]:
     """Invalid input raises validation errors; uncertainty is REVIEW, not a rejection."""
     rules = jd_profile if isinstance(jd_profile, HardFilterRules) else resolve_hard_filters(jd_profile)
@@ -165,6 +166,16 @@ def evaluate_stage1_hard_filters(
         else:
             record("education", "FAIL", "EDUCATION_LEVEL_MISMATCH", "Education level mismatch: detected level is below the requirement.")
 
+    from app.stage1_rules.jd_matcher import required_skill_evidence
+    from app.stage1_rules.jd_profiler import SkillCluster
+    for value in required_skills or []:
+        cluster = SkillCluster.model_validate(value).model_dump()
+        skill_evidence = required_skill_evidence(candidate_cv_text, cluster)
+        weight = skill_evidence["match_weight"]
+        record("skill", "PASS" if weight else "REVIEW", "REQUIRED_SKILL_FOUND" if weight else "REQUIRED_SKILL_UNCERTAIN",
+               f"{cluster['canonical']}: " + ("approved substitute found" if weight == 0.75 else
+               "term found in CV" if weight else "no term evidence; recruiter verification required"))
+        checks[-1].update(canonical=cluster["canonical"], **skill_evidence, source="cv_extracted")
     failed = [check["message"] for check in checks if check["status"] == "FAIL"]
     review = [check["message"] for check in checks if check["status"] == "REVIEW"]
     return {

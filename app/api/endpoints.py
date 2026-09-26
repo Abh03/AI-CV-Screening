@@ -21,6 +21,19 @@ from app.core.auth import Principal, current_principal, can_access
 router = APIRouter(prefix="/api/v1/screening", tags=["CV Screening"])
 
 
+async def resolve_approved_profile(payload, db, principal):
+    """Production intake requires approved versions; internal text callers remain supported."""
+    if payload.approved_jd_id:
+        from app.models.database import ApprovedJDModel
+        from app.api.schemas import JobProfileInputSchema
+        approved = await db.get(ApprovedJDModel, payload.approved_jd_id)
+        if approved is None or approved.owner_id != principal.id:
+            raise HTTPException(404, "Approved JD not found")
+        payload.job_profile = JobProfileInputSchema.model_validate(approved.profile)
+    elif settings.ENVIRONMENT.lower() == "production":
+        raise HTTPException(422, "Screening requires an approved_jd_id")
+
+
 @router.post("/submit", status_code=status.HTTP_202_ACCEPTED)
 async def submit_screening_endpoint(payload: ScreeningRequestSchema, db: AsyncSession = Depends(get_db),
                                     principal: Principal = Depends(current_principal)):
@@ -29,6 +42,7 @@ async def submit_screening_endpoint(payload: ScreeningRequestSchema, db: AsyncSe
         raise HTTPException(status_code=404, detail="Text screening is available only for internal use")
     if not payload.candidates:
         raise HTTPException(status_code=400, detail="Candidate list cannot be empty")
+    await resolve_approved_profile(payload, db, principal)
     job = payload.job_profile.model_dump(mode="json")
     candidates = [c.model_dump(mode="json", exclude_unset=True) for c in payload.candidates]
     try:
@@ -76,6 +90,7 @@ async def get_screening_run(run_id: str, db: AsyncSession = Depends(get_db),
 async def submit_pdf_screening_endpoint(payload: PDFScreeningRequestSchema,
                                         db: AsyncSession = Depends(get_db),
                                         principal: Principal = Depends(current_principal)):
+    await resolve_approved_profile(payload, db, principal)
     if len(payload.pdf_base64) > ((settings.PDF_MAX_BYTES + 2) // 3) * 4:
         raise HTTPException(status_code=413, detail="PDF_TOO_LARGE")
     try:
@@ -146,6 +161,7 @@ async def run_pdf_screening_endpoint(payload: PDFScreeningRequestSchema, db: Asy
     """PDF-only production entry point; no unredacted document reaches screening."""
     if settings.ENVIRONMENT.lower() == "production":
         return JSONResponse(status_code=202, content=await submit_pdf_screening_endpoint(payload, db, principal))
+    await resolve_approved_profile(payload, db, principal)
     if len(payload.pdf_base64) > ((settings.PDF_MAX_BYTES + 2) // 3) * 4:
         return await _record_pdf_failure(payload, db, "PDF_TOO_LARGE", principal=principal)
     try:
@@ -237,6 +253,7 @@ async def run_cv_screening_endpoint(
 async def _run_screening(payload: ScreeningRequestSchema, db: AsyncSession, stage0_views=None,
                          principal=None):
     principal = principal or Principal("local", "admin")
+    await resolve_approved_profile(payload, db, principal)
     if not payload.candidates:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

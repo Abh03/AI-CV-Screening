@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from app.api.endpoints import router as screening_router
 from app.api.campaigns import router as campaign_router
 from app.api.auth import router as auth_router
+from app.api.jds import router as jd_router
 from app.config import settings
 from app.core.logging import setup_logging, logger, correlation_id
 from app.models.database import engine
@@ -66,6 +67,7 @@ async def _handle_request(request, call_next, start_time, request_id):
 app.include_router(screening_router)
 app.include_router(campaign_router)
 app.include_router(auth_router)
+app.include_router(jd_router)
 
 
 @app.get("/health")
@@ -84,7 +86,7 @@ async def readiness_check():
         async with engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
             revision = (await connection.execute(text("SELECT version_num FROM alembic_version"))).scalar_one()
-            if revision != "c3e9a72d1860":
+            if revision != "d91a2b3c4e50":
                 raise RuntimeError("migration pending")
         redis = Redis.from_url(settings.REDIS_URL, socket_connect_timeout=2, socket_timeout=2)
         try:

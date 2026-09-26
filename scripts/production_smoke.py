@@ -23,8 +23,6 @@ async def main():
     document.close()
     key = uuid4().hex
     payload = {
-        "job_profile": {"job_id": "smoke-" + key, "title": "Synthetic Engineer",
-                        "jd_category_queries": {}},
         "candidate_id": "synthetic-" + key,
         "pdf_base64": base64.b64encode(pdf).decode(),
         "work_authorized": "ineligible",
@@ -51,6 +49,23 @@ async def main():
             assert login.status_code == 200, f"login status {login.status_code}"
             token = login.cookies["cv_access"]
         headers = {"Authorization": "Bearer " + token}
+        jd_document = fitz.open()
+        jd_document.new_page().insert_text((40, 40),
+            "Synthetic Engineer\nThe software engineer will work on Python software projects.\nWork authorization is required for this software developer role.")
+        jd_pdf = jd_document.tobytes()
+        jd_document.close()
+        extracted = await client.post("/api/v1/jds/extract", content=jd_pdf,
+            headers={**headers, "Content-Type": "application/pdf"}, timeout=180)
+        extracted.raise_for_status()
+        draft = extracted.json()
+        if draft["status"] != "REVIEW":
+            raise RuntimeError(f"JD extraction failed: {draft['error_code']}")
+        # Explicitly approve a synthetic requirement to exercise deterministic rejection.
+        profile = draft["profile"]
+        profile["hard_filter_rules"]["require_work_authorization"] = True
+        approved = await client.post(f"/api/v1/jds/drafts/{draft['draft_id']}/approve", json=profile, headers=headers)
+        approved.raise_for_status()
+        payload["approved_jd_id"] = approved.json()["approved_jd_id"]
         response = await client.post("/api/v1/screening/submit-pdf", json=payload, headers=headers)
         assert response.status_code == 202, f"submission status {response.status_code}"
         run_id = response.json()["run_id"]

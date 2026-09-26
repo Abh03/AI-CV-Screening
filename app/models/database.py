@@ -17,6 +17,30 @@ class Base(DeclarativeBase):
     pass
 
 
+class JDDraftModel(Base):
+    __tablename__ = "jd_drafts"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    pdf_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    pages: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    profile: Mapped[dict | None] = mapped_column(JSON)
+    provenance: Mapped[dict] = mapped_column(JSON, nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (UniqueConstraint("owner_id", "pdf_hash", name="uq_jd_owner_pdf"),)
+
+
+class ApprovedJDModel(Base):
+    __tablename__ = "approved_jds"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    draft_id: Mapped[str] = mapped_column(ForeignKey("jd_drafts.id"), nullable=False, unique=True)
+    profile: Mapped[dict] = mapped_column(JSON, nullable=False)
+    provenance: Mapped[dict] = mapped_column(JSON, nullable=False)
+    approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class RecruiterUserModel(Base):
     __tablename__ = "recruiter_users"
 

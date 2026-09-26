@@ -2,6 +2,24 @@ import re
 from typing import List, Dict, Any
 
 
+def required_skill_evidence(text: str, cluster: Dict[str, Any]) -> Dict[str, Any]:
+    """Term presence is evidence of a mention, never verified proficiency."""
+    uncertain = None
+    for terms, weight in (([cluster["canonical"], *cluster.get("aliases", [])], 1.0),
+                          (cluster.get("substitutes", []), 0.75)):
+        for term in terms:
+            for match in re.finditer(r"(?<!\w)" + re.escape(term) + r"(?!\w)", text, re.I):
+                prefix = re.split(r"[.!?\n]", text[max(0, match.start() - 80):match.start()])[-1]
+                evidence = {"matched_term": term, "excerpt": text[max(0, match.start() - 80):match.end() + 80],
+                            "match_weight": weight, "negated": False}
+                if re.search(r"\b(no|not|without|lack|lacking|never)\b", prefix, re.I):
+                    evidence.update(match_weight=0, negated=True)
+                    uncertain = evidence
+                else:
+                    return evidence
+    return uncertain or {"matched_term": None, "excerpt": None, "match_weight": 0, "negated": False}
+
+
 def evaluate_skill_cluster_match(cv_text_lower: str, cluster: Dict[str, Any]) -> float:
     """
     Evaluates candidate text against a SkillCluster:
@@ -17,7 +35,7 @@ def evaluate_skill_cluster_match(cv_text_lower: str, cluster: Dict[str, Any]) ->
     for term in [canonical] + aliases:
         if not term:
             continue
-        pattern = r"\b" + re.escape(term) + r"\b"
+        pattern = r"(?<!\w)" + re.escape(term) + r"(?!\w)"
         if re.search(pattern, cv_text_lower):
             return 1.0
 
@@ -25,7 +43,7 @@ def evaluate_skill_cluster_match(cv_text_lower: str, cluster: Dict[str, Any]) ->
     for sub in substitutes:
         if not sub:
             continue
-        pattern = r"\b" + re.escape(sub) + r"\b"
+        pattern = r"(?<!\w)" + re.escape(sub) + r"(?!\w)"
         if re.search(pattern, cv_text_lower):
             return 0.75
 

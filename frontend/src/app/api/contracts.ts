@@ -9,8 +9,12 @@ export interface JobProfile {
   job_id: string; title: string;
   jd_category_queries: Partial<Record<Category, string>>;
   hard_filter_rules: { min_years_experience: number; degree_requirement: DegreeRequirement | null; require_work_authorization: boolean };
+  must_have_skills?: SkillCluster[]; nice_to_have_skills?: SkillCluster[];
 }
-export interface CampaignCreate { job_profiles: JobProfile[]; idempotency_key: string }
+export interface SkillCluster { canonical: string; aliases: string[]; substitutes: string[] }
+export interface ExtractedJD extends Omit<JobProfile, 'job_id'> { schema_version: 'jd-v1'; uncertainties: string[] }
+export interface JdDraft { draft_id: string; status: string; profile: ExtractedJD | null; error_code: string | null; pages: { page_number: number; blocks: { text: string }[] }[] }
+export interface CampaignCreate { job_profiles?: JobProfile[]; approved_jd_ids?: string[]; idempotency_key: string }
 export interface CampaignCreated { campaign_id: string; status: string; created: boolean; upload_url: string }
 export interface CampaignListItem { campaign_id: string; status: string; created_at: string; updated_at: string; completed_at: string | null; jd_count: number; accepted_count: number }
 export interface CampaignListPage { total: number; limit: number; offset: number; campaigns: CampaignListItem[] }

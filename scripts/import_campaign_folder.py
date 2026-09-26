@@ -12,21 +12,27 @@ from app.api.schemas import CampaignCreateSchema
 from app.campaigns.intake import accept_pdf
 from app.campaigns.persistence import reserve_campaign
 from app.config import settings
-from app.models.database import AsyncSessionLocal, CampaignModel
+from app.models.database import AsyncSessionLocal, CampaignModel, ApprovedJDModel
+from app.run_audit import policy_snapshot
 from app.workers.tasks import campaign_stage0_task
 
 
 async def import_folder(folder: Path, jobs_path: Path, owner: str, key: str | None):
-    payload = CampaignCreateSchema(job_profiles=json.loads(jobs_path.read_text(encoding="utf-8")),
+    payload = CampaignCreateSchema(approved_jd_ids=json.loads(jobs_path.read_text(encoding="utf-8")),
                                    idempotency_key=key)
-    if len(payload.job_profiles) > settings.CAMPAIGN_MAX_JDS:
+    if len(payload.approved_jd_ids) > settings.CAMPAIGN_MAX_JDS:
         raise ValueError("Too many JDs")
-    jobs = [job.model_dump(mode="json") for job in payload.job_profiles]
-    digest = hashlib.sha256(json.dumps(jobs, sort_keys=True).encode()).hexdigest()
     async with AsyncSessionLocal() as db:
+        jobs = []
+        for identifier in payload.approved_jd_ids:
+            approved = await db.get(ApprovedJDModel, identifier)
+            if approved is None or approved.owner_id != owner:
+                raise ValueError("Approved JD not found for owner")
+            jobs.append(approved.profile)
+        digest = hashlib.sha256(json.dumps(jobs, sort_keys=True).encode()).hexdigest()
         _, campaign = await reserve_campaign(
             db, owner_id=owner, request_hash=digest, job_snapshots=jobs,
-            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 30} for _ in jobs],
+            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 30, **policy_snapshot(30)} for _ in jobs],
             idempotency_key=key)
         if campaign.status != "INTAKE":
             return {"campaign_id": campaign.id, "status": campaign.status}
@@ -66,7 +72,7 @@ async def import_folder(folder: Path, jobs_path: Path, owner: str, key: str | No
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("folder", type=Path)
-    parser.add_argument("jobs_json", type=Path, help="JSON array of structured JDs")
+    parser.add_argument("jobs_json", type=Path, help="JSON array of approved JD version IDs")
     parser.add_argument("--owner", required=True)
     parser.add_argument("--idempotency-key")
     args = parser.parse_args()

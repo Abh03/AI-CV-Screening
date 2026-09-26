@@ -25,6 +25,7 @@ celery_app.conf.update(
         "campaign.stage2_pair": {"queue": "retrieval"},
         "campaign.stage3_pair": {"queue": "evaluation"},
         "campaign.coordinate": {"queue": "control"},
+        "jd.expire_drafts": {"queue": "control"},
     },
     worker_hijack_root_logger=False,
     task_serializer="json", accept_content=["json"], result_serializer="json",
@@ -43,5 +44,7 @@ celery_app.conf.update(
         "task": "campaign.recover_stage0", "schedule": 60.0,
     }, "coordinate-campaigns": {
         "task": "campaign.coordinate", "schedule": 30.0,
+    }, "expire-jd-drafts": {
+        "task": "jd.expire_drafts", "schedule": 3600.0,
     }},
 )

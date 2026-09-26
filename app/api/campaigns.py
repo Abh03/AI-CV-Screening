@@ -31,9 +31,17 @@ async def _owned(db, campaign_id, principal):
 @router.post("", status_code=201)
 async def create_campaign(payload: CampaignCreateSchema, db: AsyncSession = Depends(get_db),
                           principal: Principal = Depends(current_principal)):
-    if len(payload.job_profiles) > settings.CAMPAIGN_MAX_JDS:
+    if len(payload.approved_jd_ids) > settings.CAMPAIGN_MAX_JDS:
         raise HTTPException(status_code=413, detail="Too many JDs")
-    jobs = [job.model_dump(mode="json") for job in payload.job_profiles]
+    if payload.job_profiles:
+        raise HTTPException(422, "Create campaigns using approved_jd_ids after JD review and approval")
+    from app.models.database import ApprovedJDModel
+    jobs = []
+    for identifier in payload.approved_jd_ids:
+        approved = await db.get(ApprovedJDModel, identifier)
+        if approved is None or approved.owner_id != principal.id:
+            raise HTTPException(404, "Approved JD not found")
+        jobs.append(approved.profile)
     digest = hashlib.sha256(json.dumps(jobs, sort_keys=True).encode()).hexdigest()
     try:
         created, campaign = await reserve_campaign(

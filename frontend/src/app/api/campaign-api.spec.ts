@@ -22,7 +22,7 @@ describe('CampaignApi', () => {
     request.flush({ campaign_id: 'campaign-1', status: 'INTAKE', accepted_count: 0, rejected_count: 0, accepted: [], rejected: [] });
   });
   it('sends the stable idempotency key and server pagination parameters', () => {
-    api.create({ job_profiles: [], idempotency_key: 'fixed-key' }).subscribe();
+    api.create({ approved_jd_ids: ['approved-1'], idempotency_key: 'fixed-key' }).subscribe();
     const created = http.expectOne('/api/v1/campaigns');
     expect(created.request.body.idempotency_key).toBe('fixed-key');
     created.flush({ campaign_id: 'campaign-1', status: 'INTAKE', created: true, upload_url: '/api/v1/campaigns/campaign-1/archive' });

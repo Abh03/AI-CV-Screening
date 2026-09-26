@@ -1,20 +1,32 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional, Annotated
+from pydantic import BaseModel, Field, field_validator
 from app.stage1_rules.contracts import DegreeRequirement, HardFilterRules, StrictModel
+
+SkillTerm = Annotated[str, Field(min_length=1, max_length=120, pattern=r"\S")]
 
 
 class SkillCluster(StrictModel):
-    canonical: str = Field(
+    canonical: str = Field(min_length=1, max_length=120, pattern=r"\S",
         description="The primary name of the required skill/technology (e.g., 'Kubernetes')."
     )
-    aliases: List[str] = Field(
-        default_factory=list,
+    aliases: List[SkillTerm] = Field(
+        default_factory=list, max_length=30,
         description="Exact acronyms, synonyms, or alternative spellings (e.g., ['k8s', 'kubectl'])."
     )
-    substitutes: List[str] = Field(
-        default_factory=list,
+    substitutes: List[SkillTerm] = Field(
+        default_factory=list, max_length=30,
         description="Acceptable domain substitutes scored at partial weight (e.g., ['docker swarm'])."
     )
+
+    @field_validator("canonical")
+    @classmethod
+    def trim_name(cls, value):
+        return value.strip()
+
+    @field_validator("aliases", "substitutes")
+    @classmethod
+    def trim_terms(cls, values):
+        return list(dict.fromkeys(value.strip() for value in values))
 
 
 class JDProfile(HardFilterRules):

@@ -8,7 +8,7 @@ import fitz
 from app.config import settings
 
 _ocr_slots = BoundedSemaphore(settings.OCR_CONCURRENCY_LIMIT)
-from app.stage0_extraction.integrity import assess_extraction_integrity
+from app.stage0_extraction.integrity import assess_extraction_integrity, assess_jd_extraction_integrity
 from app.stage0_extraction.parser import sort_page_blocks
 from app.stage0_extraction.pii_masker import mask_header_zone, mask_body_zone
 
@@ -39,7 +39,8 @@ def _ocr_page(page: fitz.Page) -> str:
     return result.stdout.decode("utf-8", errors="replace").strip()
 
 
-def ingest_pdf(data: bytes) -> PDFIngestionResult:
+def ingest_pdf(data: bytes, *, redact: bool = True) -> PDFIngestionResult:
+    assess_text = (lambda text: assess_extraction_integrity(text, min_density=0.35)) if redact else assess_jd_extraction_integrity
     if not data.startswith(b"%PDF-"):
         return PDFIngestionResult("failure", "INVALID_PDF")
     if len(data) > settings.PDF_MAX_BYTES:
@@ -67,7 +68,7 @@ def ingest_pdf(data: bytes) -> PDFIngestionResult:
                 raw_text = "\n\n".join(block["text"] for block in blocks)
                 if len(raw_text) > 200_000:
                     return PDFIngestionResult("failure", "PDF_TEXT_LIMIT")
-                assessment = assess_extraction_integrity(raw_text, min_density=0.35)
+                assessment = assess_text(raw_text)
                 if assessment["requires_ocr"]:
                     if ocr_count >= settings.PDF_OCR_MAX_PAGES:
                         return PDFIngestionResult("review", "OCR_PAGE_LIMIT")
@@ -78,7 +79,7 @@ def ingest_pdf(data: bytes) -> PDFIngestionResult:
                         return PDFIngestionResult("review", "OCR_TIMEOUT")
                     except (OSError, RuntimeError, ValueError):
                         return PDFIngestionResult("review", "OCR_FAILED")
-                    if len(ocr_text) > 200_000 or not assess_extraction_integrity(ocr_text, min_density=0.35)["passed"]:
+                    if len(ocr_text) > 200_000 or not assess_text(ocr_text)["passed"]:
                         return PDFIngestionResult("review", "EXTRACTION_UNRELIABLE")
                     blocks = [{"x0": 0, "y0": 0, "x1": page.rect.width,
                                "y1": page.rect.height, "text": ocr_text}]
@@ -99,8 +100,8 @@ def ingest_pdf(data: bytes) -> PDFIngestionResult:
                 if header and any(line.strip().upper() in {"SUMMARY", "EXPERIENCE", "WORK EXPERIENCE", "SKILLS", "TECHNICAL SKILLS", "EDUCATION", "PROJECTS"}
                                   for line in source.splitlines()):
                     header = False
-                redacted = mask_header_zone(source) if header else mask_body_zone(source)
-                if header and page_number == 1 and block_number == 0:
+                redacted = (mask_header_zone(source) if header else mask_body_zone(source)) if redact else source
+                if redact and header and page_number == 1 and block_number == 0:
                     first_line, separator, rest = redacted.partition("\n")
                     if ("[REDACTED" not in first_line and
                             1 <= len(first_line.split()) <= 4 and

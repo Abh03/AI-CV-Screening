@@ -19,7 +19,7 @@ from app.stage2_retrieval.repository import CHUNKING_VERSION, REDACTION_VERSION
 from app.stage2_retrieval.evidence_extractor import DEFAULT_CATEGORY_WEIGHTS
 from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME, RERANKER_MODEL_VERSION
 
-PROMPT_VERSION = "stage3-prompt-v2"
+PROMPT_VERSION = "stage3-prompt-v3"
 RUN_POLICY_VERSION = "orchestration-v2"
 
 

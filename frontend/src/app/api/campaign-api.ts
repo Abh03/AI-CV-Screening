@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { publicConfig } from '../core/config';
+import { ExtractedJD, JdDraft, JobProfile } from './contracts';
 import { CampaignCreate, CampaignCreated, CampaignListPage, CampaignStatus, JdDefinition, JdsResponse, OutcomeStatus, ResultsPage, UploadResponse } from './contracts';
 
 @Injectable({ providedIn: 'root' })
@@ -10,6 +11,13 @@ export class CampaignApi {
   private readonly base = `${publicConfig.apiBase}/campaigns`;
 
   create(body: CampaignCreate): Observable<CampaignCreated> { return this.http.post<CampaignCreated>(this.base, body); }
+  extractJd(file: File, retry = false): Observable<JdDraft> {
+    return this.http.post<JdDraft>(`${publicConfig.apiBase}/jds/extract`, file,
+      { headers: { 'Content-Type': 'application/pdf' }, params: { retry } });
+  }
+  approveJd(id: string, profile: ExtractedJD): Observable<{ approved_jd_id: string; profile: JobProfile }> {
+    return this.http.post<{ approved_jd_id: string; profile: JobProfile }>(`${publicConfig.apiBase}/jds/drafts/${encodeURIComponent(id)}/approve`, profile);
+  }
   list(limit: number, offset: number): Observable<CampaignListPage> {
     return this.http.get<CampaignListPage>(this.base, { params: { limit, offset } });
   }

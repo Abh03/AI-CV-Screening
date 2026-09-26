@@ -152,6 +152,7 @@ async def run_end_to_end_screening_pipeline(
                 jd_profile=rules,
                 experience_source=facts.experience_source,
                 authorization_source=facts.authorization_source,
+                required_skills=jd_profile.get("must_have_skills", []),
             )
         except Exception:
             stage1_elapsed += time.perf_counter() - candidate_started

@@ -53,6 +53,13 @@ def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, regi
     root = ET.Element("evaluation_request", candidate_id=checked_text(candidate_id))
     jd = ET.SubElement(root, "job_description")
     ET.SubElement(jd, "title").text = checked_text(jd_profile.get("title", "Target Role"))
+    for key in ("must_have_skills", "nice_to_have_skills"):
+        node = ET.SubElement(jd, key)
+        for cluster in jd_profile.get(key, []):
+            skill = ET.SubElement(node, "skill")
+            ET.SubElement(skill, "canonical").text = checked_text(cluster["canonical"])
+            for kind in ("aliases", "substitutes"):
+                ET.SubElement(skill, kind).text = checked_text(", ".join(cluster.get(kind, [])))
     requirements = ET.SubElement(jd, "category_requirements")
     queries = jd_profile.get("jd_category_queries", {})
     for category in CATEGORIES:

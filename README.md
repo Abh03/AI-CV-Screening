@@ -360,13 +360,13 @@ data and thresholds are agreed. CI separates unit, PostgreSQL/Redis and worker,
 image/model, and manually dispatched live-provider checks.
 ## Campaign operations
 
-Create a campaign with one or more structured JDs, then upload a ZIP of PDFs.
+Upload each JD PDF, review the extracted requirements, and explicitly approve it before creating a campaign. Then upload a ZIP of CV PDFs.
 Stage 0 runs once per accepted PDF. Every accepted candidate is checked against
 every JD. Each JD shortlists at most 30 Stage 2 survivors for Stage 3.
 
 ```bash
 curl -H "Authorization: Bearer $API_TOKEN" -H "Content-Type: application/json" \
-  -d '{"idempotency_key":"autumn-2026","job_profiles":[{"job_id":"ops","title":"Operations Manager","jd_category_queries":{"EXPERIENCE":"operations management"}}]}' \
+  -d '{"idempotency_key":"autumn-2026","approved_jd_ids":["APPROVED_JD_ID"]}' \
   http://localhost:8000/api/v1/campaigns
 curl -H "Authorization: Bearer $API_TOKEN" -H "Content-Type: application/zip" \
   --data-binary @cvs.zip http://localhost:8000/api/v1/campaigns/CAMPAIGN_ID/archive
@@ -376,7 +376,7 @@ curl -H "Authorization: Bearer $API_TOKEN" \
 
 The upload response reports accepted candidates and rejected ZIP members in archive order. Repeating the same upload returns the stored report. PDF bytes are encrypted while queued and removed after Stage 0. The default limits are 256 MiB compressed, 1 GiB uncompressed, 2,000 members, 100 JDs, and the existing 10 MiB per PDF; configure `CAMPAIGN_*` and `PDF_MAX_BYTES` to change them. The ZIP upload uses a temporary spool that is deleted when the request ends.
 
-For files already on the server, put the structured JD array in `jobs.json` and run `python scripts/import_campaign_folder.py /path/to/pdfs jobs.json --owner OWNER_ID --idempotency-key campaign-key` from the project root. The owner must match an API credential ID for subsequent owner-scoped reads.
+For files already on the server, put the approved JD ID array in `jobs.json` and run `python scripts/import_campaign_folder.py /path/to/pdfs jobs.json --owner OWNER_ID --idempotency-key campaign-key` from the project root. The owner must match an API credential ID for subsequent owner-scoped reads.
 
 Compose runs legacy screening on `screening`, PDF extraction on `ocr`, retrieval on `retrieval`, and coordination/recovery on `control`, each with a single worker process. Status reads query PostgreSQL directly. Keep the control worker and beat service running to recover interrupted Stage 0 and pair tasks. Pair dispatch is bounded by `CAMPAIGN_RETRIEVAL_INFLIGHT` per campaign and `CAMPAIGN_RETRIEVAL_GLOBAL_INFLIGHT` overall. A JD becomes `SHORTLISTED` only when all its accepted CVs have a terminal extraction/Stage 1/Stage 2 outcome; Stage 2 scores are ranked globally by descending score and candidate ID, and at most the JD cap (30 by default) is selected. Retrieval failures are retried up to `RUN_MAX_ATTEMPTS`; failed attempts remain visible as `PROCESSING_FAILED`.
 
@@ -385,18 +385,34 @@ control worker dispatches bounded Stage 3 work and beat recovers expired leases.
 The image's `/ready` health probe applies to `web`; worker services disable it.
 Check `docker compose -f docker/docker-compose.yml ps` for all five workers and
 beat before uploading a campaign. `GET /ready` checks PostgreSQL at Alembic
-revision `c3e9a72d1860`, Redis, and production model directories.
+revision `d91a2b3c4e50`, Redis, and production model directories.
 
-For one JD, `jobs.json` can contain the single object below in an array. Add
-more objects with distinct `job_id` values for multiple openings; the same
-candidate can appear in several final rankings.
+For folder imports and capacity trials, `jobs.json` contains approved version IDs:
 
 ```json
-[{"job_id":"ops","title":"Operations Manager","jd_category_queries":{"EXPERIENCE":"operations management"},"hard_filter_rules":{"require_work_authorization":false}}]
+["APPROVED_JD_ID_1", "APPROVED_JD_ID_2"]
 ```
 
-Use the API commands above with this array as `job_profiles`. The folder import
-accepts the same JSON array:
+Obtain these IDs through the recruiter upload/review UI or the JD APIs:
+`POST /api/v1/jds/extract` accepts an `application/pdf` body; edit the returned
+`profile` and send it to `POST /api/v1/jds/drafts/{draft_id}/approve`.
+`GET /api/v1/jds/approved` lists the owner's saved versions. Campaign creation
+accepts `approved_jd_ids`; inline `job_profiles` are no longer accepted.
+Production single-PDF screening also accepts `approved_jd_id`.
+
+JD PDFs use bounded extraction/OCR without CV PII masking. The JD provider is
+called once per successful owner/PDF-hash extraction. Repeated uploads reuse the
+draft; failed provider attempts require `?retry=true` to call again. An interrupted
+request becomes retryable after the bounded extraction/provider deadline. JD
+source text is cleared on approval; unapproved draft contents expire after seven
+days and are cleared hourly by the control worker/beat. Approved versions are
+immutable. Upload a revised PDF to create a new version. Mock JD extraction is
+synthetic and explicitly requires the recruiter to enter requirements from the PDF.
+
+Each mandatory skill needs term, alias or approved-substitute evidence. Missing
+CV text produces REVIEW, not rejection; preferences never reject. Existing verified
+hard filters preserve PASS/REVIEW/FAIL. Stage 2 category requirements and Stage 3
+skills come from the exact saved version. Existing campaign snapshots remain readable.
 
 ```sh
 python scripts/import_campaign_folder.py /srv/cvs jobs.json --owner recruiter-id --idempotency-key autumn-2026
@@ -423,7 +439,7 @@ future UI should show upload rejections and every JD's review and failure queues
 
 ### Capacity trial and recovery
 
-Prepare a ZIP of representative PDFs and a JSON JD array. Run the trial against
+Prepare a ZIP of representative PDFs and a JSON array of approved JD IDs. Run the trial against
 a migrated PostgreSQL/Redis deployment with all workers subscribed:
 
 ```sh

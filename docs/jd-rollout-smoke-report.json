@@ -1,0 +1,28 @@
+{
+  "date": "2026-09-26",
+  "provider": "groq",
+  "fixture": "synthetic text PDFs; one JD and one CV",
+  "approved_jd_id": "571ed060b8724844b5e0c288b86cc24d",
+  "campaign_id": "0763a4e6-db24-4d15-a85a-b4bd5fc4d9f7",
+  "status": "COMPLETED",
+  "accounting": {
+    "expected_pairs": 1,
+    "actual_pairs": 1,
+    "terminal_pairs": 1,
+    "selected_pairs": 1,
+    "pair_statuses": {
+      "REVIEW_REQUIRED": 1
+    },
+    "jds": [
+      {
+        "jd_key": "571ed060b8724844b5e0c288b86cc24d",
+        "status": "COMPLETED",
+        "pairs": 1,
+        "selected": 1,
+        "cap": 30,
+        "reconciled": true
+      }
+    ],
+    "reconciled": true
+  }
+}

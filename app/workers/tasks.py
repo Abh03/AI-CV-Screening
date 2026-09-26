@@ -36,6 +36,26 @@ from app.stage0_extraction.pipeline import ingest_pdf
 logger = logging.getLogger("cv_screening")
 
 
+async def expire_jd_drafts():
+    from sqlalchemy import update
+    from app.models.database import JDDraftModel
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(update(JDDraftModel).where(
+                JDDraftModel.expires_at < datetime.now(timezone.utc),
+                JDDraftModel.status.notin_(["APPROVED", "EXPIRED"])).values(
+                    pages=[], profile=None, status="EXPIRED", error_code="JD_DRAFT_EXPIRED"))
+            await db.commit()
+            return result.rowcount
+    finally:
+        await engine.dispose()
+
+
+@celery_app.task(name="jd.expire_drafts")
+def expire_jd_drafts_task():
+    return asyncio.run(expire_jd_drafts())
+
+
 class NonRetryableRunError(Exception):
     pass
 
@@ -305,7 +325,8 @@ async def execute_campaign_pair(pair_id, lease_owner):
                 candidate_yoe=None, candidate_cv_text=redacted_text,
                 work_authorized=AuthorizationStatus.UNKNOWN, jd_profile=rules,
                 experience_source=AttributeSource.UNKNOWN,
-                authorization_source=AttributeSource.UNKNOWN)
+                authorization_source=AttributeSource.UNKNOWN,
+                required_skills=job.get("must_have_skills", []))
             details["input_provenance"] = {
                 "reported_experience_source": "unknown",
                 "reported_authorization_source": "unknown",
