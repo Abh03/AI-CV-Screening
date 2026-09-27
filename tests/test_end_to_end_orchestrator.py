@@ -9,7 +9,6 @@ async def test_stage1_review_is_provisional_without_changing_stage3_status(monke
     from app.stage3_evaluation.schemas import CategoryAssessment, LLMEvaluationOutput, EvidenceVerification
     from app.stage3_evaluation.scoring import score_evaluation, failed_evaluation
 
-    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
     retrieved = []
 
     def extract(**kwargs):

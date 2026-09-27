@@ -24,12 +24,12 @@ def make_pdf(*, scan=False, pages=1):
     return result
 
 
-def test_pdf_success_redaction_and_provenance(monkeypatch):
+def test_pdf_success_full_text_and_provenance(monkeypatch):
     monkeypatch.setattr(pipeline, "assess_readable_extraction_integrity", lambda text, **kwargs: {"requires_ocr": False, "passed": True})
     result = pipeline.ingest_pdf(make_pdf())
     assert result.status == "success"
     assert result.pages[0]["blocks"][0]["block_number"] == 0
-    assert "Jane Doe" not in result.redacted_text
+    assert "Jane Doe" in result.redacted_text
     chunks = generate_cv_chunks(result.redacted_text, result.pages)
     assert chunks
     assert chunks[0]["source_location"]["page_number"] == 1
@@ -104,7 +104,7 @@ def test_first_line_name_is_masked_in_merged_block_with_section_heading(monkeypa
     with fitz.open() as doc:
         doc.new_page().insert_text((40, 40), name + "\nPROFILE\n"
             "Software engineer with experience building Python and Java database services.")
-        result = pipeline.ingest_pdf(doc.tobytes())
+        result = pipeline.ingest_pdf(doc.tobytes(), redact=True)
     assert result.status == "success"
     assert name not in result.redacted_text
     assert "[REDACTED_NAME]" in result.redacted_text
@@ -120,7 +120,7 @@ def test_repeated_page_header_name_is_masked_even_when_ner_misses_it(monkeypatch
             page.insert_text((40, 40), "Marisol Jones")
             page.insert_text((40, 80), "EXPERIENCE")
             page.insert_text((40, 110), "Software engineer with Python and Java database service experience.")
-        result = pipeline.ingest_pdf(doc.tobytes())
+        result = pipeline.ingest_pdf(doc.tobytes(), redact=True)
     assert result.status == "success"
     assert "Marisol Jones" not in result.redacted_text
     assert all(page["blocks"][0]["text"] == "[REDACTED_NAME]" for page in result.pages)

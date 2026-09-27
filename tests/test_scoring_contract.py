@@ -100,7 +100,6 @@ async def test_provider_failure_entry_points_agree(monkeypatch):
 @pytest.mark.asyncio
 async def test_stage1_review_is_preserved(monkeypatch):
     from app import orchestrator
-    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
     result = await orchestrator.run_end_to_end_screening_pipeline(
         [{"candidate_id": "review", "raw_cv_text": "EDUCATION\nBachelor of Computer Science - pursuing university degree", "parsed_attributes": {"experience_years": 5}}],
         {"title": "Engineer"}, {"degree_requirement": {"level": "BACHELOR"}},

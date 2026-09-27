@@ -1,4 +1,4 @@
-"""Bounded, ephemeral PDF ingestion. Only redacted blocks leave this module."""
+"""Bounded PDF ingestion preserving full text by default; masking is opt-in."""
 from dataclasses import dataclass, field
 import subprocess
 import re
@@ -19,6 +19,7 @@ class PDFIngestionResult:
     status: str
     code: str
     pages: list[dict] = field(default_factory=list)
+    # Legacy field name retained for API/storage compatibility; full text by default.
     redacted_text: str = ""
 
 
@@ -40,7 +41,7 @@ def _ocr_page(page: fitz.Page) -> str:
     return result.stdout.decode("utf-8", errors="replace").strip()
 
 
-def ingest_pdf(data: bytes, *, redact: bool = True) -> PDFIngestionResult:
+def ingest_pdf(data: bytes, *, redact: bool = False) -> PDFIngestionResult:
     assess_text = assess_readable_extraction_integrity
     if not data.startswith(b"%PDF-"):
         return PDFIngestionResult("failure", "INVALID_PDF")

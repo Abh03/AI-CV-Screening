@@ -1,17 +1,52 @@
 import re
+import unicodedata
 from typing import List, Dict, Any
+
+
+# Identity aliases only: related products are not interchangeable skills.
+IDENTITY_ALIASES = (
+    ("JavaScript", "Java Script", "JS"),
+    ("TypeScript", "Type Script", "TS"),
+    ("Kubernetes", "K8s"),
+    ("PostgreSQL", "Postgres"),
+    ("Node.js", "NodeJS", "Node JS"),
+    ("React.js", "ReactJS", "React"),
+    ("C#", "C Sharp", "CSharp"),
+    ("C++", "CPP", "C Plus Plus"),
+    (".NET", "dotnet", "dot net"),
+    ("Amazon Web Services", "AWS"),
+    ("Google Cloud Platform", "GCP"),
+)
+
+
+def term_pattern(term: str) -> str:
+    normalized = unicodedata.normalize("NFKC", term).strip()
+    leading = "." if normalized.startswith(".") else ""
+    parts = re.split(r"[\s._-]+", normalized[len(leading):])
+    # Keep leading punctuation (.NET) and symbols (C++, C#) significant.
+    return r"(?<!\w)" + re.escape(leading) + r"[\s._-]*".join(re.escape(part) for part in parts) + r"(?!\w)"
+
+
+def identity_terms(terms):
+    expanded = list(terms)
+    for group in IDENTITY_ALIASES:
+        if any(term.casefold() in {alias.casefold() for alias in group} for term in terms):
+            expanded.extend(group)
+    return list(dict.fromkeys(expanded))
 
 
 def required_skill_evidence(text: str, cluster: Dict[str, Any]) -> Dict[str, Any]:
     """Term presence is evidence of a mention, never verified proficiency."""
     uncertain = None
-    for terms, weight in (([cluster["canonical"], *cluster.get("aliases", [])], 1.0),
-                          (cluster.get("substitutes", []), 0.75)):
+    text = unicodedata.normalize("NFKC", text)
+    for terms, weight in ((identity_terms([cluster["canonical"], *cluster.get("aliases", [])]), 1.0),
+                          (identity_terms(cluster.get("substitutes", [])), 0.75)):
         for term in terms:
-            for match in re.finditer(r"(?<!\w)" + re.escape(term) + r"(?!\w)", text, re.I):
+            for match in re.finditer(term_pattern(term), text, re.I):
                 prefix = re.split(r"[.!?\n]", text[max(0, match.start() - 80):match.start()])[-1]
                 evidence = {"matched_term": term, "excerpt": text[max(0, match.start() - 80):match.end() + 80],
                             "match_weight": weight, "negated": False}
+                prefix = re.sub(r"\bnot\s+only\b", "", prefix, flags=re.I)
                 if re.search(r"\b(no|not|without|lack|lacking|never)\b", prefix, re.I):
                     evidence.update(match_weight=0, negated=True)
                     uncertain = evidence
@@ -27,27 +62,7 @@ def evaluate_skill_cluster_match(cv_text_lower: str, cluster: Dict[str, Any]) ->
     - Acceptable Substitute match = 0.75 weight
     - No match = 0.0 weight
     """
-    canonical = cluster.get("canonical", "").lower()
-    aliases = [a.lower() for a in cluster.get("aliases", [])]
-    substitutes = [s.lower() for s in cluster.get("substitutes", [])]
-
-    # 1. Exact canonical or Synonym/Alias match (1.0)
-    for term in [canonical] + aliases:
-        if not term:
-            continue
-        pattern = r"(?<!\w)" + re.escape(term) + r"(?!\w)"
-        if re.search(pattern, cv_text_lower):
-            return 1.0
-
-    # 2. Domain Substitute match (0.75)
-    for sub in substitutes:
-        if not sub:
-            continue
-        pattern = r"(?<!\w)" + re.escape(sub) + r"(?!\w)"
-        if re.search(pattern, cv_text_lower):
-            return 0.75
-
-    return 0.0
+    return required_skill_evidence(cv_text_lower, cluster)["match_weight"]
 
 
 def match_cv_against_jds(redacted_cv_text: str, active_jds: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

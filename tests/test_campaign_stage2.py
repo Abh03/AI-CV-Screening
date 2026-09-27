@@ -77,7 +77,12 @@ async def test_global_cutoff_waits_for_every_pair_and_is_idempotent(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_pair_worker_reuses_redaction_and_fences_old_lease(monkeypatch):
+@pytest.mark.parametrize("cv_text,filters,skills,expected", [
+    ("Operations experience", {}, [], "STAGE2_READY"),
+    ("Total experience: 2 years", {"min_years_experience": 5}, [], "FILTER_REJECTED"),
+    ("Operations experience", {}, [{"canonical": "Python"}], "FILTER_REJECTED"),
+])
+async def test_pair_worker_reuses_redaction_and_fences_old_lease(monkeypatch, cv_text, filters, skills, expected):
     from app.campaigns import persistence
     monkeypatch.setattr(persistence, "encrypt_payload", lambda data: data)
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
@@ -101,12 +106,13 @@ async def test_pair_worker_reuses_redaction_and_fences_old_lease(monkeypatch):
         async with sessions() as db:
             _, campaign = await reserve_campaign(db, owner_id="owner", request_hash="x",
                 job_snapshots=[{"job_id": "ops", "title": "Operations",
+                    "hard_filter_rules": filters, "must_have_skills": skills,
                     "jd_category_queries": {"EXPERIENCE": "operations"}}],
                 policy_snapshots=[{}])
             await reserve_cv(db, campaign_id=campaign.id, owner_id="owner",
                 candidate_id="candidate", source_filename="c.pdf", content_hash="x")
             await finish_stage0(db, campaign_id=campaign.id, owner_id="owner",
-                candidate_id="candidate", redacted_text="Operations experience", source_locations=[])
+                candidate_id="candidate", redacted_text=cv_text, source_locations=[])
             campaign.status = "RUNNING"
             await db.commit()
             pair_id, token = (await dispatch_pairs(db, campaign.id))[0]
@@ -116,15 +122,19 @@ async def test_pair_worker_reuses_redaction_and_fences_old_lease(monkeypatch):
             recovered_id, recovered_token = (await dispatch_pairs(db, campaign.id))[0]
             assert recovered_id == pair_id and recovered_token != token
         assert await tasks.execute_campaign_pair(pair_id, token) == "LEASE_LOST"
-        assert await tasks.execute_campaign_pair(pair_id, recovered_token) == "STAGE2_READY"
+        assert await tasks.execute_campaign_pair(pair_id, recovered_token) == expected
         assert await tasks.execute_campaign_pair(pair_id, recovered_token) == "LEASE_LOST"
-        assert len(calls) == 1
+        assert len(calls) == (1 if expected == "STAGE2_READY" else 0)
         async with sessions() as db:
             pair = await db.get(CampaignPairModel, pair_id)
-            assert pair.stage1_decision == "REVIEW"
+            assert pair.stage1_decision == ("REVIEW" if expected == "STAGE2_READY" else "FAIL")
             assert pair.verification_required
-            assert pair.stage2_score == 0.75
-            assert pair.result_snapshot["stage2_evidence"]["composite_score"] == 0.75
+            if expected == "STAGE2_READY":
+                assert pair.stage2_score == 0.75
+                assert pair.result_snapshot["stage2_evidence"]["composite_score"] == 0.75
+            else:
+                assert pair.stage2_score is None
+                assert pair.status == "FILTER_REJECTED"
     finally:
         await engine.dispose()
 

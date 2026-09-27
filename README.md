@@ -23,11 +23,10 @@ setting. `STAGE2_BACKEND=memory` retains the reference backend for local tests.
 Docker Compose runs Alembic before starting the web service. The standalone
 `sql/*.sql` files are historical notes and do not provision the database.
 
-Stage 2 stores redacted CV chunks as searchable text and 384-dimensional vectors.
+Stage 2 stores full, unredacted CV chunks as searchable text and 384-dimensional vectors.
 Treat the PostgreSQL database as sensitive candidate data: restrict access and
-apply the same retention controls as other screening records. Raw PDF bytes and
-unredacted extracted text are not written to retrieval tables. Document identity
-includes candidate ID, redacted content and source locations, redaction version,
+apply the same retention controls as other screening records. Raw PDF bytes are not written to retrieval tables. Full extracted text is stored. Document identity
+includes candidate ID, full content and source locations, redaction version,
 and chunking version. Chunk embeddings are reused for the same model version;
 JD embeddings are reused per job, category, query text, and model version.
 Changing model or processing versions creates new cache entries. Search remains
@@ -117,7 +116,7 @@ unsupported because that safety check needs database access.
 ## Evidence and prompt boundaries (Phase 3)
 
 Before a provider call, Python creates an immutable registry from the retrieved
-redacted evidence and builds escaped XML from that same snapshot. Each CATEGORY:N
+unredacted evidence and builds escaped XML from that same snapshot. Each CATEGORY:N
 reference maps to the candidate, assessment category, original source category,
 chunk identity, document identity when available, source location, and exact text.
 Source fields are not inferred from the LLM response. Empty snippets and NONE
@@ -160,7 +159,7 @@ historical evaluation records are not relabeled or recomputed.
 Policy `stage1-v1.0.0` uses validated recruiter input for experience; this release
 does not infer years from employment dates. API and direct pipeline calls share
 `app/stage1_rules/contracts.py`. Invalid rules/attributes are rejected before
-masking or retrieval. API validation errors return 422 with field locations and
+screening or retrieval. API validation errors return 422 with field locations and
 reasons, without echoing input values (including NaN/infinity or CV content).
 
 The supported hard-filter keys are `min_years_experience` (finite, nonnegative
@@ -234,7 +233,7 @@ facts (`work_authorized`, `authorization_source`, `parsed_attributes`, and
 for `status`, `failure_code`, and the completed `result`. The existing `/run` raw-text route is for
 internal development and tests and returns 404 in production.
 `POST /api/v1/screening/ingest-pdf` also accepts a raw `application/pdf` body
-and returns only redacted page/block text with source locations.
+and returns full unredacted page/block text with source locations.
 
 Each `/run` response includes `run_id` and `idempotency_key`. Supply an
 `idempotency_key` in the request to name a logical submission. Reusing it with
@@ -244,16 +243,16 @@ used, so identical submissions replay. The `screening_runs` row stores the
 job/rule and policy snapshots. `candidate_outcomes` records every input from
 reservation through its final result, including reviews, rejections, cutoff
 exclusions, extraction errors, and evaluation errors. A failed PDF ingestion
-also returns a `run_id` and stores a Stage 0 outcome. The audit stores redacted
+also returns a `run_id` and stores a Stage 0 outcome. The audit stores full unredacted
 CV text or a PDF hash, never raw PDF bytes. `recompute_stored_decision` in
 `app/run_audit.py` checks a stored Stage 3 score and tier without a provider call.
 
 Raw PDF bytes are encrypted before reservation and discarded from API memory.
 The worker decrypts them for ingestion; the encrypted run request snapshot is
-cleared on completion. Only redacted blocks enter retrieval and LLM evaluation. OCR uses
+cleared on completion. Full unredacted text enters Stage 1 and retrieval, and is included in LLM prompts alongside retrieved evidence. OCR uses
 English (`eng`) and runs only on pages that fail the text integrity check,
 with page count, image pixel, and per-page time limits. With
-`STAGE2_BACKEND=postgres`, redacted text is stored in source chunks and indexed
+`STAGE2_BACKEND=postgres`, unredacted text is stored in source chunks and indexed
 for PostgreSQL full-text search.
 
 Set `ENCRYPTION_SECRET_KEY` to a valid Fernet key before starting in
@@ -465,8 +464,14 @@ Control and beat must remain running; expired Stage 0, retrieval, and Stage 3
 leases are recovered automatically. A provider rate limit parks the selected
 pair for delayed retry; `PROVIDER_RATE_LIMIT_EXHAUSTED` needs operator review.
 Preserve PostgreSQL backups and the encryption key separately before upgrades.
-Raw PDF bytes are purged after Stage 0; redacted text and outcomes remain
+Raw PDF bytes are purged after Stage 0; full extracted text and outcomes remain
 sensitive. The proposed 30 day pending/90 day outcome retention targets are not
 automatically enforced, so schedule manual erasure under your organization policy.
 Provider request and token budgets, Stage 3 inflight work, retrieval inflight
 work, and worker count must be set for the measured host and provider quota.
+
+Stage 0 PII masking is bypassed in screening. Masking utilities remain available
+for explicit standalone use (`ingest_pdf(..., redact=True)`). Legacy fields named
+`redacted_text` and `redacted_cv_text` carry unredacted text for compatibility.
+Previously masked campaign documents must be uploaded in a new campaign to recover
+lost text; purged source PDFs cannot be reconstructed from saved placeholders.

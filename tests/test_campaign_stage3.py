@@ -88,6 +88,7 @@ async def test_stage3_worker_rate_limit_is_durable_and_fenced(monkeypatch,failur
     monkeypatch.setattr(tasks.llm_client, "aclose", lambda: _released())
     calls = []
     async def rate_limited(*args, **kwargs):
+        assert args[0]["candidate_cv_text"] == "Operations"
         calls.append(1)
         raise failure_kind(120)
     monkeypatch.setattr(tasks, "evaluate_single_candidate_async", rate_limited)

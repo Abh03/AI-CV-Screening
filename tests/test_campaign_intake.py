@@ -99,7 +99,7 @@ async def test_zip_intake_stage0_reuse_and_rejections(monkeypatch):
         assert len(pairs) == 6
         assert sum(pair.status == "EXTRACTION_FAILED" for pair in pairs) == 2
         assert next(cv for cv in cvs if cv.source_filename == "bad.pdf").stage0_status == "FAILED"
-        assert all("Jane Doe" not in (cv.redacted_text or "") for cv in cvs)
+        assert all("Jane Doe" in cv.redacted_text for cv in cvs if cv.stage0_status == "SUCCEEDED")
 
 
 @pytest.mark.asyncio

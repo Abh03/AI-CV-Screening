@@ -1,5 +1,47 @@
 from app.stage2_retrieval.chunker import parse_cv_sections, generate_cv_chunks
 from app.stage2_retrieval.embeddings import generate_embeddings, generate_single_embedding
+import pytest
+
+
+@pytest.mark.parametrize("heading", [
+    "SELECTED PROJECTS", "KEY PROJECTS", "ACADEMIC PROJECTS", "PERSONAL PROJECTS",
+    "MAJOR PROJECTS", "NOTABLE PROJECTS", "RELEVANT PROJECTS", "TECHNICAL PROJECTS",
+    "PROFESSIONAL PROJECTS", "RESEARCH PROJECTS", "PROJECT EXPERIENCE",
+    "PROJECT HIGHLIGHTS", "PROJECT PORTFOLIO", "Selected Projects:",
+])
+def test_project_heading_aliases_preserve_category_and_provenance(heading):
+    project = "Built a Python payments API with PostgreSQL and automated tests."
+    text = f"SUMMARY\nBackend developer.\n{heading}\n{project}\nEDUCATION\nComputer Science degree."
+    sections = parse_cv_sections(text)
+    assert sections["PROJECTS"] == project
+    assert project not in sections["SUMMARY"]
+    chunks = generate_cv_chunks(text)
+    projects = [chunk for chunk in chunks if chunk["category"] == "PROJECTS"]
+    assert projects and all(chunk["section"] == "PROJECTS" for chunk in projects)
+
+    pages = [{"page_number": 1, "blocks": [
+        {"block_number": 0, "bbox": [0, 0, 10, 10], "text": "SUMMARY\nBackend developer."},
+        {"block_number": 1, "bbox": [0, 10, 10, 20], "text": heading},
+    ]}, {"page_number": 2, "blocks": [
+        {"block_number": 0, "bbox": [0, 0, 10, 10], "text": project},
+        {"block_number": 1, "bbox": [0, 10, 10, 20], "text": "EDUCATION\nComputer Science degree."},
+    ]}]
+    projects = [chunk for chunk in generate_cv_chunks(text, source_pages=pages)
+                if chunk["category"] == "PROJECTS"]
+    assert len(projects) == 1
+    assert projects[0]["source_location"] == {
+        "page_number": 2, "block_index": 0, "bbox": [0, 0, 10, 10],
+        "section": "PROJECTS", "chunk_index": 0,
+    }
+
+
+def test_embedded_project_heading_is_recognized_in_source_block():
+    pages = [{"page_number": 1, "blocks": [{"block_number": 0,
+        "bbox": [0, 0, 10, 10], "text":
+        "SUMMARY\nBackend developer.\nSELECTED PROJECTS\nBuilt a Python API."}]}]
+    chunks = generate_cv_chunks("", source_pages=pages)
+    assert [chunk["category"] for chunk in chunks] == ["EXPERIENCE", "PROJECTS"]
+    assert chunks[1]["source_location"]["section"] == "PROJECTS"
 
 
 def test_cv_section_parsing_and_canonical_normalization():

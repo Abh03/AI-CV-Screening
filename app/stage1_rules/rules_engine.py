@@ -7,7 +7,7 @@ from app.stage1_rules.contracts import (
 )
 from app.stage2_retrieval.chunker import SECTION_HEADER_PATTERN
 
-STAGE1_POLICY_VERSION = "stage1-v1.1.0"
+STAGE1_POLICY_VERSION = "stage1-v1.2.0"
 EDUCATION_CONTEXT_ANCHORS = re.compile(
     r"(?i)\b(?:university|college|campus|institute|gpa|cgpa|graduated|degree|faculty|board|school|passed|major|specialization)\b"
 )
@@ -107,10 +107,17 @@ def evaluate_stage1_hard_filters(
     authorization_source: AttributeSource = AttributeSource.UNKNOWN,
     required_skills: list[dict] | None = None,
 ) -> dict[str, Any]:
-    """Invalid input raises validation errors; uncertainty is REVIEW, not a rejection."""
+    """Reject known experience shortfalls and absent mandatory skill evidence."""
     rules = jd_profile if isinstance(jd_profile, HardFilterRules) else resolve_hard_filters(jd_profile)
     facts = CandidateFacts(experience_years=candidate_yoe, experience_source=experience_source,
                            work_authorized=work_authorized, authorization_source=authorization_source)
+    experience_evidence = None
+    if facts.experience_years is None:
+        from app.stage1_rules.experience import extract_experience
+        experience_evidence = extract_experience(candidate_cv_text)
+        if experience_evidence:
+            facts.experience_years = experience_evidence["years"]
+            facts.experience_source = AttributeSource.CV_EXTRACTED
     checks = []
 
     def record(rule, status, code, message):
@@ -131,11 +138,11 @@ def evaluate_stage1_hard_filters(
         record("experience", "PASS", "EXPERIENCE_NOT_REQUIRED", "JD has no minimum experience requirement.")
     elif facts.experience_years is None:
         record("experience", "REVIEW", "EXPERIENCE_UNKNOWN", "Years of experience are unknown.")
-    elif facts.experience_source != AttributeSource.RECRUITER_VERIFIED:
-        record("experience", "REVIEW", "EXPERIENCE_UNVERIFIED", "Experience requires recruiter verification.")
     elif facts.experience_years < rules.min_years_experience:
         record("experience", "FAIL", "INSUFFICIENT_EXPERIENCE",
                f"Insufficient YoE: candidate has {facts.experience_years} years, JD requires {rules.min_years_experience} years.")
+    elif facts.experience_source != AttributeSource.RECRUITER_VERIFIED:
+        record("experience", "REVIEW", "EXPERIENCE_UNVERIFIED", "Experience requires recruiter verification.")
     else:
         record("experience", "PASS", "EXPERIENCE_MET", "Verified experience meets the minimum.")
 
@@ -168,13 +175,15 @@ def evaluate_stage1_hard_filters(
 
     from app.stage1_rules.jd_matcher import required_skill_evidence
     from app.stage1_rules.jd_profiler import SkillCluster
+    if required_skills is None and isinstance(jd_profile, dict):
+        required_skills = jd_profile.get("must_have_skills", [])
     for value in required_skills or []:
         cluster = SkillCluster.model_validate(value).model_dump()
         skill_evidence = required_skill_evidence(candidate_cv_text, cluster)
         weight = skill_evidence["match_weight"]
-        record("skill", "PASS" if weight else "REVIEW", "REQUIRED_SKILL_FOUND" if weight else "REQUIRED_SKILL_UNCERTAIN",
+        record("skill", "PASS" if weight else "FAIL", "REQUIRED_SKILL_FOUND" if weight else "MISSING_REQUIRED_SKILLS",
                f"{cluster['canonical']}: " + ("approved substitute found" if weight == 0.75 else
-               "term found in CV" if weight else "no term evidence; recruiter verification required"))
+               "term found in CV" if weight else "mandatory skill, aliases and approved substitutes are absent or negated"))
         checks[-1].update(canonical=cluster["canonical"], **skill_evidence, source="cv_extracted")
     failed = [check["message"] for check in checks if check["status"] == "FAIL"]
     review = [check["message"] for check in checks if check["status"] == "REVIEW"]
@@ -186,6 +195,7 @@ def evaluate_stage1_hard_filters(
                     "work_authorized": facts.work_authorized.value,
                     "require_work_authorization": rules.require_work_authorization,
                     "experience_source": facts.experience_source.value,
+                    "experience_evidence": experience_evidence,
                     "authorization_source": facts.authorization_source.value,
                     "parsed_degrees": entries},
     }

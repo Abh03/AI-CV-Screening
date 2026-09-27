@@ -72,7 +72,7 @@ def test_malformed_authorization_rejected(auth):
 @pytest.mark.parametrize("years,source,expected", [
     (None, "unknown", "REVIEW"), (0, "recruiter_verified", "FAIL"),
     (5, "recruiter_verified", "PASS"), (6, "cv_extracted", "REVIEW"),
-    (1, "cv_extracted", "REVIEW"), (6, "unknown", "REVIEW"),
+    (1, "cv_extracted", "FAIL"), (1, "unknown", "FAIL"), (6, "unknown", "REVIEW"),
 ])
 def test_experience_policy(years, source, expected):
     result = evaluate(years=years, experience_source=source, rules={"min_years_experience": 5})
@@ -130,11 +130,11 @@ def test_education_scope_and_ambiguity(cv, level, fields, expected):
 
 
 @pytest.mark.asyncio
-async def test_direct_pipeline_validates_before_masking(monkeypatch):
+async def test_direct_pipeline_validates_before_processing(monkeypatch):
     from app import orchestrator
     def forbidden(*args):
         pytest.fail("Invalid input must be rejected before processing")
-    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", forbidden)
+    monkeypatch.setattr(orchestrator, "evaluate_stage1_hard_filters", forbidden)
     with pytest.raises(ValidationError):
         await orchestrator.run_end_to_end_screening_pipeline(
             [{"candidate_id": "a", "raw_cv_text": "", "parsed_attributes": {"experience_years": float("nan")}}],
@@ -144,7 +144,6 @@ async def test_direct_pipeline_validates_before_masking(monkeypatch):
 @pytest.mark.asyncio
 async def test_unverified_claims_continue_to_retrieval(monkeypatch):
     from app import orchestrator
-    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
     seen = []
     def extract(**kwargs):
         seen.append(kwargs["candidate_id"])

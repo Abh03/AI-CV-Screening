@@ -1,4 +1,4 @@
-"""PostgreSQL retrieval store for redacted, versioned CV evidence."""
+"""PostgreSQL retrieval store for full-text, versioned CV evidence."""
 import hashlib
 import json
 import math
@@ -15,8 +15,8 @@ from app.stage2_retrieval.embeddings import (EMBEDDING_MODEL_NAME, EMBEDDING_MOD
                                              generate_embeddings, generate_single_embedding)
 from app.stage2_retrieval.hybrid_search import compute_rrf_score
 
-CHUNKING_VERSION = "structural-v2"
-REDACTION_VERSION = "pii-mask-v4"
+CHUNKING_VERSION = "structural-v3"
+REDACTION_VERSION = "unredacted-v1"
 
 
 def digest(value):

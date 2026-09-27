@@ -214,7 +214,7 @@ def recover_runs():
 
 
 async def execute_campaign_stage0(cv_id):
-    """Claim one document version; completed redaction is reused on redelivery."""
+    """Claim one document version; full extraction is reused on redelivery."""
     await engine.dispose()
     try:
         async with AsyncSessionLocal() as db:
@@ -312,7 +312,7 @@ def recover_campaign_stage0():
 
 
 async def execute_campaign_pair(pair_id, lease_owner):
-    """Use the stored redacted document and fence results from expired workers."""
+    """Use the stored full-text document and fence results from expired workers."""
     await engine.dispose()
     try:
         async with AsyncSessionLocal() as db:
@@ -344,12 +344,14 @@ async def execute_campaign_pair(pair_id, lease_owner):
                 required_skills=job.get("must_have_skills", []))
             details["input_provenance"] = {
                 "reported_experience_source": "unknown",
+                "effective_experience_source": details["metrics"]["experience_source"],
                 "reported_authorization_source": "unknown",
                 "document_version": document_version}
             decision = details["status"]
             if decision in ("PASS", "REVIEW"):
                 kwargs = dict(candidate_id=candidate_id, redacted_cv_text=redacted_text,
-                              jd_category_queries=job["jd_category_queries"], source_pages=pages)
+                              jd_category_queries=job["jd_category_queries"], source_pages=pages,
+                              required_skills=job.get("must_have_skills", []))
                 if settings.STAGE2_BACKEND == "postgres":
                     evidence = await asyncio.wait_for(
                         extract_candidate_category_evidence_postgres(**kwargs, job_id=job_id),
@@ -481,6 +483,8 @@ async def execute_campaign_stage3(pair_id, lease_owner):
                 return "LEASE_LOST"
             campaign_id, candidate_id = pair.campaign_id, cv.candidate_id
             evidence = (pair.result_snapshot or {}).get("stage2_evidence")
+            if evidence:
+                evidence = dict(evidence, candidate_cv_text=cv.redacted_text)
             job = jd.job_snapshot
             policy = jd.policy_snapshot
             await db.rollback()

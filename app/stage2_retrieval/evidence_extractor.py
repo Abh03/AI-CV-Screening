@@ -13,12 +13,31 @@ DEFAULT_CATEGORY_WEIGHTS: Dict[str, float] = {
 }
 
 
+def resolve_retrieval_queries(jd_category_queries: Dict[str, str],
+                              required_skills: list | None = None) -> Dict[str, str]:
+    """Derive a retrieval target without adding requirements to the JD."""
+    queries = dict(jd_category_queries)
+    project_query = queries.get("PROJECTS", "")
+    if project_query.strip() and "no explicit requirement" not in project_query.casefold():
+        return queries
+    skills = []
+    for skill in required_skills or []:
+        name = skill.get("canonical", "") if isinstance(skill, dict) else getattr(skill, "canonical", "")
+        if name.strip() and name.strip() not in skills:
+            skills.append(name.strip())
+    queries["PROJECTS"] = "Projects demonstrating hands-on experience"
+    if skills:
+        queries["PROJECTS"] += " with " + ", ".join(skills)
+    return queries
+
+
 def extract_candidate_category_evidence(
     candidate_id: str,
     redacted_cv_text: str,
     jd_category_queries: Dict[str, str],
     weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS,
-    source_pages: list[dict] | None = None
+    source_pages: list[dict] | None = None,
+    required_skills: list | None = None
 ) -> Dict[str, Any]:
     """
     Processes a single candidate CV:
@@ -36,7 +55,7 @@ def extract_candidate_category_evidence(
 
     # Stable content-derived identities until database document/chunk IDs arrive.
     from app.stage3_evaluation.evidence import stable_identity
-    document_id = "redacted:" + stable_identity(candidate_id, redacted_cv_text)
+    document_id = "unredacted:" + stable_identity(candidate_id, redacted_cv_text)
     for chunk in chunks:
         chunk["candidate_id"] = candidate_id
         chunk["document_id"] = document_id
@@ -48,6 +67,7 @@ def extract_candidate_category_evidence(
     for chunk, emb in zip(chunks, embeddings):
         chunk["embedding"] = emb
 
+    jd_category_queries = resolve_retrieval_queries(jd_category_queries, required_skills)
     evidence_by_category: Dict[str, List[Dict[str, Any]]] = {}
     category_scores: Dict[str, float] = {}
 
@@ -108,9 +128,13 @@ def extract_candidate_category_evidence(
 async def extract_candidate_category_evidence_postgres(
     candidate_id: str, redacted_cv_text: str, jd_category_queries: Dict[str, str],
     job_id: str, weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS,
-    source_pages: list[dict] | None = None
+    source_pages: list[dict] | None = None,
+    required_skills: list | None = None
 ) -> Dict[str, Any]:
-    """Persist redacted chunks and retrieve both branches in PostgreSQL."""
+    """Persist full-text chunks and retrieve both branches in PostgreSQL.
+
+    redacted_cv_text is a legacy parameter name; screening passes unredacted text.
+    """
     from app.models.database import AsyncSessionLocal
     from app.stage2_retrieval.repository import PostgresRetrievalRepository
 
@@ -121,6 +145,7 @@ async def extract_candidate_category_evidence_postgres(
     if not chunks:
         return {"candidate_id": candidate_id, "composite_score": 0.0,
                 "evidence_by_category": {}, "status": "NO_CHUNKS"}
+    jd_category_queries = resolve_retrieval_queries(jd_category_queries, required_skills)
     evidence_by_category = {}
     category_scores = {}
     async with AsyncSessionLocal() as session:

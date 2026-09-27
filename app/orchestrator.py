@@ -3,7 +3,6 @@ import asyncio
 import hashlib
 import logging
 import time
-from app.stage0_extraction.pii_masker import mask_pii_runtime_view
 from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
 from app.stage1_rules.contracts import CandidateInput, resolve_hard_filters
 from app.stage2_retrieval.evidence_extractor import (
@@ -37,7 +36,7 @@ async def run_end_to_end_screening_pipeline(
 ) -> Dict[str, Any]:
     """
     Executes the full automated screening pipeline across all candidates:
-    - Stage 0: PII Masking & Security
+    - Stage 0: Full-text extraction & Security
     - Stage 1: Deterministic Hard Filters
     - Stage 2: Category-Aware Hybrid Retrieval + Cross-Encoder Ranking
     - Stage 3: Async LLM Multi-Attribute Evaluation & Tier Assembly
@@ -117,25 +116,14 @@ async def run_end_to_end_screening_pipeline(
 
     leaderboard = []
 
-    # Stage 0 & Stage 1: PII Masking & Hard Filtering
+    # Stage 0 & Stage 1: Full-text Input & Hard Filtering
     for cand in candidates:
         cand_id = cand.candidate_id
         raw_text = cand.raw_cv_text
         candidate_started = time.perf_counter()
 
-        # Stage 0: PII Redaction (returns string directly)
-        view = (stage0_views or {}).get(cand_id)
-        try:
-            redacted_text = view.redacted_text if view is not None else mask_pii_runtime_view(raw_text)
-        except Exception:
-            stage0_elapsed += time.perf_counter() - candidate_started
-            item = {"candidate_id": cand_id, "stage": "STAGE0", "evaluation_status": "EXTRACTION_FAILED",
-                    "reason": "EXTRACTION_FAILED"}
-            failed_candidates.append(item)
-            outcomes[cand_id].update(outcome="EXTRACTION_FAILED", stage="STAGE0", result_snapshot=item)
-            outcomes[cand_id]["stage_history"].append({"stage": "STAGE0", "status": "FAILED"})
-            pipeline_metrics["stage0_failed"] += 1
-            continue
+        # Preserve all extracted text. Legacy redacted_* fields now carry full text.
+        redacted_text = raw_text
         stage0_elapsed += time.perf_counter() - candidate_started
         outcomes[cand_id]["input_snapshot"]["redacted_cv_text"] = redacted_text
         outcomes[cand_id]["stage_history"].append({"stage": "STAGE0", "status": "PROCESSED"})
@@ -213,6 +201,7 @@ async def run_end_to_end_screening_pipeline(
                 candidate_id=survivor["candidate_id"],
                 redacted_cv_text=survivor["redacted_cv_text"],
                 jd_category_queries=jd_category_queries,
+                required_skills=effective_jd.get("must_have_skills", []),
                 source_pages=(stage0_views or {}).get(survivor["candidate_id"]).pages
                 if survivor["candidate_id"] in (stage0_views or {}) else None)
             if settings.STAGE2_BACKEND == "postgres":
@@ -233,7 +222,8 @@ async def run_end_to_end_screening_pipeline(
             continue
         outcomes[survivor["candidate_id"]]["evidence_snapshot"] = evidence_payload
         outcomes[survivor["candidate_id"]]["stage_history"].append({"stage": "STAGE2", "status": "EXTRACTED"})
-        stage2_payloads.append(dict(evidence_payload, **stage1_verification(survivor["filter_details"])))
+        stage2_payloads.append(dict(evidence_payload, candidate_cv_text=survivor["redacted_cv_text"],
+                                    **stage1_verification(survivor["filter_details"])))
 
     # Global Batch Cutoff: Rank all Stage 1 survivors by S_cand and slice top candidates
     try:

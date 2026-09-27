@@ -141,7 +141,7 @@ async def submit_pdf_screening_endpoint(payload: PDFScreeningRequestSchema,
 
 @router.post("/ingest-pdf")
 async def ingest_pdf_upload(request: Request, principal: Principal = Depends(current_principal)):
-    """Accept a bounded PDF byte stream and return its redacted view."""
+    """Accept a bounded PDF byte stream and return its full extracted text."""
     if request.headers.get("content-type", "").split(";", 1)[0].lower() != "application/pdf":
         return {"status": "failure", "code": "INVALID_CONTENT_TYPE"}
     data = bytearray()
@@ -158,7 +158,7 @@ async def ingest_pdf_upload(request: Request, principal: Principal = Depends(cur
 @router.post("/run-pdf")
 async def run_pdf_screening_endpoint(payload: PDFScreeningRequestSchema, db: AsyncSession = Depends(get_db),
                                      principal: Principal = Depends(current_principal)):
-    """PDF-only production entry point; no unredacted document reaches screening."""
+    """PDF-only production entry point preserving full CV text for screening."""
     if settings.ENVIRONMENT.lower() == "production":
         return JSONResponse(status_code=202, content=await submit_pdf_screening_endpoint(payload, db, principal))
     await resolve_approved_profile(payload, db, principal)

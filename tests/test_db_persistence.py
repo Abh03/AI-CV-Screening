@@ -94,7 +94,6 @@ async def test_api_preserves_review_and_failure_outcomes(monkeypatch, review_kin
     from app import orchestrator
     from app.stage3_evaluation.llm_client import llm_client, LLMClientWrapper
 
-    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
     monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", lambda **kwargs: {
         "candidate_id": kwargs["candidate_id"], "composite_score": 1,
         "evidence_by_category": {category: [{"text": "Test evidence"}] for category in ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")},
@@ -156,7 +155,6 @@ async def test_run_replay_and_changed_job_snapshot(monkeypatch):
     from app import orchestrator
     from app.run_audit import recompute_stored_decision
 
-    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
     monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", lambda **kwargs: {
         "candidate_id": kwargs["candidate_id"], "composite_score": 5,
         "evidence_by_category": {name: [{"text": "Documented evidence"}] for name in
@@ -197,7 +195,6 @@ async def test_run_replay_and_changed_job_snapshot(monkeypatch):
 @pytest.mark.asyncio
 async def test_every_candidate_has_outcome_across_stages(monkeypatch):
     from app import orchestrator
-    monkeypatch.setattr(orchestrator, "mask_pii_runtime_view", lambda text: text)
 
     def extract(**kwargs):
         name = kwargs["candidate_id"]

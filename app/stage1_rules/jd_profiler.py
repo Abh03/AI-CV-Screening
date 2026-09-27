@@ -11,11 +11,11 @@ class SkillCluster(StrictModel):
     )
     aliases: List[SkillTerm] = Field(
         default_factory=list, max_length=30,
-        description="Exact acronyms, synonyms, or alternative spellings (e.g., ['k8s', 'kubectl'])."
+        description="Identity acronyms, full names, synonyms or spelling variants of this exact skill (e.g., Kubernetes: ['k8s']); exclude related tools."
     )
     substitutes: List[SkillTerm] = Field(
         default_factory=list, max_length=30,
-        description="Acceptable domain substitutes scored at partial weight (e.g., ['docker swarm'])."
+        description="Different skills explicitly accepted by the JD as alternatives; empty otherwise. They satisfy the mandatory group and score at partial weight."
     )
 
     @field_validator("canonical")

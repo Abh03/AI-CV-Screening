@@ -286,7 +286,7 @@ async def test_unknown_authorization_returns_review_through_api():
 
 
 @pytest.mark.asyncio
-async def test_pdf_api_passes_only_redacted_provenance_to_screening(monkeypatch, caplog):
+async def test_pdf_api_passes_full_text_and_provenance_to_screening(monkeypatch, caplog):
     doc = fitz.open()
     page = doc.new_page()
     page.insert_text((40, 40), "Jane Doe")
@@ -321,7 +321,7 @@ async def test_pdf_api_passes_only_redacted_provenance_to_screening(monkeypatch,
         response = await client.post("/api/v1/screening/run-pdf", json=payload)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
-    assert "Jane Doe" not in observed["raw_candidates"][0]["raw_cv_text"]
+    assert "Jane Doe" in observed["raw_candidates"][0]["raw_cv_text"]
     assert "Jane Doe" not in caplog.text
     assert observed["stage0_views"]["pdf_candidate"].pages[0]["blocks"][0]["bbox"]
 
@@ -372,5 +372,5 @@ async def test_binary_pdf_upload_has_structured_outcomes(monkeypatch):
         bad = await client.post("/api/v1/screening/ingest-pdf", content=b"bad",
                                 headers={"Content-Type": "application/pdf"})
     assert good.json()["status"] == "success"
-    assert "Jane Doe" not in str(good.json())
+    assert "Jane Doe" in str(good.json())
     assert bad.json()["code"] == "INVALID_PDF"
