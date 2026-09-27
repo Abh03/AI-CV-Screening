@@ -123,3 +123,42 @@ temp/
 
 docker/.env
 docker/*.log
+
+# Generated artifacts, diagnostic dumps, and local test output
+/artifacts/
+/diagnostics/
+/dumps/
+/reports/
+/test-results/
+/playwright-report/
+/tmp/
+coverage/
+coverage.xml
+junit.xml
+test-results.xml
+*.prof
+*.dump
+*.sql.dump
+*.sqlite
+*.sqlite3
+*.db
+
+# Generated reports and exports (keep application JSON and test fixtures tracked)
+*-report.json
+*-reports.json
+*-diagnostics.json
+*-telemetry.jsonl
+*-worker-events*.jsonl
+*.stage-details.json
+*.stage-io.json
+/phase*-*.json
+/phase*-*.zip
+/jobs.json
+/runtime.json
+
+# Local planning notes and one-off audit/capacity reports
+/*_PLAN.md
+/*_STATUS.md
+/CONFIRMED_ISSUE_CAUSES.md
+/PHASE6_CAPACITY_REPORT.md
+/RESULTS_ANALYSIS_WITH_ABH.md
