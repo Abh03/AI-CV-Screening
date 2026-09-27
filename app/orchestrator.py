@@ -202,6 +202,8 @@ async def run_end_to_end_screening_pipeline(
                 redacted_cv_text=survivor["redacted_cv_text"],
                 jd_category_queries=jd_category_queries,
                 required_skills=effective_jd.get("must_have_skills", []),
+                preferred_skills=effective_jd.get("nice_to_have_skills", []),
+                degree_requirement=rules.degree_requirement,
                 source_pages=(stage0_views or {}).get(survivor["candidate_id"]).pages
                 if survivor["candidate_id"] in (stage0_views or {}) else None)
             if settings.STAGE2_BACKEND == "postgres":

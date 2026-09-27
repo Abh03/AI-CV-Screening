@@ -4,6 +4,7 @@ from app.stage2_retrieval.chunker import generate_cv_chunks
 from app.stage2_retrieval.embeddings import generate_embeddings, generate_single_embedding
 from app.stage2_retrieval.hybrid_search import execute_category_hybrid_search
 from app.stage2_retrieval.reranker import rerank_category_chunks
+from app.stage2_retrieval.sparse import build_sparse_plan, retrieval_diagnostics
 
 DEFAULT_CATEGORY_WEIGHTS: Dict[str, float] = {
     "EXPERIENCE": 0.40,
@@ -37,7 +38,9 @@ def extract_candidate_category_evidence(
     jd_category_queries: Dict[str, str],
     weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS,
     source_pages: list[dict] | None = None,
-    required_skills: list | None = None
+    required_skills: list | None = None,
+    preferred_skills: list | None = None,
+    degree_requirement=None
 ) -> Dict[str, Any]:
     """
     Processes a single candidate CV:
@@ -70,6 +73,7 @@ def extract_candidate_category_evidence(
     jd_category_queries = resolve_retrieval_queries(jd_category_queries, required_skills)
     evidence_by_category: Dict[str, List[Dict[str, Any]]] = {}
     category_scores: Dict[str, float] = {}
+    retrieval_by_category = {}
 
     for category in ["SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION"]:
         cat_query = jd_category_queries.get(category, "")
@@ -85,11 +89,14 @@ def extract_candidate_category_evidence(
             continue
 
         query_vector = generate_single_embedding(cat_query)
+        plan = build_sparse_plan(cat_query, category, required_skills,
+                                 preferred_skills, degree_requirement)
         rrf_hits = execute_category_hybrid_search(
             query_text=cat_query,
             query_vector=query_vector,
             category_chunks=cat_chunks,
-            top_k=10
+            top_k=10,
+            sparse_plan=plan
         )
 
         # Re-rank Top 2 evidence chunks for this category
@@ -101,6 +108,8 @@ def extract_candidate_category_evidence(
 
         for item in top_ranked:
             item.pop("embedding", None)
+
+        retrieval_by_category[category] = retrieval_diagnostics(plan, rrf_hits, top_ranked)
 
         evidence_by_category[category] = top_ranked
 
@@ -120,6 +129,7 @@ def extract_candidate_category_evidence(
         "candidate_id": candidate_id,
         "composite_score": round(composite_score, 4),
         "category_scores": category_scores,
+        "retrieval_by_category": retrieval_by_category,
         "evidence_by_category": evidence_by_category,
         "status": "SUCCESS"
     }
@@ -129,7 +139,9 @@ async def extract_candidate_category_evidence_postgres(
     candidate_id: str, redacted_cv_text: str, jd_category_queries: Dict[str, str],
     job_id: str, weights: Dict[str, float] = DEFAULT_CATEGORY_WEIGHTS,
     source_pages: list[dict] | None = None,
-    required_skills: list | None = None
+    required_skills: list | None = None,
+    preferred_skills: list | None = None,
+    degree_requirement=None
 ) -> Dict[str, Any]:
     """Persist full-text chunks and retrieve both branches in PostgreSQL.
 
@@ -148,6 +160,7 @@ async def extract_candidate_category_evidence_postgres(
     jd_category_queries = resolve_retrieval_queries(jd_category_queries, required_skills)
     evidence_by_category = {}
     category_scores = {}
+    retrieval_by_category = {}
     async with AsyncSessionLocal() as session:
         repo = PostgresRetrievalRepository(session)
         document_id = await repo.prepare_document(candidate_id, redacted_cv_text,
@@ -159,10 +172,14 @@ async def extract_candidate_category_evidence_postgres(
                 category_scores[category] = 0.0
                 continue
             query_vector = await repo.query_vector(job_id, category, query)
+            plan = build_sparse_plan(query, category, required_skills,
+                                     preferred_skills, degree_requirement)
             hits = await repo.search(candidate_id, document_id, category, query,
-                                     query_vector, fallback_to_experience=category in ("SKILLS", "PROJECTS"))
+                                     query_vector, fallback_to_experience=category in ("SKILLS", "PROJECTS"),
+                                     sparse_plan=plan)
             await session.commit()
             ranked = await asyncio.to_thread(rerank_category_chunks, query, hits, top_n=2)
+            retrieval_by_category[category] = retrieval_diagnostics(plan, hits, ranked)
             evidence_by_category[category] = ranked
             category_scores[category] = (max(0.0, sum(c["rerank_score"] for c in ranked) / len(ranked))
                                          if ranked else 0.0)
@@ -170,6 +187,7 @@ async def extract_candidate_category_evidence_postgres(
     score = sum(weights.get(category, 0.25) * category_scores[category]
                 for category in ["EXPERIENCE", "SKILLS", "PROJECTS", "EDUCATION"])
     return {"candidate_id": candidate_id, "composite_score": round(score, 4),
+            "retrieval_by_category": retrieval_by_category,
             "category_scores": category_scores, "evidence_by_category": evidence_by_category,
             "status": "SUCCESS"}
 

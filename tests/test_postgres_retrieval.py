@@ -55,7 +55,7 @@ async def test_migrations_scoped_retrieval_and_cache(migrated_database, monkeypa
         async with sessions() as session:
             assert 160000 <= int((await session.execute(text("SHOW server_version_num"))).scalar_one()) < 170000
             assert (await session.execute(text("SELECT extversion FROM pg_extension WHERE extname='vector'"))).scalar_one()
-            assert (await session.execute(text("SELECT version_num FROM alembic_version"))).scalar_one() == "f8137b4a2c91"
+            assert (await session.execute(text("SELECT version_num FROM alembic_version"))).scalar_one() == "a27c9d410e62"
             repo = PostgresRetrievalRepository(session)
             first = generate_cv_chunks("SKILLS\nPython FastAPI PostgreSQL\n\nEXPERIENCE\nBuilt Python services")
             other = generate_cv_chunks("SKILLS\nPython and Kubernetes")
@@ -112,8 +112,99 @@ async def test_migrations_scoped_retrieval_and_cache(migrated_database, monkeypa
                 WHERE tsv_content @@ websearch_to_tsquery('english', 'Python')
             """))).all())
             assert "ix_source_chunks_fts" in fts_plan
+            lexical_plan = " ".join(row[0] for row in (await connection.execute(text("""
+                EXPLAIN SELECT id FROM source_chunks
+                WHERE tsv_lexical @@ to_tsquery('simple', 'python')
+            """))).all())
+            assert "ix_source_chunks_lexical" in lexical_plan
     finally:
         await engine.dispose()
+
+
+async def test_sparse_concepts_match_partial_requirements_and_symbols(migrated_database, monkeypatch):
+    from app.stage2_retrieval import repository as module
+    from app.stage2_retrieval.sparse import build_sparse_plan
+    monkeypatch.setattr(module, "generate_embeddings", lambda texts: [[1.0] + [0.0] * 383 for _ in texts])
+    engine = create_async_engine(migrated_database)
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    chunks = [dict(global_chunk_id=i, category="SKILLS", section="SKILLS", chunk_index=i, text=value)
+              for i, value in enumerate(["C# .NET", "C++", "Spring holiday with a boot",
+                                        "Spring Boot Java", "Postgres PostgreSQL", "Unrelated"])]
+    plan = build_sparse_plan("Strong experience required with C#, .NET, Java and Spring Boot",
+        required_skills=[{"canonical": "C#", "substitutes": ["C++"]},
+                         {"canonical": ".NET"}, {"canonical": "Spring Boot"}],
+        preferred_skills=[{"canonical": "PostgreSQL"}])
+    try:
+        async with sessions() as session:
+            repo = PostgresRetrievalRepository(session)
+            doc = await repo.prepare_document("symbols", "fixture", chunks)
+            # Old prose compiles into a conjunction that matches none of these chunks.
+            assert (await session.execute(text("SELECT count(*) FROM source_chunks WHERE "
+                "tsv_content @@ websearch_to_tsquery('english', :query)"),
+                {"query": "Strong experience required with C#, .NET, Java and Spring Boot"})).scalar_one() == 0
+            hits = await repo.search("symbols", doc, "SKILLS", "original prose",
+                                     [1.0] + [0.0] * 383, sparse_plan=plan)
+            sparse = {hit["text"]: hit for hit in hits if hit["sparse_rank"] is not None}
+            assert set(sparse) == {"C# .NET", "C++", "Spring Boot Java", "Postgres PostgreSQL"}
+            assert sparse["C# .NET"]["sparse_required_coverage"] == 2
+            assert sparse["C# .NET"]["sparse_rank"] == 1
+            assert sparse["C++"]["sparse_required_coverage"] == 1
+            assert sparse["Postgres PostgreSQL"]["sparse_preferred_coverage"] == 1
+            csharp_only = build_sparse_plan("C#", required_skills=[{"canonical": "C#"}])
+            hits = await repo.search("symbols", doc, "SKILLS", "C#", [1.0] + [0.0] * 383,
+                                     sparse_plan=csharp_only)
+            assert {h["text"] for h in hits if h["sparse_rank"] is not None} == {"C# .NET"}
+            assert all(h["document_id"] == doc for h in hits)
+    finally:
+        await engine.dispose()
+
+
+async def test_sparse_migration_backfills_existing_chunks_and_downgrades(monkeypatch):
+    from app.stage2_retrieval.sparse import normalize_lexical_v1
+    name = "sparse_upgrade_" + uuid.uuid4().hex[:16]
+    source = make_url(settings.DATABASE_URL)
+    conn = psycopg2.connect(source.set(drivername="postgresql", database="postgres").render_as_string(hide_password=False))
+    conn.autocommit = True
+    with conn.cursor() as cursor:
+        cursor.execute(f'CREATE DATABASE "{name}"')
+    monkeypatch.setattr(settings, "DATABASE_URL", source.set(database=name).render_as_string(hide_password=False))
+    try:
+        await asyncio.to_thread(command.upgrade, Config("alembic.ini"), "d91a2b3c4e50")
+        engine = create_async_engine(settings.DATABASE_URL)
+        try:
+            async with engine.begin() as db:
+                await db.execute(text("INSERT INTO candidates (id, created_at) VALUES ('old', CURRENT_TIMESTAMP)"))
+                await db.execute(text("INSERT INTO document_versions "
+                    "(id,candidate_id,content_hash,redaction_version,chunking_version,created_at) "
+                    "VALUES ('old-doc','old','hash','masked-v1','structural-v3',CURRENT_TIMESTAMP)"))
+                await db.execute(text("INSERT INTO source_chunks "
+                    "(id,document_id,candidate_id,category,section,chunk_index,text,content_hash,source_location) "
+                    "VALUES ('old-chunk','old-doc','old','SKILLS','SKILLS',0,'C# .NET Node.js','hash','{}')"))
+        finally:
+            await engine.dispose()
+        await asyncio.to_thread(command.upgrade, Config("alembic.ini"), "head")
+        engine = create_async_engine(settings.DATABASE_URL)
+        try:
+            async with engine.connect() as db:
+                row = (await db.execute(text("SELECT text,lexical_text,lexical_version FROM source_chunks"))).one()
+                assert row.text == "C# .NET Node.js"
+                assert row.lexical_text == normalize_lexical_v1(row.text)
+                assert row.lexical_version == "concept-v1"
+                assert (await db.execute(text("SELECT count(*) FROM source_chunks "
+                    "WHERE tsv_lexical @@ to_tsquery('simple','techcsharp')"))).scalar_one() == 1
+        finally:
+            await engine.dispose()
+        await asyncio.to_thread(command.downgrade, Config("alembic.ini"), "d91a2b3c4e50")
+        engine = create_async_engine(settings.DATABASE_URL)
+        try:
+            async with engine.connect() as db:
+                assert (await db.execute(text("SELECT text FROM source_chunks"))).scalar_one() == "C# .NET Node.js"
+        finally:
+            await engine.dispose()
+    finally:
+        with conn.cursor() as cursor:
+            cursor.execute(f'DROP DATABASE "{name}" WITH (FORCE)')
+        conn.close()
 
 
 async def test_campaign_upgrade_preserves_existing_run_and_pair_constraints(monkeypatch):

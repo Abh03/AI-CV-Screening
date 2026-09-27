@@ -5,7 +5,7 @@ import math
 import asyncio
 from datetime import datetime, timezone
 
-from sqlalchemy import text, select
+from sqlalchemy import text, select, or_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +14,7 @@ from app.models.database import (CandidateModel, DocumentVersionModel, SourceChu
 from app.stage2_retrieval.embeddings import (EMBEDDING_MODEL_NAME, EMBEDDING_MODEL_VERSION,
                                              generate_embeddings, generate_single_embedding)
 from app.stage2_retrieval.hybrid_search import compute_rrf_score
+from app.stage2_retrieval.sparse import build_sparse_plan, normalize_lexical_v1, LEXICAL_VERSION
 
 CHUNKING_VERSION = "structural-v3"
 REDACTION_VERSION = "unredacted-v1"
@@ -57,12 +58,18 @@ class PostgresRetrievalRepository:
             chunk["chunk_id"] = chunk_id
             chunk.setdefault("source_location", {"section": chunk["section"],
                                                  "chunk_index": chunk["chunk_index"]})
+            lexical_text = normalize_lexical_v1(chunk["text"])
             await self.session.execute(pg_insert(SourceChunkModel).values(
                 id=chunk_id, document_id=document_id, candidate_id=candidate_id,
                 category=chunk["category"], section=chunk["section"],
                 chunk_index=chunk["chunk_index"], text=chunk["text"],
-                content_hash=digest(chunk["text"]), source_location=chunk["source_location"])
-                .on_conflict_do_nothing(index_elements=["id"]))
+                content_hash=digest(chunk["text"]), source_location=chunk["source_location"],
+                lexical_text=lexical_text, lexical_version=LEXICAL_VERSION)
+                .on_conflict_do_update(index_elements=["id"], set_={
+                    "lexical_text": lexical_text,
+                    "lexical_version": LEXICAL_VERSION}, where=or_(
+                        SourceChunkModel.lexical_version != LEXICAL_VERSION,
+                        SourceChunkModel.lexical_text != lexical_text)))
         keys = [(c["chunk_id"], EMBEDDING_MODEL_NAME, EMBEDDING_MODEL_VERSION) for c in chunks]
         missing = [c for c, key in zip(chunks, keys)
                    if await self.session.get(ChunkEmbeddingModel, key) is None]
@@ -119,7 +126,7 @@ class PostgresRetrievalRepository:
         return vector
 
     async def search(self, candidate_id, document_id, category, query, query_vector,
-                     top_k=10, fallback_to_experience=False):
+                     top_k=10, fallback_to_experience=False, sparse_plan=None):
         if not query or top_k < 1:
             return []
         scope = {"candidate": candidate_id, "document": document_id,
@@ -145,11 +152,29 @@ class PostgresRetrievalRepository:
         dense_sql = text(base + """JOIN chunk_embeddings e ON e.chunk_id=c.id
                     AND e.model_name=:model AND e.model_version=:version """ + where +
                     " ORDER BY e.vector <=> CAST(:vector AS vector), c.id LIMIT :limit")
-        sparse_sql = text(base + where + """ AND c.tsv_content @@ websearch_to_tsquery('english', :query)
-                    ORDER BY ts_rank_cd(c.tsv_content, websearch_to_tsquery('english', :query)) DESC,
+        plan = sparse_plan if sparse_plan is not None else build_sparse_plan(query, category)
+        coverage = {}
+        for priority in ("required", "preferred", "context"):
+            checks = []
+            for index, concept in enumerate(plan.concepts):
+                if concept.priority == priority:
+                    key = f"concept_{index}"
+                    scope[key] = concept.tsquery
+                    checks.append(f"CASE WHEN c.tsv_lexical @@ to_tsquery('simple', :{key}) THEN 1 ELSE 0 END")
+            coverage[priority] = " + ".join(checks) or "0"
+        fields = ", ".join(f"({expression}) AS sparse_{priority}_coverage"
+                           for priority, expression in coverage.items())
+        sparse_base = base.replace("c.source_location", "c.source_location, " + fields)
+        sparse_sql = text(sparse_base + where + """ AND c.lexical_version=:lexical_version
+                    AND c.tsv_lexical @@ to_tsquery('simple', :sparse_query)
+                    ORDER BY sparse_required_coverage DESC, sparse_preferred_coverage DESC,
+                    sparse_context_coverage DESC,
+                    ts_rank_cd(c.tsv_lexical, to_tsquery('simple', :sparse_query)) DESC,
                     c.id LIMIT :limit""")
         dense = (await self.session.execute(dense_sql,
             dict(scope, vector=vector_literal(query_vector)))).mappings().all()
-        sparse = (await self.session.execute(sparse_sql, dict(scope, query=query))).mappings().all()
+        sparse = ((await self.session.execute(sparse_sql, dict(scope,
+            sparse_query=plan.tsquery, lexical_version=plan.version))).mappings().all()
+            if plan.concepts else [])
         return compute_rrf_score([dict(row) for row in dense],
-                                 [dict(row) for row in sparse], top_n=top_k)
+                                 [dict(row) for row in sparse], top_n=2 * top_k)

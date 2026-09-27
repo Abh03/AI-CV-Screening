@@ -131,6 +131,8 @@ class SourceChunkModel(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     source_location: Mapped[dict] = mapped_column(JSON, nullable=False)
+    lexical_text: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    lexical_version: Mapped[str] = mapped_column(String(32), nullable=False, default="concept-v1", server_default="concept-v1")
     __table_args__ = (Index("ix_source_chunks_scope", "candidate_id", "document_id", "category"),)
 
 

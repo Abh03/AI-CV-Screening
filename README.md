@@ -35,6 +35,26 @@ Projects fall back to Experience when their own category is absent; Experience
 and Education have no fallback. Both SQL branches feed the existing RRF and
 CrossEncoder path. The category metadata table records this policy.
 
+Sparse retrieval uses a separate concept plan instead of feeding category prose
+into a restrictive AND query. It matches any relevant concept, preserves multiword
+phrases, expands identity aliases and JD-approved substitutes, and ranks distinct
+required concept coverage before preferred and contextual coverage. Both backends
+use the `concept-v1` lexical normalization, which keeps C#, C++, .NET and other
+technical identities distinct. Dense embeddings and reranking retain the original
+category prose and source text. Each branch returns up to ten chunks; their full
+deduplicated union (up to twenty) reaches reranking, with RRF k unchanged at 60.
+`retrieval_by_category` records branch, fusion and returned sparse hit counts.
+
+Apply migration `a27c9d410e62` before starting web or workers. It backfills lexical
+text from all existing source chunks in batches and creates a separate GIN index.
+Run this migration online with `python -m alembic upgrade head`; offline SQL export
+cannot perform the Python text backfill. Source text, chunk IDs and dense embeddings
+are preserved. Historical masked text cannot recover removed terms through this
+backfill; re-extract the original documents when needed. Historical campaign results
+are not rerun by the migration. Compare exact campaign document versions in a new
+run to measure shortlist recall and latency; sparse participation alone is not a
+quality metric.
+
 Candidate/category filters are selective, so vector search uses exact ordering
 over that scope. The B-tree scope index and GIN FTS index are checked in the
 PostgreSQL integration test. CrossEncoder score averaging and zero clipping are
@@ -48,7 +68,7 @@ before using Stage 2 scores as a decision rule.
 - `python -m pytest tests/test_phase1.py --run-infrastructure -q`: explicitly test running PostgreSQL/pgvector and Redis.
 - `python -m pytest tests/test_postgres_retrieval.py --run-infrastructure -q`: create a fresh PostgreSQL database, run all migrations, and exercise scoped retrieval and embedding caches.
 - `python -m pytest tests/test_live_stage3_evaluation.py --run-live-llm -q`: explicitly allow configured live LLM calls and associated costs.
-- `python -m alembic upgrade head --sql`: inspect migration SQL without connecting.
+- `python -m alembic history`: inspect the migration chain without connecting; the sparse lexical backfill requires an online upgrade.
 
 Use `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` to prevent model downloads when
 cached models are available. API persistence tests use isolated SQLite databases;

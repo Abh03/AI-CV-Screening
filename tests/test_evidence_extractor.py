@@ -78,7 +78,8 @@ async def test_postgres_uses_synthetic_project_target(monkeypatch):
     query = "Projects demonstrating hands-on experience with SQL"
     repo.query_vector.assert_awaited_once_with("job", "PROJECTS", query)
     repo.search.assert_awaited_once_with("candidate", "document", "PROJECTS", query,
-                                        [0.0] * 384, fallback_to_experience=True)
+                                        [0.0] * 384, fallback_to_experience=True,
+                                        sparse_plan=extractor.build_sparse_plan(query, "PROJECTS", [{"canonical": "SQL"}]))
     chunks = repo.prepare_document.call_args.args[2]
     assert chunks[0]["category"] == "PROJECTS"
 

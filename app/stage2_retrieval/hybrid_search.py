@@ -1,5 +1,5 @@
 import math
-import re
+from app.stage2_retrieval.sparse import build_sparse_plan
 from typing import List, Dict, Any, Optional
 
 
@@ -38,6 +38,9 @@ def compute_rrf_score(
         scores[chunk_id] = scores.get(chunk_id, 0.0) + (1.0 / (k + rank))
         if chunk_id not in chunks_metadata:
             chunks_metadata[chunk_id] = item
+        else:
+            chunks_metadata[chunk_id] = {**chunks_metadata[chunk_id],
+                **{key: value for key, value in item.items() if key.startswith("sparse_")}}
 
     fused_results = []
     for chunk_id, rrf_score in scores.items():
@@ -47,7 +50,7 @@ def compute_rrf_score(
         meta["sparse_rank"] = sparse_ranks.get(chunk_id, None)
         fused_results.append(meta)
 
-    fused_results.sort(key=lambda x: x["rrf_score"], reverse=True)
+    fused_results.sort(key=lambda x: (-x["rrf_score"], str(x["chunk_id"])))
     if top_n is not None:
         return fused_results[:top_n]
     return fused_results
@@ -58,7 +61,8 @@ def execute_category_hybrid_search(
     query_vector: List[float],
     category_chunks: List[Dict[str, Any]],
     top_k: int = 10,
-    k_rrf: int = 60
+    k_rrf: int = 60,
+    sparse_plan=None
 ) -> List[Dict[str, Any]]:
     """
     Runs dense and sparse retrieval strictly over chunks belonging to a specific category.
@@ -75,23 +79,23 @@ def execute_category_hybrid_search(
             c = chunk.copy()
             c["dense_score"] = round(sim, 4)
             dense_scored.append(c)
-    dense_scored.sort(key=lambda x: x["dense_score"], reverse=True)
+    dense_scored.sort(key=lambda x: (-x["dense_score"], str(x["chunk_id"])))
     dense_hits = dense_scored[:top_k]
 
     # 2. Sparse Search
-    query_terms = [t.lower() for t in re.findall(r"\w+", query_text) if len(t) > 2]
+    plan = sparse_plan if sparse_plan is not None else build_sparse_plan(query_text)
     sparse_scored = []
     for chunk in category_chunks:
-        text_lower = chunk.get("text", "").lower()
-        score = 0.0
-        for term in query_terms:
-            score += len(re.findall(r"\b" + re.escape(term) + r"\b", text_lower)) * 1.0
-        if score > 0.0:
+        coverage = plan.coverage(chunk.get("text", ""))
+        if any(coverage):
             c = chunk.copy()
-            c["sparse_score"] = score
+            c.update(zip(("sparse_required_coverage", "sparse_preferred_coverage",
+                          "sparse_context_coverage"), coverage))
+            c["sparse_score"] = sum(coverage)
             sparse_scored.append(c)
-    sparse_scored.sort(key=lambda x: x["sparse_score"], reverse=True)
+    sparse_scored.sort(key=lambda x: (-x["sparse_required_coverage"],
+        -x["sparse_preferred_coverage"], -x["sparse_context_coverage"], str(x["chunk_id"])))
     sparse_hits = sparse_scored[:top_k]
 
     # 3. Reciprocal Rank Fusion
-    return compute_rrf_score(dense_hits, sparse_hits, k=k_rrf, top_n=top_k)
+    return compute_rrf_score(dense_hits, sparse_hits, k=k_rrf, top_n=2 * top_k)
