@@ -307,3 +307,78 @@ async def test_draft_cleanup_and_interrupted_request_recovery(client_db, monkeyp
     async with sessions() as db:
         expired = await db.get(JDDraftModel, "expired")
         assert expired.status == "EXPIRED" and expired.pages == [] and expired.profile is None
+
+
+@pytest.mark.asyncio
+async def test_jd_generation_validation_failure_retries_without_retrying_configuration(monkeypatch):
+    import httpx
+    import app.jd_intake as service
+    from unittest.mock import AsyncMock
+    request = httpx.Request("POST", "https://provider.example")
+    failed = httpx.HTTPStatusError("Invalid generation", request=request,
+        response=httpx.Response(400, request=request, json={"error": {"code": "json_validate_failed"}}))
+    once = AsyncMock(side_effect=[failed, ExtractedJD.model_validate(PROFILE)])
+    monkeypatch.setattr(service, "_extract_profile_once", once)
+    sleep = AsyncMock()
+    monkeypatch.setattr(service.asyncio, "sleep", sleep)
+    assert (await service.extract_profile("Software Engineer")).title == "Software Engineer"
+    assert once.await_count == 2
+    sleep.assert_awaited_once()
+    invalid = httpx.HTTPStatusError("Bad parameters", request=request,
+        response=httpx.Response(400, request=request, json={"error": {"code": "invalid_request_error"}}))
+    once.reset_mock(); once.side_effect = invalid
+    with pytest.raises(httpx.HTTPStatusError):
+        await service.extract_profile("Software Engineer")
+    assert once.await_count == 1
+    assert service.extraction_error_code(invalid) == "JD_PROVIDER_CONFIGURATION"
+
+
+@pytest.mark.asyncio
+async def test_jd_generation_invalid_response_exhausts_bounded_retries(monkeypatch):
+    import app.jd_intake as service
+    import json
+    from unittest.mock import AsyncMock
+    once = AsyncMock(side_effect=json.JSONDecodeError("Invalid JSON", "", 0))
+    monkeypatch.setattr(service, "_extract_profile_once", once)
+    monkeypatch.setattr(service.asyncio, "sleep", AsyncMock())
+    with pytest.raises(json.JSONDecodeError):
+        await service.extract_profile("Software Engineer")
+    assert once.await_count == 3
+
+
+def test_gemini_schema_uses_supported_keywords_and_errors_are_classified():
+    from app.jd_intake import extraction_json_schema, extraction_error_code
+    schema = extraction_json_schema("gemini")
+    def check(node):
+        if isinstance(node, dict):
+            assert not {"const", "pattern", "minLength", "maxLength", "exclusiveMinimum", "exclusiveMaximum", "ge"}.intersection(node)
+            for child in node.values():
+                check(child)
+        elif isinstance(node, list):
+            for child in node:
+                check(child)
+    check(schema)
+    class GeminiFailure(Exception):
+        code = 503
+    assert extraction_error_code(GeminiFailure()) == "JD_PROVIDER_UNAVAILABLE"
+
+
+@pytest.mark.asyncio
+async def test_gemini_rejected_schema_falls_back_to_validated_json_mode(monkeypatch):
+    import app.jd_intake as service
+    import json
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    class RejectedSchema(Exception):
+        code = 400
+    generate = AsyncMock(side_effect=[RejectedSchema(), SimpleNamespace(text=json.dumps(PROFILE))])
+    client = SimpleNamespace(provider="gemini", _initialize=lambda: None, aclose=AsyncMock(),
+        gemini_client=SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate))))
+    monkeypatch.setattr(service, "LLMClientWrapper", lambda: client)
+    result = await service._extract_profile_once("Software Engineer")
+    assert result.title == "Software Engineer"
+    assert generate.await_count == 2
+    config = generate.call_args.kwargs["config"]
+    assert config.response_json_schema is None
+    assert "Return JSON matching this schema" in config.system_instruction
+    client.aclose.assert_awaited_once()

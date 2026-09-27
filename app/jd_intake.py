@@ -3,14 +3,16 @@ import asyncio
 import json
 from typing import Literal
 
-from pydantic import Field, StrictBool, field_validator
+import httpx
+from pydantic import Field, StrictBool, ValidationError, field_validator
+from app.core.logging import logger
 
 from app.api.schemas import JobProfileInputSchema
 from app.config import settings
 from app.stage1_rules.contracts import StrictModel, HardFilterRules, DEGREE_HIERARCHY
 from app.stage1_rules.jd_profiler import SkillCluster, encapsulate_jd_data
 from app.stage1_rules.relevance import RelevanceContract
-from app.stage3_evaluation.llm_client import LLMClientWrapper
+from app.stage3_evaluation.llm_client import LLMClientWrapper, ProviderRateLimited, ProviderTransientFailure
 
 
 class JDHardFilters(HardFilterRules):
@@ -96,7 +98,7 @@ experience; experience targets describe applied delivery or responsibility.
 Do not infer work authorization merely from location. Return JSON only."""
 
 
-def extraction_json_schema():
+def extraction_json_schema(provider: str | None = None):
     schema = ExtractedJD.model_json_schema()
     schema["properties"]["jd_category_queries"] = {
         "type": "object", "additionalProperties": False,
@@ -105,6 +107,8 @@ def extraction_json_schema():
     def strict_objects(node):
         if isinstance(node, dict):
             node.pop("default", None)
+            if "ge" in node:
+                node["minimum"] = node.pop("ge")
             if node.get("type") == "object" and "properties" in node:
                 node["required"] = list(node["properties"])
                 node["additionalProperties"] = False
@@ -114,17 +118,33 @@ def extraction_json_schema():
             for child in node:
                 strict_objects(child)
     strict_objects(schema)
+    if provider == "gemini":
+        def compatible(node):
+            if isinstance(node, dict):
+                for key in ("pattern", "minLength", "maxLength"):
+                    node.pop(key, None)
+                if "const" in node:
+                    node["enum"] = [node.pop("const")]
+                for exclusive, inclusive in (("exclusiveMinimum", "minimum"), ("exclusiveMaximum", "maximum")):
+                    if exclusive in node:
+                        node[inclusive] = node.pop(exclusive)
+                for child in node.values():
+                    compatible(child)
+            elif isinstance(node, list):
+                for child in node:
+                    compatible(child)
+        compatible(schema)
     return schema
 
 
-async def extract_profile(text: str) -> ExtractedJD:
+async def _extract_profile_once(text: str) -> ExtractedJD:
     if len(text) > 60000:
         raise ValueError("JD_TEXT_LIMIT")
     client = LLMClientWrapper()
     try:
         client._initialize()
         prompt = encapsulate_jd_data(text)
-        schema = extraction_json_schema()
+        schema = extraction_json_schema(client.provider)
         if client.provider == "mock":
             return ExtractedJD(title="Mock JD - recruiter review required",
                 jd_category_queries={key: "No explicit requirement" for key in
@@ -132,11 +152,26 @@ async def extract_profile(text: str) -> ExtractedJD:
                 uncertainties=["Synthetic mock extraction. Enter requirements after reviewing the PDF."])
         if client.provider == "gemini":
             from google.genai import types
-            response = await asyncio.wait_for(client.gemini_client.aio.models.generate_content(
-                model=settings.GEMINI_MODEL, contents=prompt,
-                config=types.GenerateContentConfig(system_instruction=SYSTEM,
-                    response_mime_type="application/json", response_json_schema=schema,
-                    max_output_tokens=8192, temperature=0)), timeout=settings.PROVIDER_TIMEOUT_SECONDS)
+            config = types.GenerateContentConfig(system_instruction=SYSTEM,
+                response_mime_type="application/json", response_json_schema=schema,
+                max_output_tokens=8192, temperature=0)
+            try:
+                response = await asyncio.wait_for(client.gemini_client.aio.models.generate_content(
+                    model=settings.GEMINI_MODEL, contents=prompt, config=config),
+                    timeout=settings.PROVIDER_TIMEOUT_SECONDS)
+            except Exception as exc:
+                if str(getattr(exc, "code", None)) != "400":
+                    raise
+                # Some Gemini models reject this nested schema. JSON mode still
+                # receives the full contract and must pass the same local validation.
+                logger.warning("JD provider rejected schema", extra={"event": "jd_schema_fallback",
+                    "error_code": "JD_SCHEMA_REJECTED", "provider": "gemini"})
+                config = types.GenerateContentConfig(
+                    system_instruction=SYSTEM + "\nReturn JSON matching this schema:\n" + json.dumps(schema),
+                    response_mime_type="application/json", max_output_tokens=8192, temperature=0)
+                response = await asyncio.wait_for(client.gemini_client.aio.models.generate_content(
+                    model=settings.GEMINI_MODEL, contents=prompt, config=config),
+                    timeout=settings.PROVIDER_TIMEOUT_SECONDS)
             data = json.loads(response.text)
         else:
             groq = client.provider == "groq"
@@ -154,3 +189,47 @@ async def extract_profile(text: str) -> ExtractedJD:
         return ExtractedJD.model_validate(data)
     finally:
         await client.aclose()
+
+
+def extraction_error_code(exc: Exception) -> str:
+    if isinstance(exc, (ValidationError, json.JSONDecodeError)):
+        return "JD_PROVIDER_INVALID_OUTPUT"
+    if isinstance(exc, ProviderRateLimited):
+        return "JD_PROVIDER_RATE_LIMITED"
+    if isinstance(exc, (ProviderTransientFailure, httpx.TransportError, asyncio.TimeoutError)):
+        return "JD_PROVIDER_UNAVAILABLE"
+    if isinstance(exc, httpx.HTTPStatusError):
+        if exc.response.status_code == 400:
+            try:
+                code = exc.response.json().get("error", {}).get("code")
+            except (ValueError, AttributeError):
+                code = None
+            if code in {"json_validate_failed", "json_generation_failed"}:
+                return "JD_PROVIDER_INVALID_OUTPUT"
+        if exc.response.status_code in {400, 401, 403, 404}:
+            return "JD_PROVIDER_CONFIGURATION"
+    # Gemini SDK errors use numeric code rather than httpx.HTTPStatusError.
+    status = str(getattr(exc, "code", None) or getattr(exc, "status_code", None))
+    if status == "429":
+        return "JD_PROVIDER_RATE_LIMITED"
+    if status in {"500", "502", "503", "504"}:
+        return "JD_PROVIDER_UNAVAILABLE"
+    if status in {"400", "401", "403", "404"}:
+        return "JD_PROVIDER_CONFIGURATION"
+    return "JD_PROVIDER_ERROR"
+
+
+async def extract_profile(text: str) -> ExtractedJD:
+    # Retry generation failures, never credentials or unsupported request parameters.
+    for attempt in range(3):
+        try:
+            return await _extract_profile_once(text)
+        except Exception as exc:
+            code = extraction_error_code(exc)
+            logger.warning("JD extraction attempt failed", extra={"event": "jd_extraction_failure",
+                "error_code": code, "provider": settings.LLM_PROVIDER, "count": attempt + 1})
+            retryable = code in {"JD_PROVIDER_INVALID_OUTPUT", "JD_PROVIDER_RATE_LIMITED", "JD_PROVIDER_UNAVAILABLE"}
+            delay = getattr(exc, "retry_after", None)
+            if not retryable or attempt == 2 or (delay is not None and delay > 3):
+                raise
+            await asyncio.sleep(max(2 ** attempt, delay or 0))

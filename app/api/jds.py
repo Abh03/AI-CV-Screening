@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.auth import Principal, current_principal
-from app.jd_intake import ExtractedJD, extract_profile
+from app.jd_intake import ExtractedJD, extract_profile, extraction_error_code
+from app.core.logging import logger
 from app.models.database import JDDraftModel, ApprovedJDModel, get_db
 from app.stage0_extraction.pipeline import ingest_pdf
 
@@ -109,8 +110,10 @@ async def upload_jd(request: Request, retry: bool = False,
             profile = await extract_profile(extracted.redacted_text)
             profile_data = profile.model_dump(mode="json")
             status = "REVIEW"
-    except Exception:
-        error_code = "JD_PROVIDER_ERROR"
+    except Exception as exc:
+        error_code = extraction_error_code(exc)
+        logger.warning("JD extraction failed", extra={"event": "jd_extraction_failure",
+            "error_code": error_code, "provider": settings.LLM_PROVIDER})
     draft = (await db.execute(select(JDDraftModel).where(JDDraftModel.id == draft.id)
         .with_for_update().execution_options(populate_existing=True))).scalar_one()
     if draft.status != "PROCESSING" or draft.provenance.get("attempt_token") != attempt_token:

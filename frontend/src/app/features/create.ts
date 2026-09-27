@@ -47,7 +47,6 @@ const degreeLevels = ['NONE', 'SECONDARY', 'HIGHER SECONDARY', 'DIPLOMA', 'BACHE
               <div class="target-row" [formGroupName]="t">
 <div class="target-skill"><label [for]="'target-text-' + i + '-' + t">Skill / responsibility</label><input [id]="'target-text-' + i + '-' + t" formControlName="text" maxlength="600"></div>
 <div><label [for]="'target-category-' + i + '-' + t">Category</label><select [id]="'target-category-' + i + '-' + t" formControlName="category">@for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }</select></div>
-<div><label [for]="'target-kind-' + i + '-' + t">Target type</label><select [id]="'target-kind-' + i + '-' + t" formControlName="kind">@for (kind of targetKinds; track kind) { <option [value]="kind">{{ kind }}</option> }</select></div>
 <div><label [for]="'target-treatment-' + i + '-' + t">Treatment</label><select [id]="'target-treatment-' + i + '-' + t" formControlName="treatment"><option value="requirement">Requirement</option><option value="preference">Preference</option></select></div>
 <div><label [for]="'target-importance-' + i + '-' + t">Importance</label><input [id]="'target-importance-' + i + '-' + t" formControlName="importance" type="number" min="1" max="5"></div>
 <button type="button" class="secondary" (click)="jd.controls.relevanceTargets.removeAt(t)" [disabled]="!!state(jd).approvedId" [attr.aria-label]="'Remove ' + target.controls.text.value">Remove</button></div>
@@ -77,7 +76,6 @@ export class CreateComponent {
   private readonly router = inject(Router);
   readonly categories = categories;
   readonly degreeLevels = degreeLevels;
-  readonly targetKinds = ['skill', 'responsibility', 'domain', 'experience', 'project', 'education'];
   readonly cap = publicConfig.stage3Cap;
   readonly maxJds = publicConfig.maxJds;
   readonly form = this.fb.group({ name: ['', Validators.maxLength(255)], jds: this.fb.array([this.newJd()]) });
@@ -100,7 +98,7 @@ export class CreateComponent {
       const p = draft.profile;
       this.setState(jd, { file, draft, busy: false, error: p ? '' : draft.error_code === 'EXTRACTION_UNRELIABLE'
         ? 'The server could not read this PDF reliably, even after OCR. Try a PDF exported from the original document or a clearer scan. (EXTRACTION_UNRELIABLE)'
-        : `Extraction needs attention: ${draft.error_code ?? draft.status}` });
+        : this.extractionError(draft.error_code ?? draft.status) });
       if (!p) return;
       jd.controls.relevanceTargets.clear();
       for (const target of p.relevance_contract?.targets ?? []) jd.controls.relevanceTargets.push(this.newTarget(target));
@@ -113,13 +111,24 @@ export class CreateComponent {
         requiredSkills: this.skillLines(p.must_have_skills ?? []), preferredSkills: this.skillLines(p.nice_to_have_skills ?? []) });
     }, error: error => this.setState(jd, { file, busy: false, error: describeError(error) }) });
   }
+  private extractionError(code: string): string {
+    const messages: Record<string, string> = {
+      JD_PROVIDER_ERROR: 'The AI service could not process the JD. Retry extraction.',
+      JD_PROVIDER_INVALID_OUTPUT: 'The AI service returned an incomplete or invalid JD response. Retry extraction.',
+      JD_PROVIDER_RATE_LIMITED: 'The AI service is busy. Wait briefly, then retry extraction.',
+      JD_PROVIDER_UNAVAILABLE: 'The AI service is temporarily unavailable. Retry extraction.',
+      JD_PROVIDER_CONFIGURATION: 'The AI service configuration needs attention. Contact your administrator.'
+    };
+    return `${messages[code] ?? 'Extraction needs attention.'} (${code})`;
+  }
   private skillLines(skills: SkillCluster[]): string { return skills.map(s => `${s.canonical} | ${s.aliases.join(', ')} | ${s.substitutes.join(', ')}`).join('\n'); }
   private parseSkills(text: string): SkillCluster[] { return text.split('\n').filter(s => s.trim()).map(line => {
     const [canonical, aliases = '', substitutes = ''] = line.split('|');
     return { canonical: canonical.trim(), aliases: aliases.split(',').map(s => s.trim()).filter(Boolean), substitutes: substitutes.split(',').map(s => s.trim()).filter(Boolean) };
   }); }
   approve(jd: JdForm): void {
-    jd.markAllAsTouched(); const state = this.state(jd); if (!state.draft?.profile || jd.invalid) return;
+    jd.markAllAsTouched(); const state = this.state(jd); if (state.busy || state.approvedId || !state.draft?.profile) return;
+    if (jd.invalid) { this.setState(jd, { ...state, error: 'Check the JD fields: enter a title, a skill or responsibility for each row, and importance between 1 and 5.' }); return; }
     const job = this.jobs()[this.jds.controls.indexOf(jd)];
     const { job_id, ...profile } = job;
     this.setState(jd, { ...state, busy: true, error: '' });

@@ -21,8 +21,9 @@ describe('JD review and approval', () => {
       approveJd: vi.fn(() => of({ approved_jd_id: 'approved', profile: { ...profile, job_id: 'approved' } })),
       create: vi.fn(() => of({ campaign_id: 'campaign', status: 'INTAKE', created: true, upload_url: '' })) };
     TestBed.configureTestingModule({ imports: [CreateComponent], providers: [provideRouter([]), { provide: CampaignApi, useValue: api }] });
-    const component = TestBed.createComponent(CreateComponent).componentInstance;
-    return { component, api };
+    const fixture = TestBed.createComponent(CreateComponent);
+    const component = fixture.componentInstance;
+    return { component, api, fixture };
   }
   it('prefills requirements, preserves edits and submits only approved references', () => {
     const { component, api } = setup(); const jd = component.jds.at(0);
@@ -52,6 +53,22 @@ describe('JD review and approval', () => {
     expect(api.approveJd.mock.calls[1]).toEqual(['draft', expect.objectContaining({ title: 'Revised Engineer' }), true]);
     component.form.controls.name.setValue('September engineers'); component.create();
     expect(api.create.mock.calls[0]).toEqual([expect.objectContaining({ name: 'September engineers' })]);
+  });
+  it('hides target type while retaining it in the approval payload', () => {
+    const { component, fixture } = setup(); const jd = component.jds.at(0);
+    component.chooseJd({ target: { files: [new File(['pdf'], 'jd.pdf')] } } as unknown as Event, jd);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[formControlName="kind"]')).toBeNull();
+    expect(component.jobs()[0].relevance_contract?.targets[0].kind).toBe('responsibility');
+  });
+  it('shows validation errors instead of silently ignoring approval', () => {
+    const { component, api } = setup(); const jd = component.jds.at(0);
+    component.chooseJd({ target: { files: [new File(['pdf'], 'jd.pdf')] } } as unknown as Event, jd);
+    component.approve(jd); component.editJd(jd);
+    jd.controls.relevanceTargets.at(0).controls.importance.setValue(0);
+    component.approve(jd);
+    expect(component.state(jd).error).toContain('importance between 1 and 5');
+    expect(api.approveJd).toHaveBeenCalledTimes(1);
   });
   it('blocks campaign creation until every uploaded JD is approved', () => {
     const { component, api } = setup(); const jd = component.jds.at(0);
