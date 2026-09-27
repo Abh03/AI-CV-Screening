@@ -23,7 +23,13 @@ def compute_deterministic_tier(
     """Compatibility entry point; all scoring and outcome policy lives in scoring.py."""
     # A supplied prompt string is never an authority for citation membership.
     from app.stage3_evaluation.evidence import build_evidence_registry, verify_evidence
+    from app.stage3_evaluation.context import prepare_evaluation_context
+    evidence_payload = prepare_evaluation_context(candidate_id, evidence_payload)
     if registry is None:
         registry = build_evidence_registry(candidate_id, evidence_payload)
-    verification = verify_evidence(llm_output, registry, candidate_id, injection_signals)
+    metadata = evidence_payload.get("context_metadata", {})
+    verification = verify_evidence(llm_output, registry, candidate_id, injection_signals,
+        require_claim_support=metadata.get("require_claim_support", False) and not is_mock,
+        context_complete=metadata.get("complete", True))
+    verification.context_metadata = metadata
     return score_evaluation(candidate_id, llm_output, verification, is_mock=is_mock)

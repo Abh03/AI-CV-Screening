@@ -4,11 +4,13 @@ import re
 
 def extract_experience(text: str) -> dict | None:
     claims = []
-    for line in text.splitlines():
+    # PDF line wrapping must not interrupt an explicit overall duration.
+    for line in re.split(r"\n\s*\n", text):
+        line = re.sub(r"\s+", " ", line).strip()
         # Skill-specific durations cannot establish total career experience.
         patterns = (
             r"(?:total|overall)\s+(?:(?:professional|work)\s+)?experience\s*[:=-]?\s*(\d+(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)\b",
-            r"(\d+(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:(?:total|overall|professional|work)\s+)+experience\b",
+            r"(\d+(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:(?:total|overall|professional|work|industry)\s+)+experience\b",
         )
         for pattern in patterns:
             for match in re.finditer(pattern, line, re.I):

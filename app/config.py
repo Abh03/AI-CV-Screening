@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     STAGE2_BACKEND: Literal["memory", "postgres"] = "memory"
     LLM_CONCURRENCY_LIMIT: int = 5
     CAMPAIGN_STAGE3_GLOBAL_INFLIGHT: int = Field(default=2, ge=1, le=100)
+    STAGE3_CONTEXT_MAX_CHARS: int = Field(default=48000, ge=3000, le=500000)
     PROVIDER_REQUESTS_PER_MINUTE: int = Field(default=60, ge=1)
     PROVIDER_TOKENS_PER_MINUTE: int = Field(default=120000, ge=1)
     PROVIDER_TOKENS_PER_REQUEST: int = Field(default=6000, ge=1)

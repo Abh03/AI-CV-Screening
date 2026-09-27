@@ -34,17 +34,25 @@ class EvaluationStatus(str, Enum):
     EVALUATION_FAILED = "EVALUATION_FAILED"
 
 
+class SupportedClaim(StrictBaseModel):
+    claim: str
+    citation: str
+    quote: str
+
+
 class FlagDetail(StrictBaseModel):
     type: FlagType
     severity: Severity
     description: str
     citations: List[str]
+    claims: List[SupportedClaim] = Field(default_factory=list)
 
 
 class CategoryAssessment(StrictBaseModel):
     score: Score
     rationale: str
     citations: List[str]
+    claims: List[SupportedClaim] = Field(default_factory=list)
 
 
 class LLMEvaluationOutput(StrictBaseModel):
@@ -56,6 +64,13 @@ class LLMEvaluationOutput(StrictBaseModel):
     executive_summary: str
 
 
+class SourceBlock(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    page_number: int = Field(ge=1)
+    block_index: int = Field(ge=0)
+    bbox: tuple[float, float, float, float]
+
+
 class SourceLocation(StrictBaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     section: str | None = None
@@ -63,6 +78,9 @@ class SourceLocation(StrictBaseModel):
     page_number: int | None = Field(default=None, ge=1)
     block_index: int | None = Field(default=None, ge=0)
     bbox: tuple[float, float, float, float] | None = None
+    blocks: tuple[SourceBlock, ...] = ()
+    char_start: int | None = Field(default=None, ge=0)
+    char_end: int | None = Field(default=None, ge=0)
 
 
 class EvidenceReference(StrictBaseModel):
@@ -89,6 +107,7 @@ class EvidenceVerification(StrictBaseModel):
     review_reasons: List[str]
     verified_flag_indices: List[int]
     injection_signals: List[str]
+    context_metadata: dict = Field(default_factory=dict)
 
     @property
     def verified_citations(self) -> List[str]:

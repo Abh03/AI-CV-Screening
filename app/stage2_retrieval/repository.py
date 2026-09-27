@@ -16,7 +16,7 @@ from app.stage2_retrieval.embeddings import (EMBEDDING_MODEL_NAME, EMBEDDING_MOD
 from app.stage2_retrieval.hybrid_search import compute_rrf_score
 from app.stage2_retrieval.sparse import build_sparse_plan, normalize_lexical_v1, LEXICAL_VERSION
 
-CHUNKING_VERSION = "structural-v3"
+CHUNKING_VERSION = "structural-v4"
 REDACTION_VERSION = "unredacted-v1"
 
 

@@ -24,6 +24,33 @@ Docker Compose runs Alembic before starting the web service. The standalone
 `sql/*.sql` files are historical notes and do not provision the database.
 
 Stage 2 stores full, unredacted CV chunks as searchable text and 384-dimensional vectors.
+PDF blocks within employment/project entries are grouped, with entry headers
+repeated on continuation passages and all contributing block locations retained.
+The chunking version is `structural-v4`; new retrieval runs create new document
+identities rather than reuse the old fragmented chunks.
+
+Stage 3 combines selected retrieval passages with citable extracted CV context.
+Context references retain stable content identities and exact character offsets
+into the supplied extracted text; they do not claim database chunk persistence.
+The CV is not repeated in a separate uncitable prompt field. Source sections are
+available under applicable category citation tags, including applied work as
+skills/experience/project context. The model must assess what each passage states.
+`STAGE3_CONTEXT_MAX_CHARS` defaults to 48000 and bounds evidence text, including
+category copies; XML, JD text and system instructions add overhead. This is a
+character limit, not a provider token limit. Oversized CVs prioritize source
+passages around retrieval hits and their neighbours, then section-balanced
+context. Omitted passage identities and completeness are retained in evidence
+verification; omitted context forces a provisional review outcome.
+
+The `stage3-prompt-v6` output includes factual claims with citation tags and source
+quotes. Live assessments require quote support for every citation. Verification
+checks quote presence (allowing line-wrap whitespace differences) and rejects
+numeric claims whose numbers are absent from the quote. Semantic entailment and
+the suitability score still require model judgment and human review; these checks
+do not prove the truth of a CV claim. Legacy evidence-only snapshots remain
+readable. Existing campaign outcomes are not rewritten; replay candidate/JD pairs
+in a new run to measure review rates, token usage and latency.
+
 Treat the PostgreSQL database as sensitive candidate data: restrict access and
 apply the same retention controls as other screening records. Raw PDF bytes are not written to retrieval tables. Full extracted text is stored. Document identity
 includes candidate ID, full content and source locations, redaction version,

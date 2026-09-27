@@ -61,7 +61,10 @@ async def test_full_cv_reaches_rules_retrieval_and_llm_prompt(monkeypatch):
     async def evaluate(candidate_payloads, jd_profile, **kwargs):
         payload = candidate_payloads[0]
         prompt = ET.fromstring(build_stage3_user_prompt("candidate", jd_profile, payload))
-        assert prompt.find("candidate_cv_text").text == CV
+        snippets = [node.text for node in prompt.findall(".//snippet")]
+        for term in ("Jane Doe", "jane@example.com", "Kathmandu", "Spring Boot", "Bachelor degree 2018"):
+            assert any(term in text for text in snippets)
+        assert prompt.find("context_metadata") is not None
         assert "Java" in prompt.find("candidate_evidence/category/snippet").text
         seen.append("prompt")
         return [failed_evaluation("candidate", "PROVIDER_ERROR", "test")]

@@ -163,6 +163,11 @@ async def test_one_candidate_can_rank_in_two_jds_with_verification(monkeypatch):
         assert kwargs["max_retries"] == 0
         assert kwargs["max_provider_attempts"] == 1
         output = LLMEvaluationOutput.model_validate(LLMClientWrapper._call_mock(payload["candidate_id"]))
+        from app.stage3_evaluation.schemas import SupportedClaim
+        for category in ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION"):
+            getattr(output, category.lower()).claims = [SupportedClaim(
+                claim="The supplied evidence describes this category.",
+                citation=category + ":1", quote=category + " evidence")]
         return compute_deterministic_tier(payload["candidate_id"], output, payload)
     monkeypatch.setattr(tasks, "evaluate_single_candidate_async", evaluate)
     try:

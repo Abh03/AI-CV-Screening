@@ -39,6 +39,32 @@ def migrated_database(monkeypatch):
         conn.close()
 
 
+async def test_grouped_source_locations_survive_database_retrieval(migrated_database, monkeypatch):
+    from app.stage2_retrieval import repository as module
+    from app.stage3_evaluation.evidence import build_evidence_registry
+    monkeypatch.setattr(module, "generate_embeddings", lambda texts: [[1.0] + [0.0] * 383 for _ in texts])
+    pages = [{"page_number": 1, "blocks": [
+        {"block_number": i, "bbox": [0, i, 100, i + 1], "text": body}
+        for i, body in enumerate(["EXPERIENCE", "Engineer | Example", "2024 - 2026",
+                                  "Built Python pipelines with Airflow retries and monitoring."])]}]
+    cv = "\n\n".join(block["text"] for block in pages[0]["blocks"])
+    chunks = generate_cv_chunks(cv, source_pages=pages)
+    assert len(chunks) == 1
+    engine = create_async_engine(migrated_database)
+    try:
+        async with async_sessionmaker(engine)() as session:
+            repo = PostgresRetrievalRepository(session)
+            document = await repo.prepare_document("grouped", cv, chunks, source_pages=pages)
+            hits = await repo.search("grouped", document, "EXPERIENCE", "Python", [1.0] + [0.0] * 383)
+            assert hits and "2024 - 2026" in hits[0]["text"] and "monitoring" in hits[0]["text"]
+            registry = build_evidence_registry("grouped", {"evidence_by_category": {"EXPERIENCE": hits}})
+            assert [block.block_index for block in registry["EXPERIENCE:1"].source_location.blocks] == [1, 2, 3]
+            assert (await session.execute(text("SELECT chunking_version FROM document_versions WHERE id=:id"),
+                                          {"id": document})).scalar_one() == "structural-v4"
+    finally:
+        await engine.dispose()
+
+
 async def test_migrations_scoped_retrieval_and_cache(migrated_database, monkeypatch):
     from app.stage2_retrieval import repository as module
 

@@ -108,12 +108,26 @@ class LLMClientWrapper:
 
     def _get_structured_response_format(self) -> Dict[str, Any]:
         """Generates OpenAI-compatible structured outputs format from Pydantic schema."""
+        schema = LLMEvaluationOutput.model_json_schema()
+
+        def require_properties(node):
+            if isinstance(node, dict):
+                node.pop("default", None)
+                if "properties" in node:
+                    node["required"] = list(node["properties"])
+                for value in node.values():
+                    require_properties(value)
+            elif isinstance(node, list):
+                for value in node:
+                    require_properties(value)
+
+        require_properties(schema)
         return {
             "type": "json_schema",
             "json_schema": {
                 "name": "llm_evaluation_output",
                 "strict": True,
-                "schema": LLMEvaluationOutput.model_json_schema(),
+                "schema": schema,
             },
         }
 
@@ -383,6 +397,8 @@ async def evaluate_single_candidate_async(
     if is_mock and settings.ENVIRONMENT.lower() not in {"development", "test", "testing"}:
         return failed_evaluation(candidate_id, "MOCK_NOT_ALLOWED", "Mock evaluation is disabled in this environment.", is_mock=True)
     try:
+        from app.stage3_evaluation.context import prepare_evaluation_context
+        candidate_payload = prepare_evaluation_context(candidate_id, candidate_payload)
         registry = build_evidence_registry(candidate_id, candidate_payload)
         user_prompt = build_stage3_user_prompt(candidate_id, jd_profile, candidate_payload, registry=registry)
         jd_text = "\n".join([jd_profile.get("title", ""), *jd_profile.get("jd_category_queries", {}).values()])

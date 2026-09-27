@@ -219,7 +219,10 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
     else:
         assert captured["messages"][0] == {"role": "system", "content": SYSTEM_PROMPT_STAGE3}
         assert captured["messages"][1]["role"] == "user"
-        assert captured["response_format"]["json_schema"]["schema"] == LLMEvaluationOutput.model_json_schema()
+        schema = captured["response_format"]["json_schema"]["schema"]
+        for name in ("CategoryAssessment", "FlagDetail", "SupportedClaim"):
+            assert set(schema["$defs"][name]["required"]) == set(schema["$defs"][name]["properties"])
+        assert "claims" in schema["$defs"]["CategoryAssessment"]["required"]
         user_content = captured["messages"][1]["content"]
     assert SYSTEM_PROMPT_STAGE3 not in user_content
     root = ET.fromstring(user_content)

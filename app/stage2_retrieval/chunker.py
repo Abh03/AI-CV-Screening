@@ -153,27 +153,60 @@ def generate_cv_chunks(redacted_cv_text: str, source_pages: list[dict] | None = 
     if source_pages is not None:
         chunks = []
         current_section = "EXPERIENCE"
-        for page in source_pages:
-            for block in page["blocks"]:
+        pending = []
+
+        def flush():
+            if not pending:
+                return
+            content = "\n\n".join(text for text, _ in pending)
+            # Keep the role/project header and dates on continuation passages.
+            header = " ".join(text for text, _ in pending[:2])[:160]
+            entry_chunks = chunk_section_structurally(current_section, content,
+                min_chunk_chars=400, max_chunk_chars=420)
+            locations = [location for _, location in pending]
+            for index, chunk in enumerate(entry_chunks):
+                if index and current_section in {"EXPERIENCE", "PROJECTS"}:
+                    prefix = f"[Section: {current_section}] "
+                    chunk["text"] = prefix + header + "\n" + chunk["text"][len(prefix):]
+                    chunk["char_length"] = len(chunk["text"]) - len(prefix)
+                chunk["global_chunk_id"] = len(chunks)
+                chunk["chunk_id"] = f"chk_{len(chunks)}"
+                chunk["source_location"] = dict(locations[0], section=current_section,
+                                                chunk_index=chunk["chunk_index"])
+                if len(locations) > 1:
+                    chunk["source_location"]["blocks"] = locations
+                chunks.append(chunk)
+            pending.clear()
+
+        for page_index, page in enumerate(source_pages):
+            for block_position, block in enumerate(page["blocks"]):
                 heading = SECTION_HEADER_PATTERN.fullmatch(block["text"].strip())
                 if heading:
+                    flush()
                     current_section = normalize_header_to_canonical(heading.group(1))
                     continue
                 parsed = parse_cv_sections(block["text"])
                 has_embedded_header = SECTION_HEADER_PATTERN.search(block["text"]) is not None
                 for section, content in parsed.items():
                     if has_embedded_header:
+                        flush()
                         current_section = section
-                    for chunk in chunk_section_structurally(current_section, content):
-                        chunk["global_chunk_id"] = len(chunks)
-                        chunk["chunk_id"] = f"chk_{len(chunks)}"
-                        chunk["source_location"] = {
-                            "page_number": page["page_number"],
-                            "block_index": block["block_number"],
-                            "bbox": block["bbox"], "section": current_section,
-                            "chunk_index": chunk["chunk_index"],
-                        }
-                        chunks.append(chunk)
+                    # A compact non-bullet title followed by a date block marks
+                    # an entry boundary; ordinary responsibility bullets stay together.
+                    following = page["blocks"][block_position + 1:block_position + 2]
+                    if not following and page_index + 1 < len(source_pages):
+                        following = source_pages[page_index + 1]["blocks"][:1]
+                    next_text = following[0]["text"] if following else ""
+                    is_title = (current_section in {"EXPERIENCE", "PROJECTS"}
+                        and len(content) < 180
+                        and (re.search(r"\b(?:19|20)\d{2}\b", next_text)
+                             or current_section == "PROJECTS" and "|" in content)
+                        and not re.match(r"^[-•*]|^(?:technologies|tech stack|skills)\s*:", content, re.I))
+                    if is_title and pending:
+                        flush()
+                    pending.append((content, {"page_number": page["page_number"],
+                        "block_index": block["block_number"], "bbox": block["bbox"]}))
+        flush()
         return chunks
     sections = parse_cv_sections(redacted_cv_text)
     all_chunks = []
