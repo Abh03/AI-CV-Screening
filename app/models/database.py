@@ -230,7 +230,7 @@ class CampaignJDModel(Base):
     jd_key: Mapped[str] = mapped_column(String(64), nullable=False)
     job_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
     policy_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
-    stage3_cap: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    stage3_cap: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="PENDING")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

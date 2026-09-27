@@ -10,8 +10,15 @@ export interface JobProfile {
   jd_category_queries: Partial<Record<Category, string>>;
   hard_filter_rules: { min_years_experience: number; degree_requirement: DegreeRequirement | null; require_work_authorization: boolean };
   must_have_skills?: SkillCluster[]; nice_to_have_skills?: SkillCluster[];
+  relevance_contract?: { version: 'relevance-v1'; targets: RelevanceTarget[]; minimum_coverage: number };
 }
 export interface SkillCluster { canonical: string; aliases: string[]; substitutes: string[] }
+export interface RelevanceTarget {
+  target_id: string; category: Category;
+  kind: 'skill' | 'responsibility' | 'domain' | 'experience' | 'project' | 'education';
+  text: string; source_quote: string; importance: number;
+  treatment: 'requirement' | 'preference'; evidence_terms: string[][];
+}
 export interface ExtractedJD extends Omit<JobProfile, 'job_id'> { schema_version: 'jd-v1'; uncertainties: string[] }
 export interface JdDraft { draft_id: string; status: string; profile: ExtractedJD | null; error_code: string | null; pages: { page_number: number; blocks: { text: string }[] }[] }
 export interface CampaignCreate { job_profiles?: JobProfile[]; approved_jd_ids?: string[]; idempotency_key: string }
@@ -29,6 +36,8 @@ export interface EvidenceRef { citation: string; document_id: string | null; chu
 export interface PairResult {
   candidate_id: string; source_filename?: string | null; status: PairStatus; rank: number | null; stage2_rank: number | null; stage2_score: number | null;
   score: number | null; tier: string | null; category_scores: Record<string, number | null>;
+  stage2_category_scores?: Record<string, number | null>;
+  stage2_target_assessments?: { target_id: string; target_text?: string; category: Category; status: string; coverage: number; supporting_text: string }[];
   provisional: boolean; verification_required: boolean; verification_reasons: string[];
   stage1_decision: string | null; stage1_checks: unknown[]; review_reasons: string[];
   failure_code: string | null; error_message: string | null; is_mock: boolean; evidence: EvidenceRef[];

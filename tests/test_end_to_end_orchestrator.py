@@ -14,7 +14,7 @@ async def test_stage1_review_is_provisional_without_changing_stage3_status(monke
     def extract(**kwargs):
         retrieved.append(kwargs["candidate_id"])
         return {"candidate_id": kwargs["candidate_id"], "composite_score": 1,
-                "evidence_by_category": {}}
+                "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {}}
 
     async def evaluate(candidate_payloads, **kwargs):
         assert all("stage1_filter_details" in item for item in candidate_payloads)
@@ -56,6 +56,10 @@ async def test_stage1_review_is_provisional_without_changing_stage3_status(monke
 async def test_full_pipeline_end_to_end_execution():
     jd_profile = {
         "title": "Senior Python Backend Engineer",
+        "relevance_contract": {"targets": [{"target_id": "microservices", "category": "EXPERIENCE",
+            "kind": "responsibility", "text": "Build backend microservices", "importance": 1,
+            "source_quote": "Senior Backend Developer building microservices APIs", "treatment": "requirement",
+            "evidence_terms": [["microservices"]]}]},
         "jd_category_queries": {
             "SKILLS": "Python FastAPI PostgreSQL Redis Kubernetes",
             "EXPERIENCE": "Senior Backend Developer building microservices APIs",

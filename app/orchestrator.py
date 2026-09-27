@@ -29,7 +29,7 @@ async def run_end_to_end_screening_pipeline(
     raw_candidates: List[Dict[str, Any]],
     jd_profile: Dict[str, Any],
     hard_filter_rules: Optional[Dict[str, Any]] = None,
-    top_n_stage2_cutoff: int = 30,
+    top_n_stage2_cutoff: int = 15,
     llm_concurrency_limit: int = 5,
     llm_provider: Optional[Any] = None,
     stage0_views: Optional[Dict[str, Any]] = None
@@ -42,6 +42,8 @@ async def run_end_to_end_screening_pipeline(
     - Stage 3: Async LLM Multi-Attribute Evaluation & Tier Assembly
     """
     rules = resolve_hard_filters(jd_profile, hard_filter_rules)
+    if not 1 <= top_n_stage2_cutoff <= 15:
+        raise ValueError("Stage 2 cutoff must be between 1 and 15")
     stage_started = time.perf_counter()
     stage_latencies = {}
     stage0_elapsed = 0.0
@@ -62,6 +64,7 @@ async def run_end_to_end_screening_pipeline(
         "stage0_failed": 0,
         "stage0_review_required": 0,
         "stage2_failed": 0,
+        "stage2_review_required": 0,
         "stage2_excluded": 0,
         "accounted_candidates": 0,
     }
@@ -204,6 +207,7 @@ async def run_end_to_end_screening_pipeline(
                 required_skills=effective_jd.get("must_have_skills", []),
                 preferred_skills=effective_jd.get("nice_to_have_skills", []),
                 degree_requirement=rules.degree_requirement,
+                relevance_contract=effective_jd.get("relevance_contract"),
                 source_pages=(stage0_views or {}).get(survivor["candidate_id"]).pages
                 if survivor["candidate_id"] in (stage0_views or {}) else None)
             if settings.STAGE2_BACKEND == "postgres":
@@ -253,6 +257,16 @@ async def run_end_to_end_screening_pipeline(
     for evidence in stage2_payloads:
         cand_id = evidence["candidate_id"]
         if cand_id not in shortlisted_ids:
+            if evidence.get("relevance_review_required") or evidence.get("scoring_version") != "stage2-coverage-v1":
+                item = {"candidate_id": cand_id, "stage": "STAGE2", "evaluation_status": "REVIEW_REQUIRED",
+                        "reason": evidence.get("relevance_reason") or "STAGE2_SCORING_REPLAY_REQUIRED",
+                        "retrieval_score": evidence.get("composite_score"),
+                        **stage1_verification(evidence["stage1_filter_details"])}
+                review_candidates.append(item)
+                pipeline_metrics["stage2_review_required"] += 1
+                outcomes[cand_id].update(outcome="REVIEW_REQUIRED", stage="STAGE2", result_snapshot=item)
+                outcomes[cand_id]["stage_history"].append({"stage": "STAGE2", "status": "REVIEW_REQUIRED"})
+                continue
             item = {"candidate_id": cand_id, "stage": "STAGE2", "reason": "CUTOFF_EXCLUDED",
                     "retrieval_score": evidence.get("composite_score")}
             item.update({key: evidence[key] for key in

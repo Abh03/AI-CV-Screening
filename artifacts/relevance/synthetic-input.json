@@ -1,0 +1,455 @@
+{
+  "validation_kind": "synthetic_smoke",
+  "jobs": [
+    {
+      "baseline_profile": {
+        "job_id": "synthetic-job-0",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": "Java",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Java"
+          }
+        ],
+        "hard_filter_rules": {}
+      },
+      "reviewed_profile": {
+        "job_id": "synthetic-job-0",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": "Java",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Java"
+          }
+        ],
+        "hard_filter_rules": {},
+        "relevance_contract": {
+          "targets": [
+            {
+              "target_id": "delivery",
+              "category": "EXPERIENCE",
+              "kind": "responsibility",
+              "text": "Build payment APIs using Java",
+              "source_quote": "Build payment APIs using Java",
+              "importance": 1,
+              "treatment": "requirement",
+              "evidence_terms": [
+                [
+                  "payment APIs",
+                  "payment API"
+                ],
+                [
+                  "Java"
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "baseline_payloads": [
+        {
+          "candidate_id": "synthetic-0",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-1",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-2",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-3",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        }
+      ],
+      "survivor_ids": [
+        "synthetic-0",
+        "synthetic-1",
+        "synthetic-2",
+        "synthetic-3"
+      ],
+      "relevant_ids": [
+        "synthetic-0"
+      ],
+      "split": "synthetic_smoke"
+    },
+    {
+      "baseline_profile": {
+        "job_id": "synthetic-job-1",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": ".NET",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": ".NET"
+          }
+        ],
+        "hard_filter_rules": {}
+      },
+      "reviewed_profile": {
+        "job_id": "synthetic-job-1",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": ".NET",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": ".NET"
+          }
+        ],
+        "hard_filter_rules": {},
+        "relevance_contract": {
+          "targets": [
+            {
+              "target_id": "delivery",
+              "category": "EXPERIENCE",
+              "kind": "responsibility",
+              "text": "Build payment APIs using .NET",
+              "source_quote": "Build payment APIs using .NET",
+              "importance": 1,
+              "treatment": "requirement",
+              "evidence_terms": [
+                [
+                  "payment APIs",
+                  "payment API"
+                ],
+                [
+                  ".NET"
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "baseline_payloads": [
+        {
+          "candidate_id": "synthetic-0",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-1",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-2",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-3",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        }
+      ],
+      "survivor_ids": [
+        "synthetic-0",
+        "synthetic-1",
+        "synthetic-2",
+        "synthetic-3"
+      ],
+      "relevant_ids": [
+        "synthetic-1"
+      ],
+      "split": "synthetic_smoke"
+    },
+    {
+      "baseline_profile": {
+        "job_id": "synthetic-job-2",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": "Python",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Python"
+          }
+        ],
+        "hard_filter_rules": {}
+      },
+      "reviewed_profile": {
+        "job_id": "synthetic-job-2",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": "Python",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Python"
+          }
+        ],
+        "hard_filter_rules": {},
+        "relevance_contract": {
+          "targets": [
+            {
+              "target_id": "delivery",
+              "category": "EXPERIENCE",
+              "kind": "responsibility",
+              "text": "Build payment APIs using Python",
+              "source_quote": "Build payment APIs using Python",
+              "importance": 1,
+              "treatment": "requirement",
+              "evidence_terms": [
+                [
+                  "payment APIs",
+                  "payment API"
+                ],
+                [
+                  "Python"
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "baseline_payloads": [
+        {
+          "candidate_id": "synthetic-0",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-1",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-2",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-3",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        }
+      ],
+      "survivor_ids": [
+        "synthetic-0",
+        "synthetic-1",
+        "synthetic-2",
+        "synthetic-3"
+      ],
+      "relevant_ids": [
+        "synthetic-2"
+      ],
+      "split": "synthetic_smoke"
+    },
+    {
+      "baseline_profile": {
+        "job_id": "synthetic-job-3",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": "Selenium",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Selenium"
+          }
+        ],
+        "hard_filter_rules": {}
+      },
+      "reviewed_profile": {
+        "job_id": "synthetic-job-3",
+        "title": "Synthetic API role",
+        "jd_category_queries": {
+          "SKILLS": "Selenium",
+          "EXPERIENCE": "Minimum 3 years",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "No explicit requirement"
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Selenium"
+          }
+        ],
+        "hard_filter_rules": {},
+        "relevance_contract": {
+          "targets": [
+            {
+              "target_id": "delivery",
+              "category": "EXPERIENCE",
+              "kind": "responsibility",
+              "text": "Build payment APIs using Selenium",
+              "source_quote": "Build payment APIs using Selenium",
+              "importance": 1,
+              "treatment": "requirement",
+              "evidence_terms": [
+                [
+                  "payment APIs",
+                  "payment API"
+                ],
+                [
+                  "Selenium"
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "baseline_payloads": [
+        {
+          "candidate_id": "synthetic-0",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-1",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-2",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        },
+        {
+          "candidate_id": "synthetic-3",
+          "composite_score": 0,
+          "category_scores": {
+            "SKILLS": 0,
+            "EXPERIENCE": 0,
+            "PROJECTS": 0,
+            "EDUCATION": 0
+          }
+        }
+      ],
+      "survivor_ids": [
+        "synthetic-0",
+        "synthetic-1",
+        "synthetic-2",
+        "synthetic-3"
+      ],
+      "relevant_ids": [
+        "synthetic-3"
+      ],
+      "split": "synthetic_smoke"
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "synthetic-0",
+      "raw_cv_text": "SKILLS\nJava\nEXPERIENCE\nBuilt payment APIs using Java."
+    },
+    {
+      "candidate_id": "synthetic-1",
+      "raw_cv_text": "SKILLS\n.NET\nEXPERIENCE\nBuilt payment APIs using .NET."
+    },
+    {
+      "candidate_id": "synthetic-2",
+      "raw_cv_text": "SKILLS\nPython\nEXPERIENCE\nBuilt payment APIs using Python."
+    },
+    {
+      "candidate_id": "synthetic-3",
+      "raw_cv_text": "SKILLS\nSelenium\nEXPERIENCE\nBuilt payment APIs using Selenium."
+    }
+  ]
+}

@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     PDF_OCR_LANGUAGE: Literal["eng"] = "eng"
     
     # Pipeline Defaults & Concurrency Limits
-    DEFAULT_STAGE2_CUTOFF: int = 30
+    DEFAULT_STAGE2_CUTOFF: int = Field(default=15, ge=1, le=15)
     STAGE2_BACKEND: Literal["memory", "postgres"] = "memory"
     LLM_CONCURRENCY_LIMIT: int = 5
     CAMPAIGN_STAGE3_GLOBAL_INFLIGHT: int = Field(default=2, ge=1, le=100)

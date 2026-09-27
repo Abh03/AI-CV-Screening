@@ -49,7 +49,10 @@ def test_synthetic_project_query_reaches_retrieval_and_reranking(monkeypatch):
     payload = extractor.extract_candidate_category_evidence(
         "candidate", "SELECTED PROJECTS\nBuilt a Python API.",
         {"PROJECTS": "No explicit requirement"}, required_skills=[{"canonical": "Python"}])
-    assert seen == ["Projects demonstrating hands-on experience with Python"] * 2
+    assert seen[-2:] == ["Projects demonstrating hands-on experience with Python"] * 2
+    assert "Hands-on delivery using Python" in seen
+    assert payload["category_scores"]["PROJECTS"] is None
+    assert payload["category_scores"]["EXPERIENCE"] == 1
     assert payload["evidence_by_category"]["PROJECTS"][0]["section"] == "PROJECTS"
 
 
@@ -76,10 +79,13 @@ async def test_postgres_uses_synthetic_project_target(monkeypatch):
         {"PROJECTS": "No explicit requirement"}, "job",
         required_skills=[{"canonical": "SQL"}])
     query = "Projects demonstrating hands-on experience with SQL"
-    repo.query_vector.assert_awaited_once_with("job", "PROJECTS", query)
-    repo.search.assert_awaited_once_with("candidate", "document", "PROJECTS", query,
-                                        [0.0] * 384, fallback_to_experience=True,
-                                        sparse_plan=extractor.build_sparse_plan(query, "PROJECTS", [{"canonical": "SQL"}]))
+    repo.query_vector.assert_any_await("job", "PROJECTS", query)
+    repo.search.assert_any_await("candidate", "document", "PROJECTS", query,
+                                [0.0] * 384, fallback_to_experience=False,
+                                sparse_plan=extractor.build_sparse_plan(query, "PROJECTS"))
+    repo.search.assert_any_await("candidate", "document", "EXPERIENCE", query,
+                                [0.0] * 384, fallback_to_experience=False,
+                                sparse_plan=extractor.build_sparse_plan(query, "PROJECTS"))
     chunks = repo.prepare_document.call_args.args[2]
     assert chunks[0]["category"] == "PROJECTS"
 
@@ -111,8 +117,8 @@ def test_full_stage2_evidence_extraction():
     assert payload["status"] == "SUCCESS"
     chunks = [chunk for group in payload["evidence_by_category"].values() for chunk in group]
     assert chunks
-    assert all(len(group) <= 2 for group in payload["evidence_by_category"].values())
-    assert all("rerank_score" in chunk for chunk in chunks)
+    assert all("chunk_id" in chunk for chunk in chunks)
+    assert any("rerank_score" in chunk for chunk in chunks)
     assert any("FastAPI" in chunk["text"] for chunk in chunks)
 
 

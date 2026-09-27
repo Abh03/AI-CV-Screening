@@ -49,7 +49,10 @@ def build_evidence_registry(candidate_id: str, payload: dict) -> Mapping[str, Ev
             if not text.strip():
                 continue  # Empty placeholders are never citable.
             source_category = chunk.get("category", category)
-            if source_category != category and not (source_category == "EXPERIENCE" and category in ("SKILLS", "PROJECTS")):
+            allowed_sources = ({"SKILLS", "EXPERIENCE", "PROJECTS"} if category == "SKILLS" else
+                               {"EXPERIENCE", "PROJECTS"} if category in ("EXPERIENCE", "PROJECTS")
+                               else {"EDUCATION"})
+            if source_category not in allowed_sources:
                 raise ValueError("Invalid source category")
             location = SourceLocation.model_validate(chunk.get("source_location") or {
                 "section": chunk.get("section"), "chunk_index": chunk.get("chunk_index"),

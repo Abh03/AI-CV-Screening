@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 from app.stage1_rules.contracts import CandidateInput, HardFilterRules, StrictModel
 from app.stage1_rules.contracts import CandidateAttributes, RecruiterOverrides, Authorization, AuthorizationStatus, AttributeSource
 from app.stage1_rules.jd_profiler import SkillCluster
+from app.stage1_rules.relevance import RelevanceContract
 
 
 class CandidateInputSchema(CandidateInput):
@@ -15,6 +16,7 @@ class JobProfileInputSchema(StrictModel):
     job_id: str
     title: str
     jd_category_queries: Dict[str, str]
+    relevance_contract: RelevanceContract = Field(default_factory=RelevanceContract)
     hard_filter_rules: HardFilterRules = Field(default_factory=HardFilterRules)
     must_have_skills: List[SkillCluster] = Field(default_factory=list, max_length=100)
     nice_to_have_skills: List[SkillCluster] = Field(default_factory=list, max_length=100)
@@ -48,7 +50,7 @@ class ScreeningRequestSchema(StrictModel):
     job_profile: Optional[JobProfileInputSchema] = None
     approved_jd_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
     candidates: List[CandidateInputSchema]
-    top_n_stage2_cutoff: int = Field(default=30, ge=1, le=100)
+    top_n_stage2_cutoff: int = Field(default=15, ge=1, le=15)
     idempotency_key: Optional[str] = Field(default=None, min_length=1, max_length=128)
 
     @model_validator(mode="after")
@@ -70,7 +72,7 @@ class PDFScreeningRequestSchema(StrictModel):
     authorization_source: AttributeSource = AttributeSource.UNKNOWN
     parsed_attributes: CandidateAttributes = Field(default_factory=CandidateAttributes)
     recruiter_overrides: RecruiterOverrides = Field(default_factory=RecruiterOverrides)
-    top_n_stage2_cutoff: int = Field(default=30, ge=1, le=100)
+    top_n_stage2_cutoff: int = Field(default=15, ge=1, le=15)
     idempotency_key: Optional[str] = Field(default=None, min_length=1, max_length=128)
 
     @model_validator(mode="after")
@@ -95,6 +97,7 @@ class PipelineMetricsSchema(BaseModel):
     stage0_failed: int = 0
     stage0_review_required: int = 0
     stage2_failed: int = 0
+    stage2_review_required: int = 0
     stage2_excluded: int = 0
     accounted_candidates: int = 0
 

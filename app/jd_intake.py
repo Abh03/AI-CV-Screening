@@ -9,6 +9,7 @@ from app.api.schemas import JobProfileInputSchema
 from app.config import settings
 from app.stage1_rules.contracts import StrictModel, HardFilterRules, DEGREE_HIERARCHY
 from app.stage1_rules.jd_profiler import SkillCluster, encapsulate_jd_data
+from app.stage1_rules.relevance import RelevanceContract
 from app.stage3_evaluation.llm_client import LLMClientWrapper
 
 
@@ -23,6 +24,7 @@ class ExtractedJD(StrictModel):
     nice_to_have_skills: list[SkillCluster] = Field(default_factory=list, max_length=100)
     hard_filter_rules: JDHardFilters = Field(default_factory=JDHardFilters)
     jd_category_queries: dict[str, str]
+    relevance_contract: RelevanceContract = Field(default_factory=RelevanceContract)
     uncertainties: list[str] = Field(default_factory=list, max_length=100)
 
     @field_validator("uncertainties")
@@ -77,6 +79,20 @@ canonical skill name. Apply the same rule to groups of three or more alternative
 Missing or ambiguous experience, education or authorization means no hard filter and an uncertainty.
 Use title and four category requirements supported by the source. For a category with no
 requirement use 'No explicit requirement'. Record ambiguous statements in uncertainties.
+Extract a relevance_contract with version relevance-v1 and minimum_coverage 0.
+Create short independent targets for skills, responsibilities, relevant delivery,
+domain context, and explicit project/education expectations. Preserve source duties
+such as payment APIs, event consumers and operations even when minimum years are
+generic. Each target must have a unique target_id, category, kind, text, verbatim
+source_quote, importance (1 to 5), treatment (requirement or preference), and
+evidence_terms. These are SOFT relevance targets, never new hard filters.
+Domain context must use kind domain and treatment preference. Do not invent project
+requirements when none exist. Do not create a relevance target for minimum years alone.
+Evidence_terms are AND groups of concepts, each containing OR identity equivalents
+or ordinary wording variants for that same concept. Use short phrases matching how
+CVs describe demonstrated work (e.g. [["payment API", "payment APIs"], ["Java"]]).
+Split unrelated duties into separate targets. Do not duplicate a skill list as
+experience; experience targets describe applied delivery or responsibility.
 Do not infer work authorization merely from location. Return JSON only."""
 
 

@@ -2,10 +2,11 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy import func, or_, select
 
 from app.config import settings
 from app.models.database import CampaignCVModel, CampaignJDModel, CampaignModel, CampaignPairModel
+from app.stage2_retrieval.coverage import candidate_sort_key, eligible, MAX_CANDIDATES_PER_JD
 
 
 DONE_BEFORE_CUTOFF = ("EXTRACTION_FAILED", "FILTER_REJECTED", "PROCESSING_FAILED",
@@ -89,34 +90,36 @@ async def finalize_ready_jds(db, campaign_id: str):
                 if jd.status == "PENDING":
                     jd.status = "PROCESSING"
                 continue
-            rank = 0
-            cursor = None
-            while True:
-                query = select(CampaignPairModel.id, CampaignPairModel.stage2_score,
-                    CampaignCVModel.candidate_id).join(
-                    CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id).where(
-                    CampaignPairModel.jd_id == jd_id,
-                    CampaignPairModel.status == "STAGE2_READY")
-                if cursor is not None:
-                    score, candidate_id = cursor
-                    query = query.where(or_(
-                        CampaignPairModel.stage2_score < score,
-                        and_(CampaignPairModel.stage2_score == score,
-                             CampaignCVModel.candidate_id > candidate_id)))
-                batch = (await db.execute(query.order_by(
-                    CampaignPairModel.stage2_score.desc(), CampaignCVModel.candidate_id)
-                    .limit(100))).all()
-                if not batch:
-                    break
-                now = datetime.now(timezone.utc)
-                updates = []
-                for pair_id, score, candidate_id in batch:
-                    rank += 1
-                    updates.append({"id": pair_id, "stage2_rank": rank,
-                        "status": "SHORTLISTED" if rank <= jd.stage3_cap else "CUTOFF_EXCLUDED",
-                        "updated_at": now})
-                await db.execute(update(CampaignPairModel), updates)
-                cursor = batch[-1][1:]
+            # Pool size is bounded by archive intake. Use the same evidence-aware
+            # ordering and eligibility policy as the synchronous pipeline.
+            rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id).join(
+                CampaignCVModel, CampaignCVModel.id == CampaignPairModel.cv_id).where(
+                CampaignPairModel.jd_id == jd_id,
+                CampaignPairModel.status == "STAGE2_READY"))).all()
+            def payload(row):
+                pair, identifier = row
+                return {**(pair.result_snapshot or {}).get("stage2_evidence", {}),
+                        "candidate_id": identifier, "composite_score": pair.stage2_score}
+            rows = sorted(rows, key=lambda row: candidate_sort_key(payload(row)))
+            selected = 0
+            now = datetime.now(timezone.utc)
+            for rank, row in enumerate(rows, 1):
+                pair, identifier = row
+                evidence = payload(row)
+                pair.stage2_rank = rank
+                if eligible(evidence) and selected < min(jd.stage3_cap, MAX_CANDIDATES_PER_JD):
+                    pair.status = "SHORTLISTED"
+                    selected += 1
+                elif not eligible(evidence):
+                    pair.status = "REVIEW_REQUIRED"
+                    pair.verification_required = True
+                    pair.failure_code = evidence.get("relevance_reason") or "STAGE2_SCORING_REPLAY_REQUIRED"
+                    pair.result_snapshot = {**(pair.result_snapshot or {}),
+                        "candidate_id": identifier, "evaluation_status": "REVIEW_REQUIRED",
+                        "stage": "STAGE2", "reason": pair.failure_code}
+                else:
+                    pair.status = "CUTOFF_EXCLUDED"
+                pair.updated_at = now
             jd.status = "SHORTLISTED"
             jd.updated_at = datetime.now(timezone.utc)
             finalized.append(jd_id)

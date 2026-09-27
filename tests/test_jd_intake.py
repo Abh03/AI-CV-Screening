@@ -33,6 +33,34 @@ PROFILE = {"title": "Software Engineer", "must_have_skills": [{"canonical": "Pyt
     "uncertainties": ["Experience minimum unspecified"]}
 
 
+@pytest.mark.asyncio
+async def test_relevance_source_quote_is_verified_and_context_reaches_stage3(client_db, monkeypatch):
+    from xml.etree import ElementTree as ET
+    from app.stage3_evaluation.prompts import build_stage3_user_prompt
+    client, sessions = client_db
+    async def extract(text):
+        return ExtractedJD.model_validate(PROFILE)
+    monkeypatch.setattr(jds, "extract_profile", extract)
+    source = "Develop payment APIs using Java."
+    response = await client.post("/api/v1/jds/extract", content=pdf(source),
+                                 headers={"Content-Type": "application/pdf"})
+    draft = response.json()
+    target = {"target_id": "payment_api", "category": "EXPERIENCE", "kind": "responsibility",
+              "text": "Develop Java payment APIs", "source_quote": "Invented source claim",
+              "importance": 2, "treatment": "requirement", "evidence_terms": [["payment APIs"], ["Java"]]}
+    payload = {**draft["profile"], "relevance_contract": {"targets": [target]}}
+    rejected = await client.post(f'/api/v1/jds/drafts/{draft["draft_id"]}/approve', json=payload)
+    assert rejected.status_code == 422
+    target["source_quote"] = source
+    accepted = await client.post(f'/api/v1/jds/drafts/{draft["draft_id"]}/approve', json=payload)
+    assert accepted.status_code == 200
+    profile = accepted.json()["profile"]
+    assert profile["relevance_contract"]["targets"][0]["source_quote"] == source
+    prompt = ET.fromstring(build_stage3_user_prompt("candidate", profile, {}))
+    assert prompt.find("job_description/relevance_targets/target/description").text == target["text"]
+    assert prompt.find("job_description/relevance_targets/target/source_quote").text == source
+
+
 @pytest_asyncio.fixture
 async def client_db(monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
@@ -108,7 +136,7 @@ async def test_upload_edit_approve_campaign_and_reuse(client_db, monkeypatch):
     def evidence(**kwargs):
         assert kwargs["jd_category_queries"] == edited["jd_category_queries"]
         return {"candidate_id": kwargs["candidate_id"], "status": "SUCCESS", "composite_score": 0.8,
-                "evidence_by_category": {key: [{"text": key + " Python evidence", "source_location": {"page_number": 1}}]
+                "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {key: [{"text": key + " Python evidence", "source_location": {"page_number": 1}}]
                                          for key in edited["jd_category_queries"]}}
     monkeypatch.setattr(tasks, "extract_candidate_category_evidence", evidence)
     real_evaluate = tasks.evaluate_single_candidate_async

@@ -104,7 +104,7 @@ class HardFilterRules(StrictModel):
 def resolve_hard_filters(profile: dict[str, Any], explicit=None) -> HardFilterRules:
     """Accept legacy flattened profiles, but reject typos and conflicting rule sets."""
     metadata = {"job_id", "title", "job_title", "jd_category_queries", "must_have_skills",
-                "nice_to_have_skills", "min_match_threshold", "hard_filter_rules"}
+                "nice_to_have_skills", "min_match_threshold", "hard_filter_rules", "relevance_contract"}
     root = {key: value for key, value in profile.items() if key not in metadata}
     root_rules = HardFilterRules.model_validate(root)
     merged = {key: getattr(root_rules, key) for key in root_rules.model_fields_set}

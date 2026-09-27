@@ -57,9 +57,33 @@ quality metric.
 
 Candidate/category filters are selective, so vector search uses exact ordering
 over that scope. The B-tree scope index and GIN FTS index are checked in the
-PostgreSQL integration test. CrossEncoder score averaging and zero clipping are
-retained from the reference path; cutoff calibration at volume remains necessary
-before using Stage 2 scores as a decision rule.
+PostgreSQL integration test. The CrossEncoder orders passages only. Stage 2
+candidate ranking uses versioned evidence coverage of approved relevance targets,
+with identity equivalents and supported applied work. Categories without targets
+are not applicable; missing evidence for existing targets retains its weight.
+Responsibility and domain targets preserve source context in both retrieval and
+Stage 3. Domain preferences contribute at most 10% of a category and cannot
+qualify a candidate alone. A JD selects at most 15 candidates, requires supported
+applied evidence for at least one complete delivery target (or an explicitly
+accepted skill substitute) when delivery targets exist, and routes unsupported/obsolete
+scores to Stage 2 review rather than padding the shortlist with UUID ties.
+
+The assessor uses reviewed lexical concepts; it does not infer semantic matches
+or verify the truth of CV claims. Its coverage scale is not a calibrated hiring
+probability. Review the source JD and create a new approved version to add targets
+to existing profiles; historical approved versions and campaign results remain
+immutable. Legacy profiles have clearly marked derived targets, but cannot restore
+source responsibilities that were omitted from their approved text. Production
+routes profiles with only derived targets to review until source context is approved.
+
+Run `python scripts/replay_stage2_relevance.py replay-input.json replay-report.json`
+over a frozen Stage 1 survivor pool with saved baseline payloads and newly reviewed
+profiles. It compares the saved baseline, project fix alone, focused retrieval with
+legacy logits, and coverage with eligibility, all at cap 15. Local models are used;
+no Stage 3 provider requests are made. Provide independent recruiter labels and
+development/held-out splits to measure precision, recall, unrelated selections,
+category zeros, cutoff ties and evidence coverage. Real campaign calibration is
+still required before claiming improved shortlist quality.
 
 ## Verification
 
@@ -371,7 +395,7 @@ campaign capacity guarantees. `scripts/load_test.py` still measures the legacy
 one-PDF-per-run route. Use the campaign capacity trial below for the bulk API;
 no turnaround target is claimed without a representative run on the intended
 infrastructure. Run the labeled quality report with
-`python scripts/acceptance_benchmark.py labels.json --cutoff 30`. The JSON
+`python scripts/acceptance_benchmark.py labels.json --cutoff 15`. The JSON
 input contains query `relevant_ids` and `ranked_ids`, plus candidate `label`
 and `decision`; see the script header. It reports recall@k, shortlist precision
 and recall, review rate, and error rate. No quality gate is set until labeled
@@ -381,7 +405,7 @@ image/model, and manually dispatched live-provider checks.
 
 Upload each JD PDF, review the extracted requirements, and explicitly approve it before creating a campaign. Then upload a ZIP of CV PDFs.
 Stage 0 runs once per accepted PDF. Every accepted candidate is checked against
-every JD. Each JD shortlists at most 30 Stage 2 survivors for Stage 3.
+every JD. Each JD shortlists at most 15 Stage 2 survivors with supported relevance for Stage 3.
 
 ```bash
 curl -H "Authorization: Bearer $API_TOKEN" -H "Content-Type: application/json" \
@@ -397,7 +421,7 @@ The upload response reports accepted candidates and rejected ZIP members in arch
 
 For files already on the server, put the approved JD ID array in `jobs.json` and run `python scripts/import_campaign_folder.py /path/to/pdfs jobs.json --owner OWNER_ID --idempotency-key campaign-key` from the project root. The owner must match an API credential ID for subsequent owner-scoped reads.
 
-Compose runs legacy screening on `screening`, PDF extraction on `ocr`, retrieval on `retrieval`, and coordination/recovery on `control`, each with a single worker process. Status reads query PostgreSQL directly. Keep the control worker and beat service running to recover interrupted Stage 0 and pair tasks. Pair dispatch is bounded by `CAMPAIGN_RETRIEVAL_INFLIGHT` per campaign and `CAMPAIGN_RETRIEVAL_GLOBAL_INFLIGHT` overall. A JD becomes `SHORTLISTED` only when all its accepted CVs have a terminal extraction/Stage 1/Stage 2 outcome; Stage 2 scores are ranked globally by descending score and candidate ID, and at most the JD cap (30 by default) is selected. Retrieval failures are retried up to `RUN_MAX_ATTEMPTS`; failed attempts remain visible as `PROCESSING_FAILED`.
+Compose runs legacy screening on `screening`, PDF extraction on `ocr`, retrieval on `retrieval`, and coordination/recovery on `control`, each with a single worker process. Status reads query PostgreSQL directly. Keep the control worker and beat service running to recover interrupted Stage 0 and pair tasks. Pair dispatch is bounded by `CAMPAIGN_RETRIEVAL_INFLIGHT` per campaign and `CAMPAIGN_RETRIEVAL_GLOBAL_INFLIGHT` overall. A JD becomes `SHORTLISTED` only when all its accepted CVs have a terminal extraction/Stage 1/Stage 2 outcome; Stage 2 scores are ranked globally by descending score and candidate ID, and at most the JD cap (15 maximum) is selected. Retrieval failures are retried up to `RUN_MAX_ATTEMPTS`; failed attempts remain visible as `PROCESSING_FAILED`.
 
 Run the `evaluation-worker` too. It consumes only the `evaluation` queue; the
 control worker dispatches bounded Stage 3 work and beat recovers expired leases.
@@ -469,7 +493,7 @@ Use `--env-file docker/.env` if `API_TOKEN` is not exported. Set `DATABASE_URL`
 and `REDIS_URL` in the command environment for attempt,
 database load, and queue depth samples; add `--docker-stats` for container CPU
 and memory samples. Run a small campaign first, then the target 1,000 PDF/four
-JD trial. The report checks 4,000 pair rows and at most 120 selected pairs for
+JD trial. The report checks 4,000 pair rows and at most 60 selected pairs for
 that target. It records intake, Stage 0 completion, Stage 1/2 shortlist barrier,
 overall duration, status counts, queue peaks, and per-JD ranking counts. Samples
 bound stage timings by the polling interval. Current records do not expose exact

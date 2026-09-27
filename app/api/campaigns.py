@@ -46,8 +46,8 @@ async def create_campaign(payload: CampaignCreateSchema, db: AsyncSession = Depe
     try:
         created, campaign = await reserve_campaign(
             db, owner_id=principal.id, request_hash=digest, job_snapshots=jobs,
-            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 30,
-                               **policy_snapshot(30)} for _ in jobs],
+            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 15,
+                               **policy_snapshot(15)} for _ in jobs],
             idempotency_key=payload.idempotency_key)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -173,12 +173,15 @@ def _pair_view(pair, candidate_id, source_filename=None, *, rank=None):
         "rank": rank, "stage2_rank": pair.stage2_rank, "stage2_score": pair.stage2_score,
         "score": pair.composite_score, "tier": pair.tier,
         "category_scores": evaluation.get("category_scores", {}),
+        "stage2_category_scores": ((pair.result_snapshot or {}).get("stage2_evidence") or {}).get("category_scores", {}),
+        "stage2_target_assessments": ((pair.result_snapshot or {}).get("stage2_evidence") or {}).get("target_assessments", []),
         "provisional": pair.status == "SUCCESS" and pair.verification_required,
         "verification_required": pair.verification_required,
         "verification_reasons": pair.verification_reasons,
         "stage1_decision": pair.stage1_decision,
         "stage1_checks": (pair.stage1_details or {}).get("checks", []),
-        "review_reasons": evaluation.get("review_reasons", []),
+        "review_reasons": evaluation.get("review_reasons", []) or
+                          ([pair.failure_code] if pair.status == "REVIEW_REQUIRED" and pair.failure_code else []),
         "failure_code": pair.failure_code,
         "error_message": evaluation.get("error_message"),
         "is_mock": evaluation.get("is_mock", False),

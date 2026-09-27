@@ -33,6 +33,6 @@ def measure(data, cutoff):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("labels", type=Path)
-    parser.add_argument("--cutoff", type=int, default=30)
+    parser.add_argument("--cutoff", type=int, default=15, choices=range(1, 16))
     args = parser.parse_args()
     print(json.dumps(measure(json.loads(args.labels.read_text(encoding="utf-8")), args.cutoff), indent=2))

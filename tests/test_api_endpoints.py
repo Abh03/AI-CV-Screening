@@ -219,7 +219,7 @@ async def test_run_screening_endpoint_valid_payload():
         "candidates": [
             {
                 "candidate_id": "cand_api_001",
-                "raw_cv_text": "Alex Dev\nSkills: Python, FastAPI, PostgreSQL\nWORK EXPERIENCE\n4 years backend development.\nEDUCATION\nBachelor of Science in Computer Science, 2020",
+                "raw_cv_text": "Alex Dev\nSkills: Python, FastAPI, PostgreSQL\nWORK EXPERIENCE\n4 years backend development. Implemented backend API design using Python and FastAPI.\nEDUCATION\nBachelor of Science in Computer Science, 2020",
                 "work_authorized": "eligible",
                 "authorization_source": "recruiter_verified",
                 "parsed_attributes": {"experience_years": 4.0, "experience_source": "recruiter_verified"}

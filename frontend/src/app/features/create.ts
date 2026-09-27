@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { HttpEventType } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { CampaignApi } from '../api/campaign-api';
-import { categories, Category, JobProfile, UploadResponse, JdDraft, SkillCluster } from '../api/contracts';
+import { categories, Category, JobProfile, UploadResponse, JdDraft, SkillCluster, RelevanceTarget } from '../api/contracts';
 import { publicConfig } from '../core/config';
 import { describeError } from '../core/http-errors';
 import { LocalCampaigns } from '../core/local-campaigns';
@@ -41,6 +41,21 @@ const degreeLevels = ['NONE', 'SECONDARY', 'HIGHER SECONDARY', 'DIPLOMA', 'BACHE
           <div><label [for]="'title-' + i">Title</label><input [id]="'title-' + i" formControlName="title" maxlength="255" [attr.aria-invalid]="jd.controls.title.invalid && jd.controls.title.touched">@if (jd.controls.title.invalid && jd.controls.title.touched) { <p class="error" role="alert">Enter a title.</p> }</div></div>
           <fieldset><legend>Category requirements</legend><p class="muted">Review all four. Use “No explicit requirement” when the PDF does not specify one.</p>
             <div class="grid two">@for (category of categories; track category) { <div><label [for]="category + '-' + i">{{ categoryLabel(category) }}</label><textarea [id]="category + '-' + i" [formControl]="queryControl(jd, category)" rows="2"></textarea></div> }</div></fieldset>
+          <fieldset><legend>Job relevance</legend><p>Review responsibilities, applied skills and domain context against the PDF. These guide ranking and do not add hard filters. Domain context must be a preference.</p>
+            <div formArrayName="relevanceTargets">@for (target of jd.controls.relevanceTargets.controls; track target; let t = $index) {
+              <fieldset [formGroupName]="t"><legend>Relevance target {{ t + 1 }}</legend>
+                <label [for]="'target-id-' + i + '-' + t">Target ID</label><input [id]="'target-id-' + i + '-' + t" formControlName="targetId">
+                <label [for]="'target-text-' + i + '-' + t">Expectation</label><textarea [id]="'target-text-' + i + '-' + t" formControlName="text" rows="2"></textarea>
+                <label [for]="'target-source-' + i + '-' + t">Supporting quote from the JD</label><textarea [id]="'target-source-' + i + '-' + t" formControlName="sourceQuote" rows="2"></textarea>
+                <div class="grid three"><div><label [for]="'target-category-' + i + '-' + t">Category</label><select [id]="'target-category-' + i + '-' + t" formControlName="category">@for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }</select></div>
+                <div><label [for]="'target-kind-' + i + '-' + t">Target type</label><select [id]="'target-kind-' + i + '-' + t" formControlName="kind">@for (kind of targetKinds; track kind) { <option [value]="kind">{{ kind }}</option> }</select></div>
+                <div><label [for]="'target-treatment-' + i + '-' + t">Requirement or preference</label><select [id]="'target-treatment-' + i + '-' + t" formControlName="treatment"><option value="requirement">Requirement (soft relevance)</option><option value="preference">Preference</option></select></div></div>
+                <label [for]="'target-weight-' + i + '-' + t">Importance (1 to 5)</label><input [id]="'target-weight-' + i + '-' + t" type="number" min="1" max="5" formControlName="importance">
+                <label [for]="'target-terms-' + i + '-' + t">Evidence concepts</label><textarea [id]="'target-terms-' + i + '-' + t" formControlName="evidenceTerms" rows="3"></textarea><small>One concept per line; comma-separated equivalent wording on the same line. All concepts support a full match. For example: payment API, payment APIs.</small>
+                <button type="button" class="secondary" (click)="jd.controls.relevanceTargets.removeAt(t)" [disabled]="!!state(jd).approvedId">Remove target</button>
+              </fieldset>
+            }</div><button type="button" class="secondary" (click)="jd.controls.relevanceTargets.push(newTarget())" [disabled]="!!state(jd).approvedId || jd.controls.relevanceTargets.length >= 48">Add relevance target</button>
+          </fieldset>
           <fieldset><legend>Hard filters</legend><div class="grid three"><div><label [for]="'years-' + i">Minimum years of experience</label><input [id]="'years-' + i" type="number" min="0" step="0.5" formControlName="years"></div><div><label [for]="'degree-' + i">Minimum degree</label><select [id]="'degree-' + i" formControlName="degree">@for (level of degreeLevels; track level) { <option [value]="level">{{ level }}</option> }</select></div><div><label [for]="'fields-' + i">Degree fields</label><input [id]="'fields-' + i" formControlName="fields" placeholder="Computer Science, Engineering"><small>Comma-separated. Requires a degree level.</small></div></div>
             <div class="grid two"><div><label [for]="'field-aliases-' + i">Degree field aliases</label><input [id]="'field-aliases-' + i" formControlName="fieldAliases"></div><div><label [for]="'level-aliases-' + i">Degree level aliases</label><input [id]="'level-aliases-' + i" formControlName="levelAliases"></div></div>
             <label class="check"><input type="checkbox" formControlName="authorization">Require work authorization</label></fieldset>
@@ -64,6 +79,7 @@ export class CreateComponent {
   private readonly router = inject(Router);
   readonly categories = categories;
   readonly degreeLevels = degreeLevels;
+  readonly targetKinds = ['skill', 'responsibility', 'domain', 'experience', 'project', 'education'];
   readonly cap = publicConfig.stage3Cap;
   readonly maxJds = publicConfig.maxJds;
   readonly form = this.fb.group({ jds: this.fb.array([this.newJd()]) });
@@ -88,6 +104,9 @@ export class CreateComponent {
         ? 'The server could not read this PDF reliably, even after OCR. Try a PDF exported from the original document or a clearer scan. (EXTRACTION_UNRELIABLE)'
         : `Extraction needs attention: ${draft.error_code ?? draft.status}` });
       if (!p) return;
+      jd.controls.relevanceTargets.clear();
+      for (const target of p.relevance_contract?.targets ?? []) jd.controls.relevanceTargets.push(this.newTarget(target));
+      jd.controls.minimumCoverage.setValue(p.relevance_contract?.minimum_coverage ?? 0);
       jd.patchValue({ jobId: draft.draft_id, title: p.title, skills: p.jd_category_queries.SKILLS ?? '',
         experience: p.jd_category_queries.EXPERIENCE ?? '', projects: p.jd_category_queries.PROJECTS ?? '', education: p.jd_category_queries.EDUCATION ?? '',
         years: p.hard_filter_rules.min_years_experience, authorization: p.hard_filter_rules.require_work_authorization,
@@ -112,7 +131,17 @@ export class CreateComponent {
   }
   private idempotencyKey = crypto.randomUUID();
   get jds(): FormArray<JdForm> { return this.form.controls.jds; }
-  newJd() { return this.fb.group({ requiredSkills: [''], preferredSkills: [''], jobId: ['', [Validators.required, Validators.maxLength(64)]], title: ['', [Validators.required, Validators.maxLength(255)]],
+  newTarget(target?: RelevanceTarget) { return this.fb.group({
+    targetId: [target?.target_id ?? `target_${crypto.randomUUID().replaceAll('-', '')}`, [Validators.required, Validators.pattern(/^[A-Za-z0-9_-]+$/)]],
+    category: this.fb.control<Category>(target?.category ?? 'EXPERIENCE', { nonNullable: true }),
+    kind: this.fb.control<RelevanceTarget['kind']>(target?.kind ?? 'responsibility', { nonNullable: true }),
+    treatment: this.fb.control<RelevanceTarget['treatment']>(target?.treatment ?? 'requirement', { nonNullable: true }),
+    text: [target?.text ?? '', [Validators.required, Validators.maxLength(600)]],
+    sourceQuote: [target?.source_quote ?? '', [Validators.required, Validators.maxLength(2000)]],
+    importance: [target?.importance ?? 1, [Validators.required, Validators.min(1), Validators.max(5)]],
+    evidenceTerms: [target?.evidence_terms.map(group => group.join(', ')).join('\n') ?? '', Validators.required]
+  }); }
+  newJd() { return this.fb.group({ relevanceTargets: this.fb.array<ReturnType<CreateComponent['newTarget']>>([]), minimumCoverage: [0], requiredSkills: [''], preferredSkills: [''], jobId: ['', [Validators.required, Validators.maxLength(64)]], title: ['', [Validators.required, Validators.maxLength(255)]],
     skills: [''], experience: [''], projects: [''], education: [''], years: [0, [Validators.required, Validators.min(0), Validators.max(100)]], degree: ['NONE'], fields: [''], fieldAliases: [''], levelAliases: [''], authorization: [false] }); }
   queryControl(jd: JdForm, category: Category): FormControl<string | null> { return jd.controls[category.toLowerCase() as 'skills' | 'experience' | 'projects' | 'education']; }
   categoryLabel(category: Category): string { return category.charAt(0) + category.slice(1).toLowerCase(); }
@@ -123,6 +152,11 @@ export class CreateComponent {
     for (const category of categories) { const value = (v[category.toLowerCase() as 'skills' | 'experience' | 'projects' | 'education'] ?? '').trim(); if (value) queries[category] = value; }
     const fields = (v.fields ?? '').split(',').map(s => s.trim()).filter(Boolean);
     return { job_id: (v.jobId ?? '').trim(), title: (v.title ?? '').trim(), jd_category_queries: queries,
+      relevance_contract: { version: 'relevance-v1', minimum_coverage: v.minimumCoverage ?? 0,
+        targets: (v.relevanceTargets ?? []).map(target => ({ target_id: target.targetId ?? '',
+          category: target.category, kind: target.kind, treatment: target.treatment,
+          text: (target.text ?? '').trim(), source_quote: (target.sourceQuote ?? '').trim(), importance: Number(target.importance),
+          evidence_terms: (target.evidenceTerms ?? '').split('\n').filter(line => line.trim()).map(line => line.split(',').map(term => term.trim()).filter(Boolean)) })) },
       must_have_skills: this.parseSkills(v.requiredSkills ?? ''), nice_to_have_skills: this.parseSkills(v.preferredSkills ?? ''),
       hard_filter_rules: { min_years_experience: Number(v.years), require_work_authorization: !!v.authorization,
         degree_requirement: v.degree === 'NONE' ? null : { level: v.degree ?? 'NONE', fields,

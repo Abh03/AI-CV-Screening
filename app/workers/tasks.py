@@ -351,6 +351,7 @@ async def execute_campaign_pair(pair_id, lease_owner):
             if decision in ("PASS", "REVIEW"):
                 kwargs = dict(candidate_id=candidate_id, redacted_cv_text=redacted_text,
                               jd_category_queries=job["jd_category_queries"], source_pages=pages,
+                              relevance_contract=job.get("relevance_contract"),
                               required_skills=job.get("must_have_skills", []),
                               preferred_skills=job.get("nice_to_have_skills", []),
                               degree_requirement=(job.get("hard_filter_rules") or {}).get("degree_requirement"))

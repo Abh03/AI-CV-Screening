@@ -41,7 +41,7 @@ describe('CampaignApi', () => {
     listing.flush({ total: 0, limit: 20, offset: 40, campaigns: [] });
     api.definition('campaign-1', 'ops').subscribe();
     const definition = http.expectOne('/api/v1/campaigns/campaign-1/jds/ops/definition');
-    definition.flush({ campaign_id: 'campaign-1', jd_key: 'ops', stage3_cap: 30,
+    definition.flush({ campaign_id: 'campaign-1', jd_key: 'ops', stage3_cap: 15,
       job_profile: { job_id: 'ops', title: 'Operations', jd_category_queries: { SKILLS: 'logistics' },
         hard_filter_rules: { min_years_experience: 0, degree_requirement: null, require_work_authorization: false } } });
   });

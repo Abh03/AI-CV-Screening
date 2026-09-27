@@ -56,7 +56,7 @@ async def test_screening_endpoint_persists_to_db():
         "candidates": [
             {
                 "candidate_id": "cand_db_001",
-                "raw_cv_text": "John DB Test\nSkills: Python, FastAPI\nWORK EXPERIENCE\n3 years backend software engineer.\nEDUCATION\nBachelor of Science in Computer Science",
+                "raw_cv_text": "John DB Test\nSkills: Python, FastAPI\nWORK EXPERIENCE\n3 years backend software engineer. Built backend microservices in Python.\nEDUCATION\nBachelor of Science in Computer Science",
                 "work_authorized": "eligible",
                 "authorization_source": "recruiter_verified",
                 "parsed_attributes": {"experience_years": 3.0, "experience_source": "recruiter_verified"}
@@ -96,7 +96,7 @@ async def test_api_preserves_review_and_failure_outcomes(monkeypatch, review_kin
 
     monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", lambda **kwargs: {
         "candidate_id": kwargs["candidate_id"], "composite_score": 1,
-        "evidence_by_category": {category: [{"text": "Test evidence"}] for category in ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")},
+        "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {category: [{"text": "Test evidence"}] for category in ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")},
     })
 
     async def generate(*, system_prompt, user_prompt, candidate_id):
@@ -156,8 +156,8 @@ async def test_run_replay_and_changed_job_snapshot(monkeypatch):
     from app.run_audit import recompute_stored_decision
 
     monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", lambda **kwargs: {
-        "candidate_id": kwargs["candidate_id"], "composite_score": 5,
-        "evidence_by_category": {name: [{"text": "Documented evidence"}] for name in
+        "candidate_id": kwargs["candidate_id"], "composite_score": 0.5,
+        "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {name: [{"text": "Documented evidence"}] for name in
                                  ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")}})
     payload = {"job_profile": {"job_id": "versioned", "title": "Engineer",
                                "jd_category_queries": {"SKILLS": "Python"}},
@@ -200,8 +200,8 @@ async def test_every_candidate_has_outcome_across_stages(monkeypatch):
         name = kwargs["candidate_id"]
         if name == "broken":
             raise RuntimeError("extractor unavailable")
-        return {"candidate_id": name, "composite_score": 10 if name == "top" else 1,
-                "evidence_by_category": {category: [{"text": "Evidence"}] for category in
+        return {"candidate_id": name, "composite_score": 1 if name == "top" else 0.1,
+                "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {category: [{"text": "Evidence"}] for category in
                                          ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")}}
 
     monkeypatch.setattr(orchestrator, "extract_candidate_category_evidence", extract)

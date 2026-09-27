@@ -48,6 +48,7 @@ async def test_global_cutoff_waits_for_every_pair_and_is_idempotent(monkeypatch)
                                else "STAGE2_READY")
                 pair.stage1_decision = "REVIEW" if candidate == "c" else "PASS"
                 if pair.status == "STAGE2_READY":
+                    pair.result_snapshot = {"stage2_evidence": {"scoring_version": "stage2-coverage-v1", "shortlist_eligible": True}}
                     pair.stage2_score = {"a": 0.8, "b": 0.9, "c": 0.9, "d": 0.1}[candidate]
                 else:
                     pair.stage2_score = 999.0
@@ -140,7 +141,7 @@ async def test_pair_worker_reuses_redaction_and_fences_old_lease(monkeypatch, cv
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("count", [1, 30, 31, 101])
+@pytest.mark.parametrize("count", [1, 15, 16, 101])
 async def test_default_cap_applies_to_entire_jd_pool(count, monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
@@ -163,13 +164,14 @@ async def test_default_cap_applies_to_entire_jd_pool(count, monkeypatch):
             for pair, candidate in rows:
                 pair.status = "STAGE2_READY"
                 pair.stage1_decision = "REVIEW"
+                pair.result_snapshot = {"stage2_evidence": {"scoring_version": "stage2-coverage-v1", "shortlist_eligible": True}}
                 pair.stage2_score = 0.5
             await db.commit()
             assert len(await finalize_ready_jds(db, campaign.id)) == 1
             rows = (await db.execute(select(CampaignPairModel, CampaignCVModel.candidate_id)
                 .join(CampaignCVModel))).all()
-            assert sum(pair.status == "SHORTLISTED" for pair, _ in rows) == min(count, 30)
-            assert sum(pair.status == "CUTOFF_EXCLUDED" for pair, _ in rows) == max(0, count - 30)
+            assert sum(pair.status == "SHORTLISTED" for pair, _ in rows) == min(count, 15)
+            assert sum(pair.status == "CUTOFF_EXCLUDED" for pair, _ in rows) == max(0, count - 15)
             assert [(candidate, pair.stage2_rank) for pair, candidate in sorted(
                 rows, key=lambda item: item[1])] == [(f"candidate-{index:03}", index + 1)
                                                 for index in range(count)]

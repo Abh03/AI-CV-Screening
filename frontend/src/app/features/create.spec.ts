@@ -8,7 +8,12 @@ import { CampaignApi } from '../api/campaign-api';
 const profile = { schema_version: 'jd-v1' as const, title: 'Engineer',
   jd_category_queries: { SKILLS: 'Python', EXPERIENCE: 'Software', PROJECTS: 'APIs', EDUCATION: 'No explicit requirement' },
   hard_filter_rules: { min_years_experience: 0, degree_requirement: null, require_work_authorization: false },
-  must_have_skills: [{ canonical: 'Python', aliases: ['py'], substitutes: ['Java'] }], nice_to_have_skills: [], uncertainties: ['Years unspecified'] };
+  must_have_skills: [{ canonical: 'Python', aliases: ['py'], substitutes: ['Java'] }], nice_to_have_skills: [], uncertainties: ['Years unspecified'],
+  relevance_contract: { version: 'relevance-v1' as const, minimum_coverage: 0, targets: [{
+    target_id: 'delivery', category: 'EXPERIENCE' as const, kind: 'responsibility' as const,
+    treatment: 'requirement' as const, text: 'Deliver Python services', source_quote: 'Python software engineering',
+    importance: 2, evidence_terms: [['Python'], ['service', 'services']]
+  }] } };
 
 describe('JD review and approval', () => {
   function setup() {
@@ -25,9 +30,15 @@ describe('JD review and approval', () => {
     component.chooseJd({ target: { files: [new File(['pdf'], 'jd.pdf')] } } as unknown as Event, jd);
     expect(jd.controls.title.value).toBe('Engineer');
     expect(jd.controls.requiredSkills.value).toBe('Python | py | Java');
+    expect(component.cap).toBe(15);
+    expect(jd.controls.relevanceTargets.length).toBe(1);
+    jd.controls.relevanceTargets.at(0).controls.text.setValue('Build Python services');
     component.create(); expect(api.create).not.toHaveBeenCalled();
     jd.controls.title.setValue('Edited Engineer'); component.approve(jd);
     expect(api.approveJd.mock.calls[0]).toEqual(['draft', expect.objectContaining({ title: 'Edited Engineer', must_have_skills: profile.must_have_skills })]);
+    expect(api.approveJd.mock.calls[0]).toEqual(['draft', expect.objectContaining({ relevance_contract: {
+      ...profile.relevance_contract, targets: [{ ...profile.relevance_contract.targets[0], text: 'Build Python services' }]
+    } })]);
     expect(jd.disabled).toBe(true);
     component.create(); expect(api.create.mock.calls[0]).toEqual([expect.objectContaining({ approved_jd_ids: ['approved'] })]);
   });

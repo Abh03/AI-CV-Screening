@@ -138,6 +138,11 @@ async def approve(draft_id: str, payload: ExtractedJD, db: AsyncSession = Depend
         return {"approved_jd_id": existing.id, "profile": existing.profile}
     if draft.status != "REVIEW":
         raise HTTPException(409, "Only a successfully extracted review draft can be approved")
+    source = " ".join(" ".join(block.get("text", "").split())
+                       for page in draft.pages for block in page.get("blocks", []))
+    for target in payload.relevance_contract.targets:
+        if " ".join(target.source_quote.split()) not in source:
+            raise HTTPException(422, "Relevance target source quote must occur in the extracted JD")
     identifier = uuid4().hex
     approved = ApprovedJDModel(id=identifier, owner_id=principal.id, draft_id=draft.id,
         profile=payload.screening_profile(identifier),

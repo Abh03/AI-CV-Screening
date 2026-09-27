@@ -143,7 +143,7 @@ async def test_campaign_owner_scope_and_queue_routes(monkeypatch):
         assert (await client.get("/api/v1/campaigns", headers=bob)).json()["campaigns"] == []
         definition = (await client.get(url + "/jds/ops/definition", headers=alice)).json()
         assert definition["job_profile"]["jd_category_queries"]["EXPERIENCE"] == "operations"
-        assert definition["stage3_cap"] == 30
+        assert definition["stage3_cap"] == 15
         assert (await client.get(url + "/jds/ops/definition", headers=bob)).status_code == 404
         assert (await client.get(url + "/jds/missing/definition", headers=alice)).status_code == 404
     routes = celery_app.conf.task_routes

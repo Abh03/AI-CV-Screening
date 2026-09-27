@@ -60,8 +60,14 @@ def test_category_aware_pipeline_and_batch_ranking():
         "High School Diploma in Humanities, 2018\n"
     )
 
-    payload_strong = extract_candidate_category_evidence("cand_101", cv_strong, jd_category_queries)
-    payload_weak = extract_candidate_category_evidence("cand_102", cv_weak, jd_category_queries)
+    contract = {"targets": [{"target_id": "backend_delivery", "category": "EXPERIENCE",
+        "kind": "responsibility", "text": "Develop backend microservices", "importance": 1,
+        "source_quote": jd_category_queries["EXPERIENCE"], "treatment": "requirement",
+        "evidence_terms": [["microservices"]]}]}
+    payload_strong = extract_candidate_category_evidence("cand_101", cv_strong, jd_category_queries,
+                                                        relevance_contract=contract)
+    payload_weak = extract_candidate_category_evidence("cand_102", cv_weak, jd_category_queries,
+                                                      relevance_contract=contract)
 
     assert payload_strong["composite_score"] > payload_weak["composite_score"]
 

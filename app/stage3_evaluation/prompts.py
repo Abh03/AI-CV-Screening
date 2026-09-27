@@ -29,6 +29,10 @@ CATEGORY MEANINGS:
 - projects: Project Complexity
 - education: Education/Certifications
 Assess each category independently. Python applies weights and decides final tiers.
+Use the approved relevance_targets to retain responsibility and domain context.
+All targets are soft relevance criteria. Domain preferences are not hard filters.
+Derived retrieval guidance does not introduce a new JD requirement. Do not treat
+Stage 2 coverage or passage reranker scores as verified Stage 3 judgments.
 Do not apply extra score deductions solely because a missing-information flag exists.
 
 SCORING SCALE:
@@ -66,6 +70,14 @@ def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, regi
     queries = jd_profile.get("jd_category_queries", {})
     for category in CATEGORIES:
         ET.SubElement(requirements, category.lower()).text = checked_text(queries.get(category, ""))
+    targets = ET.SubElement(jd, "relevance_targets")
+    for target in (jd_profile.get("relevance_contract") or {}).get("targets", []):
+        node = ET.SubElement(targets, "target", id=checked_text(target["target_id"]),
+                             category=checked_text(target["category"]),
+                             treatment=checked_text(target["treatment"]),
+                             kind=checked_text(target["kind"]))
+        ET.SubElement(node, "description").text = checked_text(target["text"])
+        ET.SubElement(node, "source_quote").text = checked_text(target["source_quote"])
     if "candidate_cv_text" in evidence_payload:
         ET.SubElement(root, "candidate_cv_text").text = checked_text(evidence_payload["candidate_cv_text"])
     evidence = ET.SubElement(root, "candidate_evidence")

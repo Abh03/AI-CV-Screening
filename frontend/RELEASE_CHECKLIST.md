@@ -13,4 +13,4 @@ The campaign UI is implemented for internal read-only use. The backend now provi
 
 ## Capacity trial
 
-With the supplied dataset, record browser and backend versions, hardware, upload duration, page responsiveness, browser memory, errors and correlation IDs. Confirm accepted CVs × four JDs equals accounted pairs, each JD selects at most 30 for Stage 3, rejected entries have reason codes, and all terminal outcomes remain accessible. The 1,000-CV/four-JD trial has not been run; do not label capacity verified until it has.
+With the supplied dataset, record browser and backend versions, hardware, upload duration, page responsiveness, browser memory, errors and correlation IDs. Confirm accepted CVs × four JDs equals accounted pairs, each JD selects at most 15 for Stage 3, rejected entries have reason codes, and all terminal outcomes remain accessible. The 1,000-CV/four-JD trial has not been run; do not label capacity verified until it has.

@@ -32,7 +32,7 @@ async def import_folder(folder: Path, jobs_path: Path, owner: str, key: str | No
         digest = hashlib.sha256(json.dumps(jobs, sort_keys=True).encode()).hexdigest()
         _, campaign = await reserve_campaign(
             db, owner_id=owner, request_hash=digest, job_snapshots=jobs,
-            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 30, **policy_snapshot(30)} for _ in jobs],
+            policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 15, **policy_snapshot(15)} for _ in jobs],
             idempotency_key=key)
         if campaign.status != "INTAKE":
             return {"campaign_id": campaign.id, "status": campaign.status}

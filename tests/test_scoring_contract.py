@@ -106,7 +106,9 @@ async def test_stage1_review_is_preserved(monkeypatch):
     )
     assert result["rejected_candidates"] == []
     assert result["leaderboard"] == []
-    assert result["metrics"]["stage2_shortlisted"] == 1
+    assert result["metrics"]["stage2_shortlisted"] == 0
+    assert result["metrics"]["stage2_review_required"] == 1
+    assert result["review_candidates"][0]["reason"] == "NO_RELEVANCE_TARGETS"
     assert result["review_candidates"][0]["stage1_filter_details"]["status"] == "REVIEW"
     assert result["review_candidates"][0]["verification_required"] is True
     assert result["metrics"]["stage1_review_required"] == 1
