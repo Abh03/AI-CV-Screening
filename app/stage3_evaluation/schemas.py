@@ -94,6 +94,8 @@ class EvidenceReference(StrictBaseModel):
     source_location: SourceLocation
     text: str
     evidence_id: str | None = None
+    sentence_start: int | None = Field(default=None, ge=0)
+    sentence_end: int | None = Field(default=None, ge=0)
 
 
 class CitationCheck(StrictBaseModel):
@@ -191,4 +193,26 @@ class EvidenceSelectionOutput(StrictBaseModel):
     projects: EvidenceSelectionAssessment
     education: EvidenceSelectionAssessment
     flags: List[EvidenceSelectionFlag]
+    executive_summary: str
+
+
+class SentenceSelectionAssessment(StrictBaseModel):
+    score: Score
+    rationale: str
+    citations: List[str]
+
+
+class SentenceSelectionFlag(StrictBaseModel):
+    type: FlagType
+    severity: Severity
+    description: str
+    citations: List[str]
+
+
+class SentenceSelectionOutput(StrictBaseModel):
+    skills: SentenceSelectionAssessment
+    experience: SentenceSelectionAssessment
+    projects: SentenceSelectionAssessment
+    education: SentenceSelectionAssessment
+    flags: List[SentenceSelectionFlag]
     executive_summary: str

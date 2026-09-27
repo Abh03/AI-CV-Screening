@@ -10,7 +10,7 @@ def unique_evidence_chars(evidence):
     return sum(len(text) for _, _, text in sources)
 
 
-def prepare_evaluation_context(candidate_id, payload, max_chars=None):
+def prepare_evaluation_context(candidate_id, payload, max_chars=None, *, complete_units=False, mandatory_terms=()):
     from app.config import settings
     if payload.get("candidate_id", candidate_id) != candidate_id:
         raise ValueError("Evidence ownership mismatch")
@@ -41,7 +41,7 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
     for index, (start, section) in enumerate(boundaries):
         end = boundaries[index + 1][0] if index + 1 < len(boundaries) else len(text)
         while start < end:
-            stop = min(start + 3000, end)
+            stop = end if complete_units else min(start + 3000, end)
             if stop < end:
                 boundary = text.rfind("\n", start + 1500, stop)
                 if boundary >= 0:
@@ -77,6 +77,9 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
     priority = [passages[index] for index in sorted(nearby)]
     priority_ids = {passage["chunk_id"] for passage in priority}
     ordered = priority + [passage for passage in ordered if passage["chunk_id"] not in priority_ids]
+    if mandatory_terms:
+        ordered.sort(key=lambda passage: not any(term.casefold() in passage["text"].casefold()
+                                                  for term in mandatory_terms))
     included = 0
     omitted = omitted_retrieval
     for passage in ordered:
@@ -101,35 +104,53 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
         "require_claim_support": True})
 
 
-def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=None):
+def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=None, sentence_selections=False):
     """Bound escaped XML too, with the registry built from exactly what is sent."""
     from app.config import settings
     from app.stage3_evaluation.evidence import build_evidence_registry
     from app.stage3_evaluation.prompts import build_stage3_user_prompt
     limit = settings.STAGE3_PROMPT_MAX_BYTES if max_bytes is None else max_bytes
-    prepared = prepare_evaluation_context(candidate_id, payload)
+    prepared = prepare_evaluation_context(candidate_id, payload, complete_units=sentence_selections,
+        mandatory_terms=[skill["canonical"] for skill in jd_profile.get("must_have_skills", [])])
     evidence = {cat: list(chunks) for cat, chunks in prepared.get("evidence_by_category", {}).items()}
     metadata = dict(prepared.get("context_metadata") or {})
     metadata["omitted_passage_ids"] = list(metadata.get("omitted_passage_ids", []))
     while True:
         prepared = dict(prepared, evidence_by_category=evidence, context_metadata=metadata)
         registry = build_evidence_registry(candidate_id, prepared)
+        if sentence_selections:
+            from app.stage3_evaluation.evidence import sentence_registry
+            registry = sentence_registry(registry)
         prompt = build_stage3_user_prompt(candidate_id, jd_profile, prepared, registry=registry,
                                          compact=True, neutral_sources=True)
-        if len(prompt.encode("utf-8")) <= limit:
+        from app.stage3_evaluation.budget import request_budget
+        budget = request_budget(prompt, settings.LLM_PROVIDER.lower()) if sentence_selections else None
+        if len(prompt.encode("utf-8")) <= limit and (budget is None or budget["total"] <= budget["limit"]):
+            if budget is not None:
+                metadata["token_budget"] = budget
             return prepared, registry, prompt
         choices = [(cat, index, chunk) for cat, chunks in evidence.items()
                    for index, chunk in enumerate(chunks)]
         if not choices:
             raise ValueError("JD and prompt metadata exceed the provider prompt budget")
-        # Retain category coverage and ranked retrieval before extra source context.
-        cat, index, chunk = max(choices, key=lambda item: (
-            len(evidence[item[0]]) > 1,
-            str(item[2].get("document_id", "")).startswith("context:"),
-            len(item[2]["text"])))
-        evidence[cat].pop(index)
+        # Remove an entire source group together, preserving complete context.
+        # Mandatory terms and role/project context outrank optional retrieval.
+        mandatory = [skill['canonical'].casefold() for skill in jd_profile.get('must_have_skills', [])]
+        groups = {}
+        for cat, index, chunk in choices:
+            key = (chunk.get('document_id'), chunk.get('chunk_id'), chunk['text'])
+            groups.setdefault(key, []).append((cat, index, chunk))
+        def priority(group):
+            body = group[0][2]['text'].casefold()
+            return (any(term in body for term in mandatory),
+                    str(group[0][2].get('document_id', '')).startswith('context:'),
+                    any(cat in ('EXPERIENCE', 'PROJECTS') for cat, _, _ in group),
+                    -len(body))
+        removed = min(groups.values(), key=priority)
+        for cat, index, chunk in sorted(removed, key=lambda item: item[1], reverse=True):
+            evidence[cat].pop(index)
+            metadata['omitted_passage_ids'].append(chunk.get('chunk_id') or stable_identity(chunk['text']))
         metadata["complete"] = False
         metadata["require_claim_support"] = True
-        # Counts stay bounded even for very large legacy snapshots.
-        metadata["prompt_omitted_chunk_count"] = metadata.get("prompt_omitted_chunk_count", 0) + 1
+        metadata["prompt_omitted_chunk_count"] = metadata.get("prompt_omitted_chunk_count", 0) + len(removed)
         metadata["evidence_chars"] = unique_evidence_chars(evidence)

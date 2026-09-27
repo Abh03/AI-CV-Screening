@@ -12,7 +12,8 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.stage3_evaluation.schemas import LLMEvaluationOutput, FinalCandidateEvaluation, EvidenceSelectionOutput
+from app.stage3_evaluation.schemas import LLMEvaluationOutput, FinalCandidateEvaluation, EvidenceSelectionOutput, SentenceSelectionOutput
+from app.stage3_evaluation.budget import selection_schema
 
 logger = logging.getLogger("cv_screening")
 
@@ -107,9 +108,9 @@ class LLMClientWrapper:
             raise ValueError(f"Unsupported LLM provider: {self.provider}")
         self._initialized = True
 
-    def _get_structured_response_format(self) -> Dict[str, Any]:
+    def _get_structured_response_format(self, user_prompt=None) -> Dict[str, Any]:
         """Generates OpenAI-compatible structured outputs format from Pydantic schema."""
-        schema = EvidenceSelectionOutput.model_json_schema()
+        schema = selection_schema(user_prompt)
 
         def require_properties(node):
             if isinstance(node, dict):
@@ -154,7 +155,8 @@ class LLMClientWrapper:
                 config = types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     response_mime_type="application/json",
-                    response_json_schema=EvidenceSelectionOutput.model_json_schema(),
+                    response_json_schema=selection_schema(user_prompt),
+                    max_output_tokens=8192,
                     temperature=0.1,
                 )
 
@@ -221,7 +223,7 @@ class LLMClientWrapper:
             "messages": [{"role": "system", "content": system_prompt},
                          {"role": "user", "content": user_prompt}],
             "temperature": 0.1,
-            "response_format": self._get_structured_response_format(),
+            "response_format": self._get_structured_response_format(user_prompt),
         }
 
         if settings.GROQ_MODEL.startswith("openai/gpt-oss-"):
@@ -245,7 +247,7 @@ class LLMClientWrapper:
             "messages": [{"role": "system", "content": system_prompt},
                          {"role": "user", "content": user_prompt}],
             "temperature": 0.1,
-            "response_format": self._get_structured_response_format(),
+            "response_format": self._get_structured_response_format(user_prompt),
             "provider": {
                 "require_parameters": True
             },
@@ -417,7 +419,8 @@ async def evaluate_single_candidate_async(
         return failed_evaluation(candidate_id, "MOCK_NOT_ALLOWED", "Mock evaluation is disabled in this environment.", is_mock=True)
     try:
         from app.stage3_evaluation.context import bounded_evaluation_prompt
-        candidate_payload, registry, user_prompt = bounded_evaluation_prompt(candidate_id, jd_profile, candidate_payload)
+        candidate_payload, registry, user_prompt = bounded_evaluation_prompt(candidate_id, jd_profile, candidate_payload,
+            sentence_selections=not is_mock and llm_provider is None)
         jd_text = "\n".join([jd_profile.get("title", ""), *jd_profile.get("jd_category_queries", {}).values()])
         injection_signals = ["JD_INJECTION_SIGNAL"] if scan_for_injection_anomalies(jd_text)["is_flagged"] else []
         if scan_for_injection_anomalies(candidate_id)["is_flagged"]:
@@ -445,8 +448,11 @@ async def evaluate_single_candidate_async(
                 parsed_output = LLMEvaluationOutput.model_validate(data)
             else:
                 from app.stage3_evaluation.evidence import resolve_evidence_selection
-                parsed_output = resolve_evidence_selection(
-                    EvidenceSelectionOutput.model_validate(data), registry, candidate_id)
+                if llm_provider is None:
+                    from app.stage3_evaluation.evidence import resolve_sentence_selection
+                    parsed_output = resolve_sentence_selection(SentenceSelectionOutput.model_validate(data), registry, candidate_id)
+                else:
+                    parsed_output = resolve_evidence_selection(EvidenceSelectionOutput.model_validate(data), registry, candidate_id)
                 candidate_payload = dict(candidate_payload, context_metadata={
                     **candidate_payload.get("context_metadata", {}), "require_claim_support": True})
             return compute_deterministic_tier(
@@ -462,7 +468,8 @@ async def evaluate_single_candidate_async(
                 try:
                     candidate_payload, registry, user_prompt = bounded_evaluation_prompt(
                         candidate_id, jd_profile, candidate_payload,
-                        max_bytes=max(3000, len(user_prompt.encode("utf-8")) // 2))
+                        max_bytes=max(3000, len(user_prompt.encode("utf-8")) // 2),
+                        sentence_selections=not is_mock and llm_provider is None)
                 except (ValueError, TypeError, AttributeError):
                     return failed_evaluation(candidate_id, "PROVIDER_CONTEXT_TOO_LARGE", "Evaluation context exceeds provider capacity.", is_mock=is_mock)
                 continue

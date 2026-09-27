@@ -37,7 +37,7 @@ async def test_groq_completion_budget_and_reasoning_are_forwarded(monkeypatch):
         return {}
     monkeypatch.setattr(wrapper, '_execute_openai_compatible_http', execute)
     monkeypatch.setattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
-    await wrapper._call_groq('system', 'synthetic', 'candidate', 1)
+    await wrapper._call_groq('system', '<evaluation_request />', 'candidate', 1)
     assert sent[0]['max_completion_tokens'] == settings.GROQ_MAX_COMPLETION_TOKENS
     assert sent[0]['reasoning_effort'] == 'low'
 
@@ -50,7 +50,7 @@ async def test_openrouter_completion_budget_is_forwarded(monkeypatch):
         sent.append(payload)
         return {}
     monkeypatch.setattr(wrapper,'_execute_openai_compatible_http',execute)
-    await wrapper._call_openrouter('system','synthetic','candidate',1)
+    await wrapper._call_openrouter('system','<evaluation_request />','candidate',1)
     assert sent[0]['max_tokens']==settings.OPENROUTER_MAX_TOKENS
     assert sent[0]['response_format']['type']=='json_schema'
 
@@ -63,7 +63,7 @@ async def test_gemini_usage_includes_thinking_without_logging_input(caplog):
     wrapper=LLMClientWrapper()
     wrapper.gemini_client=SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate)))
     with caplog.at_level(logging.INFO,logger='cv_screening'):
-        assert await wrapper._call_gemini('private system','private candidate','synthetic',1)=={}
+        assert await wrapper._call_gemini('private system','<evaluation_request />','synthetic',1)=={}
     events=[record for record in caplog.records if getattr(record,'event',None)=='provider_response']
     assert len(events)==1
     assert (events[0].input_tokens,events[0].output_tokens,events[0].total_tokens)==(100,200,300)
@@ -82,7 +82,7 @@ async def test_gemini_rate_limit_leaves_retry_to_campaign():
     wrapper=LLMClientWrapper()
     wrapper.gemini_client=SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate)))
     with pytest.raises(ProviderRateLimited) as result:
-        await wrapper._call_gemini('system','synthetic','candidate',1)
+        await wrapper._call_gemini('system','<evaluation_request />','candidate',1)
     assert result.value.retry_after==120 and len(calls)==1
 
 
@@ -97,5 +97,5 @@ async def test_gemini_server_failure_is_retryable_without_an_internal_second_cal
     wrapper=LLMClientWrapper()
     wrapper.gemini_client=SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate)))
     with pytest.raises(ProviderTransientFailure):
-        await wrapper._call_gemini('system','synthetic','candidate',1)
+        await wrapper._call_gemini('system','<evaluation_request />','candidate',1)
     assert len(calls)==1

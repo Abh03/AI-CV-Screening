@@ -47,10 +47,14 @@ async def admit(redis: Redis) -> tuple[str | None, int]:
     provider = settings.LLM_PROVIDER.lower()
     prefix = f"campaign:provider:{provider}"
     token = uuid4().hex
+    # Reserve the bounded request ceiling, including schema and completion.
+    estimated_tokens = (settings.PROVIDER_TOKENS_PER_REQUEST if provider == "mock" else
+                        min(getattr(settings, f"{provider.upper()}_CONTEXT_TOKENS", 32768),
+                            settings.PROVIDER_TOKENS_PER_MINUTE))
     wait = int(await redis.eval(_ADMIT, 3, prefix + ":requests", prefix + ":tokens",
         prefix + ":active", token, settings.PROVIDER_REQUESTS_PER_MINUTE,
         settings.PROVIDER_TOKENS_PER_MINUTE, settings.CAMPAIGN_STAGE3_GLOBAL_INFLIGHT,
-        settings.PROVIDER_TOKENS_PER_REQUEST, settings.PROVIDER_TIMEOUT_SECONDS + 30))
+        estimated_tokens, settings.PROVIDER_TIMEOUT_SECONDS + 30))
     return (token if wait == 0 else None, wait)
 
 

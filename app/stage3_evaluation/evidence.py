@@ -232,3 +232,35 @@ def resolve_evidence_selection(selection, registry, candidate_id):
             claim.update(citation=entry[0] if entry else "UNKNOWN_ID:" + evidence_id,
                          quote=entry[1].text if entry else "", evidence_id=evidence_id)
     return LLMEvaluationOutput.model_validate(data)
+
+
+def sentence_registry(registry):
+    """Split at sentence punctuation, never at PDF line wraps or decimal points.
+
+    Keep the entire enclosing sentence (including qualifiers). Source offsets
+    remain in the parent chunk's coordinates; IDs bind the exact parent and span.
+    """
+    result = {}
+    counts = dict.fromkeys(CATEGORIES, 0)
+    for ref in registry.values():
+        start = 0
+        for end in [m.end() for m in re.finditer(r"[!?](?=\s|$)|\.(?=\s+[A-Z]|$)", ref.text)] + [len(ref.text)]:
+            text = ref.text[start:end]
+            if text.strip():
+                counts[ref.category] += 1
+                result[f"{ref.category}:{counts[ref.category]}"] = ref.model_copy(update={
+                    "text": text, "sentence_start": start, "sentence_end": end,
+                    "evidence_id": "ev_" + stable_identity("sentence-v1", ref.evidence_id, start, end)[:24]})
+            start = end
+    return MappingProxyType(result)
+
+
+def resolve_sentence_selection(selection, registry, candidate_id):
+    """The provider selects evidence; only trusted Python constructs facts."""
+    data = selection.model_dump()
+    by_id = {ref.evidence_id: ref for ref in registry.values()}
+    for assessment in [*(data[c.lower()] for c in CATEGORIES), *data["flags"]]:
+        assessment["claims"] = [{"claim": by_id[c].text if c in by_id else "",
+                                  "citation": c} for c in assessment["citations"]]
+    from app.stage3_evaluation.schemas import EvidenceSelectionOutput
+    return resolve_evidence_selection(EvidenceSelectionOutput.model_validate(data), registry, candidate_id)

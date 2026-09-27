@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     STAGE2_BACKEND: Literal["memory", "postgres"] = "memory"
     LLM_CONCURRENCY_LIMIT: int = 5
     CAMPAIGN_STAGE3_GLOBAL_INFLIGHT: int = Field(default=2, ge=1, le=100)
-    STAGE3_CONTEXT_MAX_CHARS: int = Field(default=12000, ge=3000, le=500000)
-    STAGE3_PROMPT_MAX_BYTES: int = Field(default=16000, ge=3000, le=500000)
+    STAGE3_CONTEXT_MAX_CHARS: int = Field(default=48000, ge=3000, le=500000)
+    STAGE3_PROMPT_MAX_BYTES: int = Field(default=128000, ge=3000, le=500000)
     PROVIDER_REQUESTS_PER_MINUTE: int = Field(default=60, ge=1)
     PROVIDER_TOKENS_PER_MINUTE: int = Field(default=120000, ge=1)
     PROVIDER_TOKENS_PER_REQUEST: int = Field(default=6000, ge=1)
@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
+    GROQ_CONTEXT_TOKENS: int = Field(default=32768, ge=1024)
+    OPENROUTER_CONTEXT_TOKENS: int = Field(default=32768, ge=1024)
+    GEMINI_CONTEXT_TOKENS: int = Field(default=131072, ge=1024)
     GROQ_MAX_COMPLETION_TOKENS: int = Field(default=4096, ge=256, le=32768)
     OPENROUTER_API_KEY: Optional[str] = None
 
