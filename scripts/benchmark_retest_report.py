@@ -36,7 +36,7 @@ def main():
         for pair in pairs:
             candidate = Path(cvs[pair['cv_id']]['source_filename']).stem
             label = expected[(benchmark_jd, candidate)]
-            selected = pair['stage3_attempt_count'] > 0 or pair['status'] in {'SHORTLISTED', 'STAGE3_RUNNING'}
+            selected = pair['stage3_attempt_count'] > 0 or pair['status'] in {'SHORTLISTED', 'STAGE3_RUNNING', 'EVALUATION_FAILED', 'SUCCESS'}
             row = {**pair, 'benchmark_jd': benchmark_jd, 'benchmark_candidate': candidate,
                    'expected': label, 'selected': selected}
             rows.append(row)
@@ -51,7 +51,7 @@ def main():
                     jd['job_snapshot'], dict(evidence,
                         context_metadata=verification.get('context_metadata', {})),
                     registry={tag: EvidenceReference.model_validate(ref) for tag, ref in registry.items()},
-                    compact=True, neutral_sources=jd['policy_snapshot'].get('prompt_version') == 'stage3-prompt-v10')
+                    compact=True, neutral_sources=jd['policy_snapshot'].get('prompt_version') in {'stage3-prompt-v10', 'stage3-prompt-v11', 'stage3-prompt-v12'})
             elif evidence and pair['stage3_attempt_count']:
                 _, _, prompt = bounded_evaluation_prompt(cvs[pair['cv_id']]['candidate_id'],
                     jd['job_snapshot'], dict(evidence, candidate_cv_text=cvs[pair['cv_id']]['redacted_text']),

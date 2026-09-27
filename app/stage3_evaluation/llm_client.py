@@ -424,7 +424,9 @@ async def evaluate_single_candidate_async(
             injection_signals.append("IDENTIFIER_INJECTION_SIGNAL")
     except (ValueError, TypeError, AttributeError):
         return failed_evaluation(candidate_id, "INVALID_EVIDENCE", "Invalid evidence or prompt context.", is_mock=is_mock)
-    for attempt in range(max_retries + 1):
+    attempt = 0
+    context_retries = 0
+    while attempt <= max_retries:
         try:
             if llm_provider is None:
                 # Honor configured real providers instead of silently using Mock.
@@ -455,7 +457,8 @@ async def evaluate_single_candidate_async(
             if attempt == max_retries:
                 return failed_evaluation(candidate_id, "INVALID_LLM_OUTPUT", "Evaluation failed: invalid provider response.", is_mock=is_mock)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 413 and attempt < max_retries:
+            if exc.response.status_code == 413 and context_retries < 1:
+                context_retries += 1
                 try:
                     candidate_payload, registry, user_prompt = bounded_evaluation_prompt(
                         candidate_id, jd_profile, candidate_payload,
@@ -476,6 +479,7 @@ async def evaluate_single_candidate_async(
         except Exception as exc:
             # Provider details may contain sensitive data; return a stable operational error.
             return failed_evaluation(candidate_id, "PROVIDER_ERROR", "Evaluation failed: provider request could not complete.", is_mock=is_mock)
+        attempt += 1
 
 
 async def evaluate_candidate_batch_async(

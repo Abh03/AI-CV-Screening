@@ -1,6 +1,6 @@
 import pytest
 from app.stage3_evaluation.evidence import (
-    build_evidence_registry, resolve_evidence_selection, verify_evidence,
+    build_evidence_registry, resolve_evidence_selection, verify_evidence, claim_is_source_excerpt,
 )
 from app.stage3_evaluation.schemas import EvidenceSelectionOutput
 
@@ -83,3 +83,42 @@ def test_provider_cannot_supply_quotes():
     data["skills"]["claims"][0]["quote"] = "fabricated"
     with pytest.raises(ValueError):
         EvidenceSelectionOutput.model_validate(data)
+
+
+@pytest.mark.parametrize('claim,source', [
+    ('Python', '[Section: SKILLS] Python, SQL, Docker'),
+    ('C#', 'C#, ASP.NET Core, SQL Server'),
+    ('Used Python', 'Used Python for 2 years.'),
+    ('SQL to transform source records', 'Used SQL to transform source records and publish curated tables.'),
+    ('Python, SQL', '[Section: SKILLS] Python,\nSQL, Docker'),
+    ('No Kafka experience', 'No\nKafka experience. Used Python for 2 years.'),
+    ('Basic Python knowledge from coursework', 'Skills: Basic Python knowledge from coursework.'),
+    ('Python for 2 years. No Kafka experience', 'Used Python for 2 years. No Kafka experience. Also used SQL.'),
+])
+def test_source_contained_excerpts(claim, source):
+    assert claim_is_source_excerpt(claim, source)
+
+
+@pytest.mark.parametrize('claim,source', [
+    ('Java', 'JavaScript'),
+    ('Kafka experience', 'No\nKafka experience.'),
+    ('Python knowledge', 'Basic Python knowledge.'),
+    ('Built Python APIs', 'Assisted colleagues who Built Python APIs.'),
+    ('Python', 'Learning Python.'),
+    ('Used Python for 8 years', 'Used Python for 2 years.'),
+    ('Expert in Python', 'Used Python for 2 years.'),
+    ('No Kafka experience. Python knowledge', 'No Kafka experience. Python knowledge is limited.'),
+])
+def test_source_excerpts_do_not_drop_limits_or_add_facts(claim, source):
+    assert not claim_is_source_excerpt(claim, source)
+
+
+def test_excerpt_support_is_applied_to_id_claims():
+    refs = registry()
+    selected = selection(refs)
+    selected.skills.claims[0].claim = 'Used Python'
+    _, checked = verify(selected, refs)
+    assert 'UNSUPPORTED_CLAIM:skills' not in checked.review_reasons
+    selected.skills.claims[0].claim = 'Kafka experience'
+    _, checked = verify(selected, refs)
+    assert 'UNSUPPORTED_CLAIM:skills' in checked.review_reasons

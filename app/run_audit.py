@@ -20,7 +20,7 @@ from app.stage2_retrieval.evidence_extractor import DEFAULT_CATEGORY_WEIGHTS
 from app.stage2_retrieval.coverage import SCORING_VERSION as STAGE2_SCORING_VERSION
 from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME, RERANKER_MODEL_VERSION
 
-PROMPT_VERSION = "stage3-prompt-v11"
+PROMPT_VERSION = "stage3-prompt-v12"
 RUN_POLICY_VERSION = "orchestration-v3"
 
 
@@ -47,6 +47,7 @@ def policy_snapshot(cutoff):
             "category_weights": {key: str(value) for key, value in CATEGORY_WEIGHTS.items()},
             "tier_thresholds": {"TIER_1": 75, "TIER_2": 55},
             "prompt_version": PROMPT_VERSION, "prompt_sha256": hashlib.sha256(SYSTEM_PROMPT_STAGE3.encode()).hexdigest(),
+            "claim_support_version": "source-excerpt-v1",
             "output_schema_sha256": canonical_hash(LLMEvaluationOutput.model_json_schema()),
             "model_temperature": 0.1,
             "provider": provider, "model": model, "stage2_cutoff": cutoff,

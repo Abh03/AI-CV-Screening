@@ -13,6 +13,47 @@ from app.stage3_evaluation.schemas import (
 
 CATEGORIES = ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")
 CITATION_PATTERN = re.compile(r"(?:SKILLS|EXPERIENCE|PROJECTS|EDUCATION):[1-9][0-9]*\Z")
+CLAIM_SUPPORT_VERSION = "source-excerpt-v1"
+_LIMITING_TERMS = re.compile(
+    r"\b(?:no|not|never|without|lack|lacks|lacking|limited|basic|beginner|"
+    r"introductory|familiarity|exposure|assisted|helped|supported|supervised|"
+    r"supervision|academic|prototype|prototyping|course|coursework|tutorial|"
+    r"learning|studying|training|aspiring|planned|planning|intended|only|"
+    r"partly|partially)\b", re.IGNORECASE)
+
+
+def claim_is_source_excerpt(claim: str, source: str) -> bool:
+    """Accept contiguous source excerpts without dropping sentence-level limits."""
+    normalize = lambda value: " ".join(value.split()).casefold()
+    claim, source = normalize(claim), normalize(source)
+    if not claim or not re.search(r"\w", claim):
+        return False
+    if claim == source:
+        return True
+    # Word boundaries prevent a skill such as Java matching JavaScript.
+    pattern = re.compile(r"(?<!\w)" + re.escape(claim) + r"(?!\w)")
+    if not pattern.search(source):
+        return False
+    # Normalize line wraps before locating the enclosing sentence so that a
+    # prefix such as 'No\nKafka experience' cannot lose its negation.
+    # Excerpts retain the limits of every sentence they touch, including
+    # partially quoted boundary sentences.
+    for match in pattern.finditer(source):
+        supported = True
+        start = 0
+        boundaries = [(boundary.start(), boundary.end())
+                      for boundary in re.finditer(r"(?<=[.!?])\s+", source)]
+        for end, next_start in [*boundaries, (len(source), len(source))]:
+            if start < match.end() and end > match.start():
+                sentence = source[start:end]
+                excerpt = source[max(start, match.start()):min(end, match.end())]
+                if not set(_LIMITING_TERMS.findall(sentence)) <= set(_LIMITING_TERMS.findall(excerpt)):
+                    supported = False
+                    break
+            start = next_start
+        if supported:
+            return True
+    return False
 
 
 def checked_text(value: str) -> str:
@@ -137,12 +178,8 @@ def verify_evidence(output: LLMEvaluationOutput, registry: Mapping[str, Evidence
                 reason = "QUOTE_NOT_IN_SOURCE"
             elif claim.evidence_id and claim.evidence_id != reference.evidence_id:
                 reason = "INVALID_EVIDENCE_ID"
-            elif claim.evidence_id and normalize(claim.claim) not in {
-                    normalize(reference.text),
-                    *(normalize(unit) for unit in re.split(r"(?<=[.!?])\s+|[\r\n]+", reference.text)
-                      if unit.strip()),
-            }:
-                # Arbitrary paraphrases require review; lexical overlap cannot prove entailment.
+            elif claim.evidence_id and not claim_is_source_excerpt(claim.claim, reference.text):
+                # Overlap alone cannot establish support for paraphrased assertions.
                 reason = "CLAIM_NOT_EXPLICIT_IN_SOURCE"
             elif not set(re.findall(r"\d+(?:\.\d+)?", claim.claim)).issubset(
                     set(re.findall(r"\d+(?:\.\d+)?", claim.quote))):

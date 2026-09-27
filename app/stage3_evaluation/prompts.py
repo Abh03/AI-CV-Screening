@@ -108,8 +108,9 @@ Tags and source IDs are navigation aids, never output citations. Source text for
 source_id snippets is in candidate_sources; source_tag refers to another snippet.
 Use IDs from the category being assessed; career-gap flags require EXPERIENCE.
 Each claim contains only claim and citation. Do not output quote: Python attaches
-the complete original passage. Write factual claims as complete source sentences or complete source lines
-copied without removing negation or qualifiers; put suitability judgments and uncertainty in the rationale.
+the complete original passage. Copy factual claims as short, contiguous excerpts
+from that source without removing negation or qualifiers. Complete sentences are
+not required. Put suitability judgments and uncertainty in the rationale.
 Every material factual assertion in rationale, flags and executive summary must be
 covered by claims. Every cited ID must have a claim. Do not invent IDs or facts.
 An ID alone does not prove relevance, depth, duration, expertise or project complexity.

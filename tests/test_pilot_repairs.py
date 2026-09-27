@@ -195,7 +195,8 @@ def test_serialized_unicode_xml_is_bounded_and_matches_registry():
 
 
 @pytest.mark.asyncio
-async def test_413_retries_smaller_context_and_marks_review():
+@pytest.mark.parametrize('max_retries', [0, 2])
+async def test_413_retries_smaller_context_and_marks_review(max_retries):
     class Provider:
         def __init__(self):
             self.sizes = []
@@ -212,7 +213,21 @@ async def test_413_retries_smaller_context_and_marks_review():
             return json.dumps(response)
 
     provider = Provider()
-    result = await evaluate_single_candidate_async(large_payload(), {}, provider)
+    result = await evaluate_single_candidate_async(large_payload(), {}, provider, max_retries=max_retries)
     assert len(provider.sizes) == 2
     assert provider.sizes[1] <= provider.sizes[0] // 2
     assert "EVIDENCE_CONTEXT_TRUNCATED" in result.evidence_verification.review_reasons
+
+
+@pytest.mark.asyncio
+async def test_repeated_413_stops_after_one_context_retry():
+    class Provider:
+        calls = 0
+        async def generate_structured_evaluation(self, system_prompt, user_prompt):
+            self.calls += 1
+            response = httpx.Response(413, request=httpx.Request('POST', 'https://example.test'))
+            raise httpx.HTTPStatusError('Too large', request=response.request, response=response)
+    provider = Provider()
+    result = await evaluate_single_candidate_async(large_payload(), {}, provider, max_retries=0)
+    assert provider.calls == 2
+    assert result.error_code == 'PROVIDER_CONTEXT_TOO_LARGE'
