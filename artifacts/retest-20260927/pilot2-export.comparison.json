@@ -1,0 +1,156 @@
+{
+  "campaign": {
+    "id": "77cecffb-8624-463d-a336-5ce7138698be",
+    "owner_id": "admin_1",
+    "status": "COMPLETED",
+    "idempotency_key": "capacity-9470009c-a701-4096-a411-3f1e1873e7b4",
+    "request_hash": "08df9f5fa238cfbee1265324473aa74bd0b6035ddc13be9c141eaacf925839a1",
+    "completed_at": "2026-09-27 06:05:30.115100+00:00",
+    "created_at": "2026-09-27 05:59:14.012134+00:00",
+    "updated_at": "2026-09-27 06:05:30.115100+00:00",
+    "archive_hash": "d121a8193dfb82e283310a8dfaf9f114665968c14c13fb056c3205ad819a3c9b"
+  },
+  "stage0": {
+    "SUCCEEDED": 36
+  },
+  "stage0_expected_success": 36,
+  "jds": [
+    {
+      "jd": "JD02",
+      "title": "C# / .NET Backend Engineer",
+      "stage1_actual": {
+        "FAIL": 31,
+        "REVIEW": 5
+      },
+      "stage1_expected": {
+        "FAIL": 23,
+        "REVIEW": 9,
+        "PASS": 4
+      },
+      "stage1_confusion": {
+        "FAIL -> FAIL": 23,
+        "REVIEW -> FAIL": 8,
+        "PASS -> REVIEW": 4,
+        "REVIEW -> REVIEW": 1
+      },
+      "stage1_crossed_actual": 5,
+      "stage1_crossed_expected": 13,
+      "stage2_selected_actual": 0,
+      "stage2_selected_expected_cap": 13,
+      "stage2_selected_bands": {},
+      "stage2_selected_expected_fail": 0,
+      "stage2_benchmark_top_overlap": 0,
+      "stage2_zero_scores": 0,
+      "stage2_review_without_llm": 5,
+      "final_statuses": {
+        "FILTER_REJECTED": 31,
+        "REVIEW_REQUIRED": 5
+      }
+    },
+    {
+      "jd": "JD04",
+      "title": "Data Engineer",
+      "stage1_actual": {
+        "FAIL": 33,
+        "REVIEW": 3
+      },
+      "stage1_expected": {
+        "REVIEW": 9,
+        "FAIL": 24,
+        "PASS": 3
+      },
+      "stage1_confusion": {
+        "REVIEW -> FAIL": 9,
+        "FAIL -> FAIL": 24,
+        "PASS -> REVIEW": 3
+      },
+      "stage1_crossed_actual": 3,
+      "stage1_crossed_expected": 12,
+      "stage2_selected_actual": 0,
+      "stage2_selected_expected_cap": 12,
+      "stage2_selected_bands": {},
+      "stage2_selected_expected_fail": 0,
+      "stage2_benchmark_top_overlap": 0,
+      "stage2_zero_scores": 0,
+      "stage2_review_without_llm": 3,
+      "final_statuses": {
+        "FILTER_REJECTED": 33,
+        "REVIEW_REQUIRED": 3
+      }
+    },
+    {
+      "jd": "JD03",
+      "title": "Test Automation Engineer",
+      "stage1_actual": {
+        "FAIL": 32,
+        "REVIEW": 4
+      },
+      "stage1_expected": {
+        "FAIL": 10,
+        "REVIEW": 23,
+        "PASS": 3
+      },
+      "stage1_confusion": {
+        "FAIL -> FAIL": 10,
+        "REVIEW -> FAIL": 22,
+        "REVIEW -> REVIEW": 1,
+        "PASS -> REVIEW": 3
+      },
+      "stage1_crossed_actual": 4,
+      "stage1_crossed_expected": 26,
+      "stage2_selected_actual": 0,
+      "stage2_selected_expected_cap": 15,
+      "stage2_selected_bands": {},
+      "stage2_selected_expected_fail": 0,
+      "stage2_benchmark_top_overlap": 0,
+      "stage2_zero_scores": 0,
+      "stage2_review_without_llm": 4,
+      "final_statuses": {
+        "FILTER_REJECTED": 32,
+        "REVIEW_REQUIRED": 4
+      }
+    },
+    {
+      "jd": "JD01",
+      "title": "Java Backend Engineer",
+      "stage1_actual": {
+        "REVIEW": 11,
+        "FAIL": 25
+      },
+      "stage1_expected": {
+        "REVIEW": 14,
+        "PASS": 7,
+        "FAIL": 15
+      },
+      "stage1_confusion": {
+        "REVIEW -> REVIEW": 3,
+        "PASS -> REVIEW": 7,
+        "REVIEW -> FAIL": 11,
+        "FAIL -> FAIL": 14,
+        "FAIL -> REVIEW": 1
+      },
+      "stage1_crossed_actual": 11,
+      "stage1_crossed_expected": 21,
+      "stage2_selected_actual": 6,
+      "stage2_selected_expected_cap": 15,
+      "stage2_selected_bands": {
+        "moderate": 3,
+        "high": 3
+      },
+      "stage2_selected_expected_fail": 1,
+      "stage2_benchmark_top_overlap": 5,
+      "stage2_zero_scores": 0,
+      "stage2_review_without_llm": 5,
+      "final_statuses": {
+        "EVALUATION_FAILED": 2,
+        "FILTER_REJECTED": 25,
+        "REVIEW_REQUIRED": 9
+      }
+    }
+  ],
+  "limitations": [
+    "Generator labels use latent facts; source evidence and system policy can differ.",
+    "No ground-truth Stage 3 SUCCESS/REVIEW labels supplied; relevance bands are proxies.",
+    "Benchmark top membership is tie-sensitive; high-band share is the primary shortlist metric."
+  ]
+}

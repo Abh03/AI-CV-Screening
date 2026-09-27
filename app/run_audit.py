@@ -17,9 +17,10 @@ from app.stage1_rules.rules_engine import STAGE1_POLICY_VERSION
 from app.stage2_retrieval.embeddings import EMBEDDING_MODEL_NAME, EMBEDDING_MODEL_VERSION
 from app.stage2_retrieval.repository import CHUNKING_VERSION, REDACTION_VERSION
 from app.stage2_retrieval.evidence_extractor import DEFAULT_CATEGORY_WEIGHTS
+from app.stage2_retrieval.coverage import SCORING_VERSION as STAGE2_SCORING_VERSION
 from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME, RERANKER_MODEL_VERSION
 
-PROMPT_VERSION = "stage3-prompt-v7"
+PROMPT_VERSION = "stage3-prompt-v8"
 RUN_POLICY_VERSION = "orchestration-v3"
 
 
@@ -30,14 +31,16 @@ def canonical_hash(value):
 
 def policy_snapshot(cutoff):
     provider = settings.LLM_PROVIDER.lower()
-    model = {"gemini": "gemini-3.6-flash", "groq": settings.GROQ_MODEL,
+    model = {"gemini": settings.GEMINI_MODEL, "groq": settings.GROQ_MODEL,
              "openrouter": settings.OPENROUTER_MODEL, "mock": "mock"}.get(provider)
     return {"orchestration_version": RUN_POLICY_VERSION, "scoring_policy_version": SCORING_POLICY_VERSION,
             "stage1_policy_version": STAGE1_POLICY_VERSION, "category_policy_version": "category-v1",
             "redaction_version": REDACTION_VERSION, "chunking_version": CHUNKING_VERSION,
             "embedding_model": EMBEDDING_MODEL_NAME, "embedding_model_version": EMBEDDING_MODEL_VERSION,
             "reranker_model": RERANKER_MODEL_NAME, "reranker_model_version": RERANKER_MODEL_VERSION,
-            "stage2_scoring_version": "stage2-coverage-v1",
+            "stage2_scoring_version": STAGE2_SCORING_VERSION,
+            "stage3_context_max_chars": settings.STAGE3_CONTEXT_MAX_CHARS,
+            "stage3_prompt_max_bytes": settings.STAGE3_PROMPT_MAX_BYTES,
             "stage2_calibration_status": "UNVALIDATED",
             "stage2_max_candidates": 15,
             "stage2_category_weights": DEFAULT_CATEGORY_WEIGHTS.copy(),

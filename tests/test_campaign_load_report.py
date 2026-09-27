@@ -25,3 +25,13 @@ def test_reconcile_rejects_missing_pair_and_excess_shortlist():
     assert reconcile(status, jds)["reconciled"] is False
     status["counts"]["pairs"] = {"SUCCESS": 1, "FILTER_REJECTED": 2}
     assert reconcile(status, jds)["reconciled"] is False
+
+
+def test_reconcile_uses_stage3_selection_counts_for_review_pairs():
+    status = {"counts": {"cvs": 3, "jds": 1, "pairs": {"REVIEW_REQUIRED": 3},
+                         "terminal_pairs": 3, "selected_pairs": 1}}
+    jds = {"jds": [{"jd_key": "a", "status": "COMPLETED", "stage3_cap": 1,
+                     "counts": {"REVIEW_REQUIRED": 3}, "selected_pairs": 1}]}
+    report = reconcile(status, jds)
+    assert report["selected_pairs"] == 1
+    assert report["reconciled"]

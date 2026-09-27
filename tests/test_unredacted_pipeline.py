@@ -56,7 +56,7 @@ async def test_full_cv_reaches_rules_retrieval_and_llm_prompt(monkeypatch):
         assert kwargs["redacted_cv_text"] == CV
         seen.append("retrieval")
         return {"candidate_id": "candidate", "status": "SUCCESS", "composite_score": 1,
-                "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {"SKILLS": [{"text": "Java, Python, Apache Spark"}]}}
+                "scoring_version": "stage2-coverage-v2", "shortlist_eligible": True, "evidence_by_category": {"SKILLS": [{"text": "Java, Python, Apache Spark"}]}}
 
     async def evaluate(candidate_payloads, jd_profile, **kwargs):
         payload = candidate_payloads[0]

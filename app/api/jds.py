@@ -87,7 +87,7 @@ async def upload_jd(request: Request, retry: bool = False,
                         "prompt_version": "jd-prompt-v1", "provider": settings.LLM_PROVIDER,
                         "model": settings.GROQ_MODEL if settings.LLM_PROVIDER == "groq" else
                                  settings.OPENROUTER_MODEL if settings.LLM_PROVIDER == "openrouter" else
-                                 "gemini-3.6-flash" if settings.LLM_PROVIDER == "gemini" else "mock"})
+                                 settings.GEMINI_MODEL if settings.LLM_PROVIDER == "gemini" else "mock"})
         db.add(draft)
     attempt_token = uuid4().hex
     draft.provenance = {**draft.provenance, "processing_started_at": datetime.now(timezone.utc).isoformat(),

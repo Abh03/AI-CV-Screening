@@ -1,0 +1,417 @@
+{
+  "jds": [
+    {
+      "approved_jd_id": "42a7509a9ecd4fc3876a6367e93225fc",
+      "profile": {
+        "job_id": "42a7509a9ecd4fc3876a6367e93225fc",
+        "title": "Data Engineer",
+        "jd_category_queries": {
+          "SKILLS": "Python, SQL, Apache Spark, PySpark, Airflow, ETL, Kafka, AWS, Azure, Databricks, dbt",
+          "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+          "PROJECTS": "No explicit requirement",
+          "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter."
+        },
+        "hard_filter_rules": {
+          "min_years_experience": 3.0,
+          "degree_requirement": null,
+          "require_work_authorization": false
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Python",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "SQL",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Apache Spark",
+            "aliases": [
+              "PySpark"
+            ],
+            "substitutes": []
+          },
+          {
+            "canonical": "Airflow",
+            "aliases": [
+              "ETL"
+            ],
+            "substitutes": []
+          }
+        ],
+        "nice_to_have_skills": [
+          {
+            "canonical": "Kafka",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "AWS",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Azure",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Databricks",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "dbt",
+            "aliases": [],
+            "substitutes": []
+          }
+        ]
+      },
+      "approved_at": "2026-09-26T09:34:47.326623+00:00",
+      "provenance": {
+        "pdf_hash": "c3d054efb2b175ffc8cad2d67c35a3ac372551c3c0c4fe2f512e581a09c50a75",
+        "schema_version": "jd-v1",
+        "extraction_version": "jd-pdf-v1",
+        "prompt_version": "jd-prompt-v1",
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "processing_started_at": "2026-09-26T09:34:06.942031+00:00",
+        "attempt_token": "1472122db9b94518b739b55d89ce4d80",
+        "owner_id": "admin_1",
+        "version": 1,
+        "review_uncertainties": [
+          "Work authorization requirement not specified",
+          "Ambiguity whether \"ETL\" refers to a specific tool or a generic process"
+        ]
+      }
+    },
+    {
+      "approved_jd_id": "cefbdecad0d84d969d6747a6846371fe",
+      "profile": {
+        "job_id": "cefbdecad0d84d969d6747a6846371fe",
+        "title": "Test Automation Engineer",
+        "jd_category_queries": {
+          "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+          "EXPERIENCE": "At least 2 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+          "PROJECTS": "No explicit requirement",
+          "SKILLS": "Selenium, Playwright, Cypress, API Testing, Postman, SQL, JUnit, TestNG, Python, Java, Jenkins, Docker, Jira"
+        },
+        "hard_filter_rules": {
+          "min_years_experience": 2.0,
+          "degree_requirement": null,
+          "require_work_authorization": false
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Selenium",
+            "aliases": [
+              "Playwright",
+              "Cypress"
+            ],
+            "substitutes": []
+          },
+          {
+            "canonical": "API Testing",
+            "aliases": [
+              "Postman"
+            ],
+            "substitutes": []
+          },
+          {
+            "canonical": "SQL",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "JUnit",
+            "aliases": [
+              "TestNG",
+              "Python",
+              "Java"
+            ],
+            "substitutes": []
+          }
+        ],
+        "nice_to_have_skills": [
+          {
+            "canonical": "Jenkins",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Docker",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Jira",
+            "aliases": [],
+            "substitutes": []
+          }
+        ]
+      },
+      "approved_at": "2026-09-26T09:34:47.257264+00:00",
+      "provenance": {
+        "pdf_hash": "90c08b55dc919e30dc61b62980e79baf4d387b256ecf675e4fc691e9556b22f1",
+        "schema_version": "jd-v1",
+        "extraction_version": "jd-pdf-v1",
+        "prompt_version": "jd-prompt-v1",
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "processing_started_at": "2026-09-26T09:34:04.091028+00:00",
+        "attempt_token": "4c260b0f84f2419182a8658cb223db17",
+        "owner_id": "admin_1",
+        "version": 1,
+        "review_uncertainties": [
+          "Work authorization requirement not specified."
+        ]
+      }
+    },
+    {
+      "approved_jd_id": "a038c776c96041c49e171040fdf8fd1a",
+      "profile": {
+        "job_id": "a038c776c96041c49e171040fdf8fd1a",
+        "title": "C# / .NET Backend Engineer",
+        "jd_category_queries": {
+          "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+          "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+          "PROJECTS": "Build claims workflow APIs and background processing services; maintain database migrations, audit records and access controls; support staged cloud releases and diagnose production incidents.",
+          "SKILLS": "C#; .NET or ASP.NET Core; Web API; SQL Server or Entity Framework; Azure; Docker; Git"
+        },
+        "hard_filter_rules": {
+          "min_years_experience": 3.0,
+          "degree_requirement": null,
+          "require_work_authorization": false
+        },
+        "must_have_skills": [
+          {
+            "canonical": "C#",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": ".NET",
+            "aliases": [
+              "ASP.NET Core"
+            ],
+            "substitutes": []
+          },
+          {
+            "canonical": "Web API",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "SQL Server",
+            "aliases": [
+              "Entity Framework"
+            ],
+            "substitutes": []
+          }
+        ],
+        "nice_to_have_skills": [
+          {
+            "canonical": "Azure",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Docker",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Git",
+            "aliases": [],
+            "substitutes": []
+          }
+        ]
+      },
+      "approved_at": "2026-09-26T09:34:47.177175+00:00",
+      "provenance": {
+        "pdf_hash": "6a1709de23abe577d248c0279a7fb021a3a9bf526319a9a1f53db7e7219644cd",
+        "schema_version": "jd-v1",
+        "extraction_version": "jd-pdf-v1",
+        "prompt_version": "jd-prompt-v1",
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "processing_started_at": "2026-09-26T09:34:01.429719+00:00",
+        "attempt_token": "c16b89b12144417f887a2f3ee64cc689",
+        "owner_id": "admin_1",
+        "version": 1,
+        "review_uncertainties": [
+          "Work authorization requirement not specified"
+        ]
+      }
+    },
+    {
+      "approved_jd_id": "d89c10d5f4c84639a46000c04324d301",
+      "profile": {
+        "job_id": "d89c10d5f4c84639a46000c04324d301",
+        "title": "Java Backend Engineer",
+        "jd_category_queries": {
+          "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+          "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+          "PROJECTS": "No explicit requirement",
+          "SKILLS": "Java, Spring Boot, REST APIs, SQL, PostgreSQL, Kafka, Docker, Kubernetes, JUnit"
+        },
+        "hard_filter_rules": {
+          "min_years_experience": 3.0,
+          "degree_requirement": null,
+          "require_work_authorization": false
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Java",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Spring Boot",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "REST APIs",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "SQL",
+            "aliases": [
+              "PostgreSQL"
+            ],
+            "substitutes": []
+          }
+        ],
+        "nice_to_have_skills": [
+          {
+            "canonical": "Kafka",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Docker",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "Kubernetes",
+            "aliases": [],
+            "substitutes": []
+          },
+          {
+            "canonical": "JUnit",
+            "aliases": [],
+            "substitutes": []
+          }
+        ]
+      },
+      "approved_at": "2026-09-26T09:34:47.077011+00:00",
+      "provenance": {
+        "pdf_hash": "18aca14127b1aa090ddfe0635ba460121a5b41d0621e7cd019b3134452618706",
+        "schema_version": "jd-v1",
+        "extraction_version": "jd-pdf-v1",
+        "prompt_version": "jd-prompt-v1",
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "processing_started_at": "2026-09-26T09:33:58.309453+00:00",
+        "attempt_token": "6cd9383941b548dcbfc4c2b01e816057",
+        "owner_id": "admin_1",
+        "version": 1,
+        "review_uncertainties": [
+          "Work authorization requirement is not specified."
+        ]
+      }
+    },
+    {
+      "approved_jd_id": "571ed060b8724844b5e0c288b86cc24d",
+      "profile": {
+        "job_id": "571ed060b8724844b5e0c288b86cc24d",
+        "title": "Synthetic Python Engineer",
+        "jd_category_queries": {
+          "SKILLS": "Python is the only required skill. Build Python APIs and database services.",
+          "EXPERIENCE": "No explicit requirement",
+          "PROJECTS": "Projects should demonstrate Python API development.",
+          "EDUCATION": "No explicit requirement"
+        },
+        "hard_filter_rules": {
+          "min_years_experience": 0.0,
+          "degree_requirement": null,
+          "require_work_authorization": false
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Python",
+            "aliases": [
+              "Python"
+            ],
+            "substitutes": []
+          }
+        ],
+        "nice_to_have_skills": []
+      },
+      "approved_at": "2026-09-26T04:24:07.426826+00:00",
+      "provenance": {
+        "pdf_hash": "5fe49a02d935495d18e087d419a4ff4d354ccfff48b74280b452b943d7322ea3",
+        "schema_version": "jd-v1",
+        "extraction_version": "jd-pdf-v1",
+        "prompt_version": "jd-prompt-v1",
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "processing_started_at": "2026-09-26T04:24:05.489710+00:00",
+        "attempt_token": "05b47f1d1080450f8f687267f087f85c",
+        "owner_id": "admin_1",
+        "version": 1,
+        "review_uncertainties": []
+      }
+    },
+    {
+      "approved_jd_id": "2988887f19b34c9c84a489b6d9b6757b",
+      "profile": {
+        "job_id": "2988887f19b34c9c84a489b6d9b6757b",
+        "title": "Synthetic Engineer",
+        "jd_category_queries": {
+          "EDUCATION": "No explicit requirement",
+          "EXPERIENCE": "No explicit requirement",
+          "PROJECTS": "No explicit requirement",
+          "SKILLS": "Python"
+        },
+        "hard_filter_rules": {
+          "min_years_experience": 0.0,
+          "degree_requirement": null,
+          "require_work_authorization": true
+        },
+        "must_have_skills": [
+          {
+            "canonical": "Python",
+            "aliases": [],
+            "substitutes": []
+          }
+        ],
+        "nice_to_have_skills": []
+      },
+      "approved_at": "2026-09-26T04:22:46.720858+00:00",
+      "provenance": {
+        "pdf_hash": "718f67e41646cb8684a2342e767b92befa3428eb4cc354f9f6280025b8492319",
+        "schema_version": "jd-v1",
+        "extraction_version": "jd-pdf-v1",
+        "prompt_version": "jd-prompt-v1",
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "processing_started_at": "2026-09-26T04:22:44.016073+00:00",
+        "attempt_token": "a569d672b57c4d75acda1b4af260b2f0",
+        "owner_id": "admin_1",
+        "version": 1,
+        "review_uncertainties": [
+          "Experience requirement not specified",
+          "Education requirement not specified",
+          "Degree requirement not specified"
+        ]
+      }
+    }
+  ]
+}

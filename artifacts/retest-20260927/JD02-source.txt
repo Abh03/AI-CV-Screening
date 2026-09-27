@@ -1,0 +1,27 @@
+C# / .NET Backend Engineer
+Technical role | Engineering and delivery
+1
+TEAM AND CONTEXT
+Join a cross-functional insurance claims team supporting business-critical services. The role includes design
+reviews, delivery and a shared support rotation.
+RESPONSIBILITIES
+Build claims workflow APIs and background processing services.
+Maintain database migrations, audit records and access controls.
+Support staged cloud releases and diagnose production incidents.
+REQUIRED TECHNICAL SKILLS
+C#
+.NET or ASP.NET Core
+Web API
+SQL Server or Entity Framework
+PREFERRED SKILLS
+Azure
+Docker
+Git
+EXPERIENCE
+At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is
+expected.
+EDUCATION
+Degree in a relevant technical discipline or equivalent practical experience; no degree filter.
+SELECTION CRITERIA
+Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking
+signals, not mandatory filters.

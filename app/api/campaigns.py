@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import CampaignCreateSchema
 from app.campaigns.intake import ArchiveLimitError, import_zip
-from app.campaigns.persistence import campaign_counts, reserve_campaign
+from app.campaigns.persistence import campaign_counts, reserve_campaign, selected_pair_count
 from app.config import settings
 from app.core.auth import Principal, can_access, current_principal
 from app.models.database import CampaignModel, CampaignJDModel, CampaignPairModel, CampaignCVModel, get_db
@@ -209,7 +209,8 @@ async def campaign_jds(campaign_id: str, db: AsyncSession = Depends(get_db),
             CampaignPairModel.lease_until > datetime.now(timezone.utc)))).scalar_one()
         result.append({"jd_key": jd.jd_key, "title": jd.job_snapshot.get("title"),
                        "status": jd.status, "stage3_cap": jd.stage3_cap,
-                       "counts": counts, "stage3_retry_waiting": retry_waiting})
+                       "counts": counts, "stage3_retry_waiting": retry_waiting,
+                       "selected_pairs": await selected_pair_count(db, CampaignPairModel.jd_id == jd.id)})
     return {"campaign_id": campaign.id, "jds": result}
 
 

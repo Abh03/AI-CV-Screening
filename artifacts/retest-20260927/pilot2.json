@@ -1,0 +1,424 @@
+{
+  "started_at": "2026-09-27T05:59:13.754470+00:00",
+  "archive_bytes": 96974,
+  "jd_count": 4,
+  "samples": [
+    {
+      "elapsed_seconds": 0.906,
+      "status": "RUNNING",
+      "stage0": {
+        "PENDING": 36
+      },
+      "pairs": {
+        "PENDING": 144
+      }
+    },
+    {
+      "elapsed_seconds": 16.0,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 48,
+        "PENDING": 88,
+        "RUNNING": 4,
+        "STAGE2_READY": 4
+      }
+    },
+    {
+      "elapsed_seconds": 31.031,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 82,
+        "PENDING": 50,
+        "REVIEW_REQUIRED": 8,
+        "RUNNING": 4
+      }
+    },
+    {
+      "elapsed_seconds": 46.125,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 110,
+        "PENDING": 15,
+        "REVIEW_REQUIRED": 12,
+        "RUNNING": 4,
+        "STAGE2_READY": 3
+      }
+    },
+    {
+      "elapsed_seconds": 61.312,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 116,
+        "PENDING": 6,
+        "REVIEW_REQUIRED": 12,
+        "RUNNING": 4,
+        "STAGE2_READY": 6
+      }
+    },
+    {
+      "elapsed_seconds": 76.344,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 17,
+        "SHORTLISTED": 5,
+        "STAGE3_RUNNING": 1
+      }
+    },
+    {
+      "elapsed_seconds": 91.359,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 5
+      }
+    },
+    {
+      "elapsed_seconds": 106.406,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 5
+      }
+    },
+    {
+      "elapsed_seconds": 121.437,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 5
+      }
+    },
+    {
+      "elapsed_seconds": 136.469,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 4
+      }
+    },
+    {
+      "elapsed_seconds": 151.5,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 4
+      }
+    },
+    {
+      "elapsed_seconds": 166.531,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 4
+      }
+    },
+    {
+      "elapsed_seconds": 181.578,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 4
+      }
+    },
+    {
+      "elapsed_seconds": 196.625,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 18,
+        "SHORTLISTED": 3,
+        "STAGE3_RUNNING": 1
+      }
+    },
+    {
+      "elapsed_seconds": 211.656,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 19,
+        "SHORTLISTED": 3
+      }
+    },
+    {
+      "elapsed_seconds": 226.703,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 19,
+        "SHORTLISTED": 3
+      }
+    },
+    {
+      "elapsed_seconds": 241.719,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 19,
+        "SHORTLISTED": 3
+      }
+    },
+    {
+      "elapsed_seconds": 256.75,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 19,
+        "SHORTLISTED": 2,
+        "STAGE3_RUNNING": 1
+      }
+    },
+    {
+      "elapsed_seconds": 271.797,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 20,
+        "SHORTLISTED": 2
+      }
+    },
+    {
+      "elapsed_seconds": 286.844,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 20,
+        "SHORTLISTED": 2
+      }
+    },
+    {
+      "elapsed_seconds": 301.89,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 20,
+        "SHORTLISTED": 2
+      }
+    },
+    {
+      "elapsed_seconds": 316.922,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 20,
+        "SHORTLISTED": 1,
+        "STAGE3_RUNNING": 1
+      }
+    },
+    {
+      "elapsed_seconds": 331.953,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 21,
+        "SHORTLISTED": 1
+      }
+    },
+    {
+      "elapsed_seconds": 347.0,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 21,
+        "SHORTLISTED": 1
+      }
+    },
+    {
+      "elapsed_seconds": 362.031,
+      "status": "RUNNING",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 1,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 21,
+        "SHORTLISTED": 1
+      }
+    },
+    {
+      "elapsed_seconds": 377.078,
+      "status": "COMPLETED",
+      "stage0": {
+        "SUCCEEDED": 36
+      },
+      "pairs": {
+        "EVALUATION_FAILED": 2,
+        "FILTER_REJECTED": 121,
+        "REVIEW_REQUIRED": 21
+      }
+    }
+  ],
+  "limitations": [
+    "Stage boundary times are sampled at the polling interval; individual queue wait is not persisted.",
+    "Provider request, token, and billing usage are not exposed by campaign records; Stage 3 attempts are worker attempts and may differ from provider requests."
+  ],
+  "campaign_id": "77cecffb-8624-463d-a336-5ce7138698be",
+  "intake_seconds": 0.516,
+  "accepted_count": 36,
+  "rejected_count": 0,
+  "rejection_codes": {},
+  "elapsed_seconds": 377.078,
+  "status": "COMPLETED",
+  "milestones": {
+    "stage0_terminal_seconds": 16.0,
+    "all_jds_shortlisted_seconds": 76.344
+  },
+  "accounting": {
+    "expected_pairs": 144,
+    "actual_pairs": 144,
+    "terminal_pairs": 144,
+    "selected_pairs": 23,
+    "pair_statuses": {
+      "EVALUATION_FAILED": 2,
+      "FILTER_REJECTED": 121,
+      "REVIEW_REQUIRED": 21
+    },
+    "jds": [
+      {
+        "jd_key": "5ac48cf853cb4a598f3fb42e10c474d4",
+        "status": "COMPLETED",
+        "pairs": 36,
+        "selected": 5,
+        "cap": 15,
+        "reconciled": true
+      },
+      {
+        "jd_key": "a37655ced70f433ebb145c427f492dd7",
+        "status": "COMPLETED",
+        "pairs": 36,
+        "selected": 3,
+        "cap": 15,
+        "reconciled": true
+      },
+      {
+        "jd_key": "d859bb02fb754dda922d4cc6de1fd4a4",
+        "status": "COMPLETED",
+        "pairs": 36,
+        "selected": 4,
+        "cap": 15,
+        "reconciled": true
+      },
+      {
+        "jd_key": "d98ced3311444bde8ccabe0d1fcb3018",
+        "status": "COMPLETED",
+        "pairs": 36,
+        "selected": 11,
+        "cap": 15,
+        "reconciled": true
+      }
+    ],
+    "reconciled": true
+  },
+  "ranking_counts": {
+    "5ac48cf853cb4a598f3fb42e10c474d4": 0,
+    "a37655ced70f433ebb145c427f492dd7": 0,
+    "d859bb02fb754dda922d4cc6de1fd4a4": 0,
+    "d98ced3311444bde8ccabe0d1fcb3018": 0
+  },
+  "ranking_checks": {
+    "5ac48cf853cb4a598f3fb42e10c474d4": true,
+    "a37655ced70f433ebb145c427f492dd7": true,
+    "d859bb02fb754dda922d4cc6de1fd4a4": true,
+    "d98ced3311444bde8ccabe0d1fcb3018": true
+  },
+  "ranking_overlap_counts": {
+    "5ac48cf853cb4a598f3fb42e10c474d4|a37655ced70f433ebb145c427f492dd7": 0,
+    "5ac48cf853cb4a598f3fb42e10c474d4|d859bb02fb754dda922d4cc6de1fd4a4": 0,
+    "5ac48cf853cb4a598f3fb42e10c474d4|d98ced3311444bde8ccabe0d1fcb3018": 0,
+    "a37655ced70f433ebb145c427f492dd7|d859bb02fb754dda922d4cc6de1fd4a4": 0,
+    "a37655ced70f433ebb145c427f492dd7|d98ced3311444bde8ccabe0d1fcb3018": 0,
+    "d859bb02fb754dda922d4cc6de1fd4a4|d98ced3311444bde8ccabe0d1fcb3018": 0
+  }
+}

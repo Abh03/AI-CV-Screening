@@ -4,6 +4,13 @@ from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
 from app.stage1_rules.experience import extract_experience
 
 
+@pytest.mark.parametrize('term', ['REST API', 'REST APIs', 'RESTful API', 'RESTful APIs'])
+def test_rest_api_identity_variants_satisfy_required_plural(term):
+    from app.stage1_rules.jd_matcher import required_skill_evidence
+    assert required_skill_evidence('Built services using ' + term,
+                                   {'canonical': 'REST APIs'})['match_weight'] == 1
+
+
 def evaluate(text, skills=None, years=None):
     return evaluate_stage1_hard_filters(years, text, None, {
         "require_work_authorization": False, "min_years_experience": 5,

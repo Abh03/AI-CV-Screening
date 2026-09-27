@@ -1,0 +1,564 @@
+{
+  "draft_id": "af52f94c65e840c680257b4e777b1ee6",
+  "status": "REVIEW",
+  "pages": [
+    {
+      "page_number": 1,
+      "ocr_used": false,
+      "blocks": [
+        {
+          "block_number": 0,
+          "text": "Java Backend Engineer",
+          "bbox": [
+            42.0,
+            40.66999816894531,
+            255.31297302246094,
+            66.83300018310547
+          ]
+        },
+        {
+          "block_number": 1,
+          "text": "Technical role | Engineering and delivery",
+          "bbox": [
+            42.0,
+            68.4000015258789,
+            186.35997009277344,
+            79.39199829101562
+          ]
+        },
+        {
+          "block_number": 2,
+          "text": "TEAM AND CONTEXT",
+          "bbox": [
+            42.0,
+            115.16000366210938,
+            165.99600219726562,
+            131.6840057373047
+          ]
+        },
+        {
+          "block_number": 3,
+          "text": "Join a cross-functional digital banking team supporting business-critical services. The role includes design reviews,\ndelivery and a shared support rotation.",
+          "bbox": [
+            42.0,
+            138.25,
+            549.3998413085938,
+            165.99000549316406
+          ]
+        },
+        {
+          "block_number": 4,
+          "text": "RESPONSIBILITIES",
+          "bbox": [
+            42.0,
+            176.16000366210938,
+            153.36000061035156,
+            192.6840057373047
+          ]
+        },
+        {
+          "block_number": 5,
+          "text": "Deliver secure account and payment APIs with explicit transaction boundaries.",
+          "bbox": [
+            42.0,
+            199.25,
+            388.8099365234375,
+            212.99000549316406
+          ]
+        },
+        {
+          "block_number": 6,
+          "text": "Integrate event consumers with replay, retry and duplicate protection.",
+          "bbox": [
+            42.0,
+            218.25,
+            348.24993896484375,
+            231.99000549316406
+          ]
+        },
+        {
+          "block_number": 7,
+          "text": "Review database access plans, service metrics and operational runbooks.",
+          "bbox": [
+            42.0,
+            237.25,
+            369.9099426269531,
+            250.99000549316406
+          ]
+        },
+        {
+          "block_number": 8,
+          "text": "REQUIRED TECHNICAL SKILLS",
+          "bbox": [
+            42.0,
+            261.1600036621094,
+            224.00401306152344,
+            277.6839904785156
+          ]
+        },
+        {
+          "block_number": 9,
+          "text": "Java",
+          "bbox": [
+            42.0,
+            284.25,
+            63.12000274658203,
+            297.989990234375
+          ]
+        },
+        {
+          "block_number": 10,
+          "text": "Spring Boot",
+          "bbox": [
+            42.0,
+            303.25,
+            94.25000762939453,
+            316.989990234375
+          ]
+        },
+        {
+          "block_number": 11,
+          "text": "REST APIs",
+          "bbox": [
+            42.0,
+            322.2499694824219,
+            92.57000732421875,
+            335.9899597167969
+          ]
+        },
+        {
+          "block_number": 12,
+          "text": "SQL or PostgreSQL",
+          "bbox": [
+            42.0,
+            341.2499694824219,
+            130.9300079345703,
+            354.9899597167969
+          ]
+        },
+        {
+          "block_number": 13,
+          "text": "PREFERRED SKILLS",
+          "bbox": [
+            42.0,
+            365.15997314453125,
+            162.01199340820312,
+            381.6839599609375
+          ]
+        },
+        {
+          "block_number": 14,
+          "text": "Kafka",
+          "bbox": [
+            42.0,
+            388.2499694824219,
+            67.56999969482422,
+            401.9899597167969
+          ]
+        },
+        {
+          "block_number": 15,
+          "text": "Docker",
+          "bbox": [
+            42.0,
+            407.2499694824219,
+            73.66999816894531,
+            420.9899597167969
+          ]
+        },
+        {
+          "block_number": 16,
+          "text": "Kubernetes",
+          "bbox": [
+            42.0,
+            426.2499694824219,
+            93.13999938964844,
+            439.9899597167969
+          ]
+        },
+        {
+          "block_number": 17,
+          "text": "JUnit",
+          "bbox": [
+            42.0,
+            445.2499694824219,
+            64.7800064086914,
+            458.9899597167969
+          ]
+        },
+        {
+          "block_number": 18,
+          "text": "EXPERIENCE",
+          "bbox": [
+            42.0,
+            469.15997314453125,
+            119.35200500488281,
+            485.6839599609375
+          ]
+        },
+        {
+          "block_number": 19,
+          "text": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is\nexpected.",
+          "bbox": [
+            42.0,
+            492.25,
+            527.2198486328125,
+            519.989990234375
+          ]
+        },
+        {
+          "block_number": 20,
+          "text": "EDUCATION",
+          "bbox": [
+            42.0,
+            530.1599731445312,
+            113.3280029296875,
+            546.6840209960938
+          ]
+        },
+        {
+          "block_number": 21,
+          "text": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+          "bbox": [
+            42.0,
+            553.25,
+            444.9498596191406,
+            566.989990234375
+          ]
+        },
+        {
+          "block_number": 22,
+          "text": "SELECTION CRITERIA",
+          "bbox": [
+            42.0,
+            577.1599731445312,
+            170.67599487304688,
+            593.6840209960938
+          ]
+        },
+        {
+          "block_number": 23,
+          "text": "Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking\nsignals, not mandatory filters.",
+          "bbox": [
+            42.0,
+            600.25,
+            522.789794921875,
+            627.989990234375
+          ]
+        },
+        {
+          "block_number": 24,
+          "text": "1",
+          "bbox": [
+            548.8275756835938,
+            812.289794921875,
+            553.2755737304688,
+            823.2817993164062
+          ]
+        }
+      ]
+    }
+  ],
+  "profile": {
+    "schema_version": "jd-v1",
+    "title": "Java Backend Engineer",
+    "must_have_skills": [
+      {
+        "canonical": "Java",
+        "aliases": [
+          "Java"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "Spring Boot",
+        "aliases": [
+          "Spring Boot",
+          "SpringBoot"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "REST APIs",
+        "aliases": [
+          "REST APIs",
+          "REST API",
+          "RESTful APIs",
+          "REST"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "SQL",
+        "aliases": [
+          "SQL",
+          "Structured Query Language"
+        ],
+        "substitutes": [
+          "PostgreSQL"
+        ]
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Kafka",
+        "aliases": [
+          "Kafka"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "Docker",
+        "aliases": [
+          "Docker"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "Kubernetes",
+        "aliases": [
+          "Kubernetes",
+          "k8s"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "JUnit",
+        "aliases": [
+          "JUnit"
+        ],
+        "substitutes": []
+      }
+    ],
+    "hard_filter_rules": {
+      "min_years_experience": 3.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "jd_category_queries": {
+      "SKILLS": "Required: Java, Spring Boot, REST APIs, SQL or PostgreSQL. Preferred: Kafka, Docker, Kubernetes, JUnit.",
+      "EXPERIENCE": "At least 3 years of relevant professional experience with implementation and operational ownership.",
+      "PROJECTS": "No explicit requirement.",
+      "EDUCATION": "Degree in relevant technical discipline or equivalent practical experience; no degree filter."
+    },
+    "relevance_contract": {
+      "version": "relevance-v1",
+      "targets": [
+        {
+          "target_id": "skill_java",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Proficient in Java programming language.",
+          "source_quote": "Java",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "Java"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_spring_boot",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Experience with Spring Boot framework.",
+          "source_quote": "Spring Boot",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "Spring Boot"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_rest_apis",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Experience building RESTful APIs.",
+          "source_quote": "REST APIs",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "REST API",
+              "REST APIs",
+              "RESTful APIs"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_sql",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Proficiency with SQL for database access.",
+          "source_quote": "SQL or PostgreSQL",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "SQL",
+              "Structured Query Language"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_kafka",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Familiarity with Kafka messaging system.",
+          "source_quote": "Kafka",
+          "importance": 3.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Kafka"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_docker",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Experience using Docker containers.",
+          "source_quote": "Docker",
+          "importance": 3.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Docker"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_kubernetes",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Experience with Kubernetes container orchestration.",
+          "source_quote": "Kubernetes",
+          "importance": 3.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Kubernetes",
+              "k8s"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_junit",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Knowledge of JUnit testing framework.",
+          "source_quote": "JUnit",
+          "importance": 3.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "JUnit"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_deliver_apis",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Deliver secure account and payment APIs with explicit transaction boundaries.",
+          "source_quote": "Deliver secure account and payment APIs with explicit transaction boundaries.",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "payment API",
+              "account API",
+              "transaction boundaries"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_integrate_events",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Integrate event consumers with replay, retry and duplicate protection.",
+          "source_quote": "Integrate event consumers with replay, retry and duplicate protection.",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "event consumer",
+              "replay",
+              "retry",
+              "duplicate protection"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_review_db",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Review database access plans, service metrics and operational runbooks.",
+          "source_quote": "Review database access plans, service metrics and operational runbooks.",
+          "importance": 3.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "database access",
+              "service metrics",
+              "operational runbooks"
+            ]
+          ]
+        },
+        {
+          "target_id": "domain_digital_banking",
+          "category": "SKILLS",
+          "kind": "domain",
+          "text": "Cross\u2011functional digital banking team delivering business\u2011critical services.",
+          "source_quote": "Join a cross\u2011functional digital banking team supporting business\u2011critical services.",
+          "importance": 4.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "digital banking",
+              "cross\u2011functional team",
+              "business\u2011critical services"
+            ]
+          ]
+        },
+        {
+          "target_id": "edu_degree",
+          "category": "EDUCATION",
+          "kind": "education",
+          "text": "Degree in relevant technical discipline or equivalent practical experience; no degree filter.",
+          "source_quote": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+          "importance": 2.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "degree",
+              "technical discipline",
+              "equivalent practical experience"
+            ]
+          ]
+        }
+      ],
+      "minimum_coverage": 0.0
+    },
+    "uncertainties": [
+      "Degree requirement ambiguous (degree or equivalent, no filter)",
+      "Work authorization not specified"
+    ]
+  },
+  "error_code": null,
+  "expires_at": "2026-10-04T05:50:45.514972+00:00",
+  "provenance": {
+    "pdf_hash": "02d151c7c7f16bf4f4825072dbb770219fc55ffefbfaf01881820f73ad50ae60",
+    "schema_version": "jd-v1",
+    "extraction_version": "jd-pdf-v1",
+    "prompt_version": "jd-prompt-v1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "processing_started_at": "2026-09-27T05:50:45.515093+00:00",
+    "attempt_token": "a512fc3216bf440382c3498151a1a0f5"
+  }
+}

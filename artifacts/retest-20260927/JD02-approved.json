@@ -1,0 +1,244 @@
+{
+  "approved_jd_id": "5ac48cf853cb4a598f3fb42e10c474d4",
+  "profile": {
+    "job_id": "5ac48cf853cb4a598f3fb42e10c474d4",
+    "title": "C# / .NET Backend Engineer",
+    "jd_category_queries": {
+      "SKILLS": "C#, .NET or ASP.NET Core, Web API, SQL Server or Entity Framework",
+      "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected. Build claims workflow APIs and background processing services. Maintain database migrations, audit records and access controls. Support staged cloud releases and diagnose production incidents.",
+      "PROJECTS": "No explicit requirement",
+      "EDUCATION": "No explicit requirement"
+    },
+    "relevance_contract": {
+      "version": "relevance-v1",
+      "targets": [
+        {
+          "target_id": "required_0",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "C#",
+          "source_quote": "C#",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "C#"
+            ]
+          ]
+        },
+        {
+          "target_id": "required_1",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": ".NET or ASP.NET Core",
+          "source_quote": ".NET or ASP.NET Core",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              ".NET",
+              "ASP.NET Core"
+            ]
+          ]
+        },
+        {
+          "target_id": "required_2",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Web API",
+          "source_quote": "Web API",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "Web API"
+            ]
+          ]
+        },
+        {
+          "target_id": "required_3",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "SQL Server or Entity Framework",
+          "source_quote": "SQL Server or Entity Framework",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "SQL Server",
+              "Entity Framework"
+            ]
+          ]
+        },
+        {
+          "target_id": "preferred_0",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Azure",
+          "source_quote": "Azure",
+          "importance": 1.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Azure"
+            ]
+          ]
+        },
+        {
+          "target_id": "preferred_1",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Docker",
+          "source_quote": "Docker",
+          "importance": 1.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Docker"
+            ]
+          ]
+        },
+        {
+          "target_id": "preferred_2",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Git",
+          "source_quote": "Git",
+          "importance": 1.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Git"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_build_claims",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Build claims workflow APIs and background processing services",
+          "source_quote": "Build claims workflow APIs and background processing services.",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "claims workflow"
+            ],
+            [
+              "API"
+            ],
+            [
+              "background processing"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_maintain_db",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Maintain database migrations, audit records and access controls",
+          "source_quote": "Maintain database migrations, audit records and access controls.",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "database migrations"
+            ],
+            [
+              "audit records"
+            ],
+            [
+              "access controls"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_cloud_release",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Support staged cloud releases and diagnose production incidents",
+          "source_quote": "Support staged cloud releases and diagnose production incidents.",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "cloud releases"
+            ],
+            [
+              "production incidents"
+            ],
+            [
+              "diagnose"
+            ]
+          ]
+        },
+        {
+          "target_id": "domain_insurance",
+          "category": "SKILLS",
+          "kind": "domain",
+          "text": "Insurance claims domain",
+          "source_quote": "insurance claims team",
+          "importance": 3.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "insurance"
+            ],
+            [
+              "claims"
+            ]
+          ]
+        }
+      ],
+      "minimum_coverage": 0.0
+    },
+    "hard_filter_rules": {
+      "min_years_experience": 3.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "must_have_skills": [
+      {
+        "canonical": "C#",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": ".NET",
+        "aliases": [],
+        "substitutes": [
+          "ASP.NET Core"
+        ]
+      },
+      {
+        "canonical": "Web API",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "SQL Server",
+        "aliases": [],
+        "substitutes": [
+          "Entity Framework"
+        ]
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Azure",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Docker",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Git",
+        "aliases": [],
+        "substitutes": []
+      }
+    ]
+  }
+}

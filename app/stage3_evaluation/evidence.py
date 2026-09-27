@@ -129,6 +129,8 @@ def verify_evidence(output: LLMEvaluationOutput, registry: Mapping[str, Evidence
                 reason = "INVALID_CLAIM_CITATION"
             elif not claim.claim.strip() or not claim.quote.strip():
                 reason = "EMPTY_CLAIM_SUPPORT"
+            elif "..." in claim.quote or "…" in claim.quote:
+                reason = "ELLIPSIS_IN_QUOTE"
             elif normalize(claim.quote) not in normalize(reference.text):
                 reason = "QUOTE_NOT_IN_SOURCE"
             elif not set(re.findall(r"\d+(?:\.\d+)?", claim.claim)).issubset(

@@ -10,7 +10,7 @@ from app.stage1_rules.jd_matcher import identity_terms, term_pattern
 from app.stage2_retrieval.sparse import build_sparse_plan, STOP_WORDS, normalize_lexical_v1
 from app.config import settings
 
-SCORING_VERSION = "stage2-coverage-v1"
+SCORING_VERSION = "stage2-coverage-v2"
 MAX_CANDIDATES_PER_JD = 15
 CATEGORIES = ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")
 ACTION = re.compile(r"\b(built|build(?:ing|s)?|develop(?:ed|ing|s)?|implement(?:ed|ing|s)?|"
@@ -19,7 +19,10 @@ ACTION = re.compile(r"\b(built|build(?:ing|s)?|develop(?:ed|ing|s)?|implement(?:
                     r"deliver(?:ed|ing|s)?|integrat(?:e|ed|ing|es)|led|lead(?:ing|s)?|"
                     r"manag(?:e|ed|ing|es)|architect(?:ed|ing|s)?|optimiz(?:e|ed|ing|es)|"
                     r"support(?:ed|ing|s)?|resolv(?:e|ed|ing|es)|creat(?:e|ed|ing|es)|"
-                    r"migrat(?:e|ed|ing|es))\b", re.I)
+                    r"migrat(?:e|ed|ing|es)|used?|using|review(?:ed|ing|s)?|"
+                    r"document(?:ed|ing|s)?|introduc(?:e|ed|ing|es)|add(?:ed|ing|s)?|"
+                    r"investigat(?:e|ed|ing|es)|refactor(?:ed|ing|s)?|"
+                    r"reduc(?:e|ed|ing|es)|troubleshoot(?:ing|s)?|configure(?:d|s)?)\b", re.I)
 
 
 def data(value):
@@ -40,6 +43,16 @@ def resolve_targets(queries, required_skills=None, preferred_skills=None,
     targets = [target.model_dump(mode="json") | {"origin": "approved"}
                for target in contract.targets]
     explicit_categories = {target["category"] for target in targets if target["treatment"] == "requirement"}
+    # Applied use of mandatory technologies is useful retrieval guidance even
+    # when approved responsibilities bundle several domain-specific concepts.
+    if "EXPERIENCE" in explicit_categories:
+        for index, cluster in enumerate(required_skills or []):
+            cluster = data(cluster)
+            targets.append(dict(target_id=f"derived_delivery_{index}", category="EXPERIENCE",
+                kind="experience", text="Hands-on delivery using " + cluster["canonical"],
+                evidence_terms=[[cluster["canonical"], *cluster.get("aliases", [])]],
+                substitutes=cluster.get("substitutes", []), importance=1,
+                treatment="requirement", origin="derived"))
     for category in CATEGORIES:
         if category in explicit_categories:
             continue
@@ -117,11 +130,14 @@ def score_coverage(targets, evidence, weights, minimum_coverage=0):
             continue
         main = [(target, result) for target, result in rows if target["treatment"] != "preference"]
         prefs = [(target, result) for target, result in rows if target["treatment"] == "preference"]
+        if not main:
+            category_scores[category] = None
+            continue  # Preferences cannot activate an otherwise inapplicable category.
         def average(items):
             return (sum(target["importance"] * result["coverage"] for target, result in items)
                     / sum(target["importance"] for target, _ in items)) if items else 0
         # Preferences (including domains) contribute at most 10% of a category.
-        category_scores[category] = (0.9 * average(main) + 0.1 * average(prefs)
+        category_scores[category] = (min(1.0, average(main) + 0.1 * average(prefs))
                                      if prefs else average(main))
         active_weights[category] = weights.get(category, 0)
     total = sum(active_weights.values())
@@ -133,9 +149,10 @@ def score_coverage(targets, evidence, weights, minimum_coverage=0):
                        if target["kind"] in ("experience", "responsibility", "project")
                        and target["treatment"] != "preference"]
     # Shared generic anchors alone must not establish delivery relevance.
-    # Partial targets still influence ranking, but need one direct applied target
-    # or an explicitly accepted substitute to qualify for automatic selection.
+    # Require direct applied evidence, an accepted substitute, or at least two
+    # concepts covering half a bundled target in the same applied passage.
     applied_supported = not applied_targets or any(result["status"] == "DIRECT" or result["accepted_substitute"]
+                                                   or (result["coverage"] >= 0.5 and len(result["matched_groups"]) >= 2)
                                                    for _, result in applied_targets)
     eligible = supported > 0 and applied_supported and score > 0 and score >= minimum_coverage
     source_context_review = not any(target["origin"] == "approved" for target in targets)

@@ -136,7 +136,7 @@ async def test_upload_edit_approve_campaign_and_reuse(client_db, monkeypatch):
     def evidence(**kwargs):
         assert kwargs["jd_category_queries"] == edited["jd_category_queries"]
         return {"candidate_id": kwargs["candidate_id"], "status": "SUCCESS", "composite_score": 0.8,
-                "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {key: [{"text": key + " Python evidence", "source_location": {"page_number": 1}}]
+                "scoring_version": "stage2-coverage-v2", "shortlist_eligible": True, "evidence_by_category": {key: [{"text": key + " Python evidence", "source_location": {"page_number": 1}}]
                                          for key in edited["jd_category_queries"]}}
     monkeypatch.setattr(tasks, "extract_candidate_category_evidence", evidence)
     real_evaluate = tasks.evaluate_single_candidate_async

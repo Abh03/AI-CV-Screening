@@ -35,16 +35,20 @@ into the supplied extracted text; they do not claim database chunk persistence.
 The CV is not repeated in a separate uncitable prompt field. Source sections are
 available under applicable category citation tags, including applied work as
 skills/experience/project context. The model must assess what each passage states.
-`STAGE3_CONTEXT_MAX_CHARS` defaults to 48000 and bounds evidence text, including
-category copies; XML, JD text and system instructions add overhead. This is a
-character limit, not a provider token limit. Oversized CVs prioritize source
+`STAGE3_CONTEXT_MAX_CHARS` defaults to 12000 and bounds retrieved evidence plus
+unique source context. Category citation copies share source text through
+`source_tag` references in provider prompts. `STAGE3_PROMPT_MAX_BYTES` defaults to
+16000 and caps the escaped UTF-8 user prompt, including JD text and XML overhead.
+System instructions and output schema add overhead; neither budget is a provider
+token limit. HTTP 413 responses retry with a smaller prompt within the retry budget.
+Oversized CVs prioritize source
 passages around retrieval hits and their neighbours, then section-balanced
 context. Omitted passage identities and completeness are retained in evidence
 verification; omitted context forces a provisional review outcome.
 
-The `stage3-prompt-v6` output includes factual claims with citation tags and source
+The `stage3-prompt-v8` output includes factual claims with citation tags and source
 quotes. Live assessments require quote support for every citation. Verification
-checks quote presence (allowing line-wrap whitespace differences) and rejects
+checks quote presence (allowing line-wrap whitespace differences), rejects ellipses, and rejects
 numeric claims whose numbers are absent from the quote. Semantic entailment and
 the suitability score still require model judgment and human review; these checks
 do not prove the truth of a CV claim. Legacy evidence-only snapshots remain
@@ -89,10 +93,14 @@ candidate ranking uses versioned evidence coverage of approved relevance targets
 with identity equivalents and supported applied work. Categories without targets
 are not applicable; missing evidence for existing targets retains its weight.
 Responsibility and domain targets preserve source context in both retrieval and
-Stage 3. Domain preferences contribute at most 10% of a category and cannot
+Stage 3. Domain preferences add at most 10 percentage points to an applicable
+category, do not activate category weights or penalize missing preferences, and cannot
 qualify a candidate alone. A JD selects at most 15 candidates, requires supported
-applied evidence for at least one complete delivery target (or an explicitly
-accepted skill substitute) when delivery targets exist, and routes unsupported/obsolete
+applied evidence for at least one complete delivery target, an explicitly
+accepted skill substitute, or two concepts covering at least half a bundled
+target in one passage when delivery targets exist. Applied use of required
+technologies remains derived guidance alongside approved responsibilities.
+The pipeline routes unsupported/obsolete
 scores to Stage 2 review rather than padding the shortlist with UUID ties.
 
 The assessor uses reviewed lexical concepts; it does not infer semantic matches
@@ -111,6 +119,13 @@ no Stage 3 provider requests are made. Provide independent recruiter labels and
 development/held-out splits to measure precision, recall, unrelated selections,
 category zeros, cutoff ties and evidence coverage. Real campaign calibration is
 still required before claiming improved shortlist quality.
+
+Stage 1 uses explicit overall experience claims when available. Otherwise it
+calculates the union of month-dated work-history periods, excluding gaps and
+overlap duplication. Source dates and the as-of date remain in rule evidence.
+Ambiguous dates and totals remain unresolved; month precision near a minimum
+boundary requires review. CV-derived experience retains recruiter verification.
+See [PILOT_FIXES.md](PILOT_FIXES.md) for the 36-CV repair verification and replay.
 
 ## Verification
 

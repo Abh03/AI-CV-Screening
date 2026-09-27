@@ -14,7 +14,7 @@ async def test_stage1_review_is_provisional_without_changing_stage3_status(monke
     def extract(**kwargs):
         retrieved.append(kwargs["candidate_id"])
         return {"candidate_id": kwargs["candidate_id"], "composite_score": 1,
-                "scoring_version": "stage2-coverage-v1", "shortlist_eligible": True, "evidence_by_category": {}}
+                "scoring_version": "stage2-coverage-v2", "shortlist_eligible": True, "evidence_by_category": {}}
 
     async def evaluate(candidate_payloads, **kwargs):
         assert all("stage1_filter_details" in item for item in candidate_payloads)

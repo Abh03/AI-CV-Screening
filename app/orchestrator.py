@@ -11,6 +11,7 @@ from app.stage2_retrieval.evidence_extractor import (
     rank_and_filter_candidate_batch
 )
 from app.config import settings
+from app.stage2_retrieval.coverage import SCORING_VERSION as STAGE2_SCORING_VERSION
 from app.stage3_evaluation.llm_client import evaluate_candidate_batch_async
 from app.stage3_evaluation.schemas import FinalCandidateEvaluation, EvaluationStatus
 from app.stage3_evaluation.scoring import evaluation_sort_key
@@ -257,7 +258,7 @@ async def run_end_to_end_screening_pipeline(
     for evidence in stage2_payloads:
         cand_id = evidence["candidate_id"]
         if cand_id not in shortlisted_ids:
-            if evidence.get("relevance_review_required") or evidence.get("scoring_version") != "stage2-coverage-v1":
+            if evidence.get("relevance_review_required") or evidence.get("scoring_version") != STAGE2_SCORING_VERSION:
                 item = {"candidate_id": cand_id, "stage": "STAGE2", "evaluation_status": "REVIEW_REQUIRED",
                         "reason": evidence.get("relevance_reason") or "STAGE2_SCORING_REPLAY_REQUIRED",
                         "retrieval_score": evidence.get("composite_score"),

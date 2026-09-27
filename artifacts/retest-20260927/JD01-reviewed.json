@@ -1,0 +1,249 @@
+{
+  "schema_version": "jd-v1",
+  "title": "Java Backend Engineer",
+  "must_have_skills": [
+    {
+      "canonical": "Java",
+      "aliases": [],
+      "substitutes": []
+    },
+    {
+      "canonical": "Spring Boot",
+      "aliases": [],
+      "substitutes": []
+    },
+    {
+      "canonical": "REST APIs",
+      "aliases": [],
+      "substitutes": []
+    },
+    {
+      "canonical": "SQL",
+      "aliases": [],
+      "substitutes": [
+        "PostgreSQL"
+      ]
+    }
+  ],
+  "nice_to_have_skills": [
+    {
+      "canonical": "Kafka",
+      "aliases": [],
+      "substitutes": []
+    },
+    {
+      "canonical": "Docker",
+      "aliases": [],
+      "substitutes": []
+    },
+    {
+      "canonical": "Kubernetes",
+      "aliases": [],
+      "substitutes": []
+    },
+    {
+      "canonical": "JUnit",
+      "aliases": [],
+      "substitutes": []
+    }
+  ],
+  "hard_filter_rules": {
+    "min_years_experience": 3.0,
+    "degree_requirement": null,
+    "require_work_authorization": false
+  },
+  "jd_category_queries": {
+    "SKILLS": "Java, Spring Boot, REST APIs, SQL or PostgreSQL",
+    "EXPERIENCE": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected. Deliver secure account and payment APIs with explicit transaction boundaries. Integrate event consumers with replay, retry and duplicate protection. Review database access plans, service metrics and operational runbooks.",
+    "PROJECTS": "No explicit requirement",
+    "EDUCATION": "No explicit requirement"
+  },
+  "relevance_contract": {
+    "version": "relevance-v1",
+    "targets": [
+      {
+        "target_id": "required_0",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "Java",
+        "source_quote": "Java",
+        "importance": 5.0,
+        "treatment": "requirement",
+        "evidence_terms": [
+          [
+            "Java"
+          ]
+        ]
+      },
+      {
+        "target_id": "required_1",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "Spring Boot",
+        "source_quote": "Spring Boot",
+        "importance": 5.0,
+        "treatment": "requirement",
+        "evidence_terms": [
+          [
+            "Spring Boot"
+          ]
+        ]
+      },
+      {
+        "target_id": "required_2",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "REST APIs",
+        "source_quote": "REST APIs",
+        "importance": 5.0,
+        "treatment": "requirement",
+        "evidence_terms": [
+          [
+            "REST APIs"
+          ]
+        ]
+      },
+      {
+        "target_id": "required_3",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "SQL or PostgreSQL",
+        "source_quote": "SQL or PostgreSQL",
+        "importance": 5.0,
+        "treatment": "requirement",
+        "evidence_terms": [
+          [
+            "SQL",
+            "PostgreSQL"
+          ]
+        ]
+      },
+      {
+        "target_id": "preferred_0",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "Kafka",
+        "source_quote": "Kafka",
+        "importance": 1.0,
+        "treatment": "preference",
+        "evidence_terms": [
+          [
+            "Kafka"
+          ]
+        ]
+      },
+      {
+        "target_id": "preferred_1",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "Docker",
+        "source_quote": "Docker",
+        "importance": 1.0,
+        "treatment": "preference",
+        "evidence_terms": [
+          [
+            "Docker"
+          ]
+        ]
+      },
+      {
+        "target_id": "preferred_2",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "Kubernetes",
+        "source_quote": "Kubernetes",
+        "importance": 1.0,
+        "treatment": "preference",
+        "evidence_terms": [
+          [
+            "Kubernetes"
+          ]
+        ]
+      },
+      {
+        "target_id": "preferred_3",
+        "category": "SKILLS",
+        "kind": "skill",
+        "text": "JUnit",
+        "source_quote": "JUnit",
+        "importance": 1.0,
+        "treatment": "preference",
+        "evidence_terms": [
+          [
+            "JUnit"
+          ]
+        ]
+      },
+      {
+        "target_id": "resp_deliver_apis",
+        "category": "EXPERIENCE",
+        "kind": "responsibility",
+        "text": "Deliver secure account and payment APIs with explicit transaction boundaries.",
+        "source_quote": "Deliver secure account and payment APIs with explicit transaction boundaries.",
+        "importance": 5.0,
+        "treatment": "requirement",
+        "evidence_terms": [
+          [
+            "payment API",
+            "account API",
+            "transaction boundaries"
+          ]
+        ]
+      },
+      {
+        "target_id": "resp_integrate_events",
+        "category": "EXPERIENCE",
+        "kind": "responsibility",
+        "text": "Integrate event consumers with replay, retry and duplicate protection.",
+        "source_quote": "Integrate event consumers with replay, retry and duplicate protection.",
+        "importance": 4.0,
+        "treatment": "requirement",
+        "evidence_terms": [
+          [
+            "event consumer",
+            "replay",
+            "retry",
+            "duplicate protection"
+          ]
+        ]
+      },
+      {
+        "target_id": "resp_review_db",
+        "category": "EXPERIENCE",
+        "kind": "responsibility",
+        "text": "Review database access plans, service metrics and operational runbooks.",
+        "source_quote": "Review database access plans, service metrics and operational runbooks.",
+        "importance": 3.0,
+        "treatment": "requirement",
+        "evidence_terms": [
+          [
+            "database access",
+            "service metrics",
+            "operational runbooks"
+          ]
+        ]
+      },
+      {
+        "target_id": "domain_digital_banking",
+        "category": "SKILLS",
+        "kind": "domain",
+        "text": "Cross\u2011functional digital banking team delivering business\u2011critical services.",
+        "source_quote": "Join a cross-functional digital banking team supporting business-critical services.",
+        "importance": 4.0,
+        "treatment": "preference",
+        "evidence_terms": [
+          [
+            "digital banking",
+            "cross\u2011functional team",
+            "business\u2011critical services"
+          ]
+        ]
+      }
+    ],
+    "minimum_coverage": 0.0
+  },
+  "uncertainties": [
+    "Degree requirement ambiguous (degree or equivalent, no filter)",
+    "Work authorization not specified"
+  ]
+}

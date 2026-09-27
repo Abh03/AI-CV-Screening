@@ -16,6 +16,7 @@ IDENTITY_ALIASES = (
     (".NET", "dotnet", "dot net"),
     ("Amazon Web Services", "AWS"),
     ("Google Cloud Platform", "GCP"),
+    ("REST API", "REST APIs", "RESTful API", "RESTful APIs"),
 )
 
 

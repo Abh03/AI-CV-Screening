@@ -19,8 +19,7 @@ import httpx
 
 TERMINAL = {"EXTRACTION_FAILED", "FILTER_REJECTED", "PROCESSING_FAILED",
             "CUTOFF_EXCLUDED", "SUCCESS", "REVIEW_REQUIRED", "EVALUATION_FAILED"}
-SELECTED = {"SHORTLISTED", "STAGE3_RUNNING", "SUCCESS", "REVIEW_REQUIRED",
-            "EVALUATION_FAILED"}
+SELECTED = {"SHORTLISTED", "STAGE3_RUNNING", "SUCCESS", "EVALUATION_FAILED"}
 QUEUES = ("ocr", "retrieval", "evaluation", "control", "screening")
 
 
@@ -29,11 +28,11 @@ def reconcile(status, jds):
     cvs = counts["cvs"]
     expected = cvs * counts["jds"]
     pairs = counts["pairs"]
-    selected = sum(pairs.get(state, 0) for state in SELECTED)
+    selected = counts.get("selected_pairs", sum(pairs.get(state, 0) for state in SELECTED))
     jd_checks = []
     for jd in jds["jds"]:
         states = jd["counts"]
-        jd_selected = sum(states.get(state, 0) for state in SELECTED)
+        jd_selected = jd.get("selected_pairs", sum(states.get(state, 0) for state in SELECTED))
         jd_checks.append({"jd_key": jd["jd_key"], "status": jd["status"],
                           "pairs": sum(states.values()), "selected": jd_selected,
                           "cap": jd["stage3_cap"],

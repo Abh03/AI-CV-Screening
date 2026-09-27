@@ -1,0 +1,139 @@
+﻿diff --git a/app/api/jds.py b/app/api/jds.py
+index d5794e0..db3dc44 100644
+--- a/app/api/jds.py
++++ b/app/api/jds.py
+@@ -87,7 +87,7 @@ async def upload_jd(request: Request, retry: bool = False,
+                         "prompt_version": "jd-prompt-v1", "provider": settings.LLM_PROVIDER,
+                         "model": settings.GROQ_MODEL if settings.LLM_PROVIDER == "groq" else
+                                  settings.OPENROUTER_MODEL if settings.LLM_PROVIDER == "openrouter" else
+-                                 "gemini-3.6-flash" if settings.LLM_PROVIDER == "gemini" else "mock"})
++                                 settings.GEMINI_MODEL if settings.LLM_PROVIDER == "gemini" else "mock"})
+         db.add(draft)
+     attempt_token = uuid4().hex
+     draft.provenance = {**draft.provenance, "processing_started_at": datetime.now(timezone.utc).isoformat(),
+diff --git a/app/config.py b/app/config.py
+index a7d887b..03dde92 100644
+--- a/app/config.py
++++ b/app/config.py
+@@ -69,6 +69,7 @@ class Settings(BaseSettings):
+     OPENAI_API_KEY: Optional[str] = None
+     ANTHROPIC_API_KEY: Optional[str] = None
+     GROQ_API_KEY: Optional[str] = None
++    GROQ_MAX_COMPLETION_TOKENS: int = Field(default=4096, ge=256, le=32768)
+     OPENROUTER_API_KEY: Optional[str] = None
+ 
+     def validate_production(self):
+diff --git a/app/jd_intake.py b/app/jd_intake.py
+index 92e4beb..bce4377 100644
+--- a/app/jd_intake.py
++++ b/app/jd_intake.py
+@@ -133,7 +133,7 @@ async def extract_profile(text: str) -> ExtractedJD:
+         if client.provider == "gemini":
+             from google.genai import types
+             response = await asyncio.wait_for(client.gemini_client.aio.models.generate_content(
+-                model="gemini-3.6-flash", contents=prompt,
++                model=settings.GEMINI_MODEL, contents=prompt,
+                 config=types.GenerateContentConfig(system_instruction=SYSTEM,
+                     response_mime_type="application/json", response_json_schema=schema,
+                     max_output_tokens=8192, temperature=0)), timeout=settings.PROVIDER_TIMEOUT_SECONDS)
+diff --git a/app/main.py b/app/main.py
+index d58feb2..c024996 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -86,7 +86,7 @@ async def readiness_check():
+         async with engine.connect() as connection:
+             await connection.execute(text("SELECT 1"))
+             revision = (await connection.execute(text("SELECT version_num FROM alembic_version"))).scalar_one()
+-            if revision != "d91a2b3c4e50":
++            if revision != "a27c9d410e62":
+                 raise RuntimeError("migration pending")
+         redis = Redis.from_url(settings.REDIS_URL, socket_connect_timeout=2, socket_timeout=2)
+         try:
+diff --git a/app/run_audit.py b/app/run_audit.py
+index 43a46c5..8fe23c5 100644
+--- a/app/run_audit.py
++++ b/app/run_audit.py
+@@ -30,7 +30,7 @@ def canonical_hash(value):
+ 
+ def policy_snapshot(cutoff):
+     provider = settings.LLM_PROVIDER.lower()
+-    model = {"gemini": "gemini-3.6-flash", "groq": settings.GROQ_MODEL,
++    model = {"gemini": settings.GEMINI_MODEL, "groq": settings.GROQ_MODEL,
+              "openrouter": settings.OPENROUTER_MODEL, "mock": "mock"}.get(provider)
+     return {"orchestration_version": RUN_POLICY_VERSION, "scoring_policy_version": SCORING_POLICY_VERSION,
+             "stage1_policy_version": STAGE1_POLICY_VERSION, "category_policy_version": "category-v1",
+diff --git a/app/stage1_rules/jd_matcher.py b/app/stage1_rules/jd_matcher.py
+index 7e4e780..dcb182c 100644
+--- a/app/stage1_rules/jd_matcher.py
++++ b/app/stage1_rules/jd_matcher.py
+@@ -16,6 +16,7 @@ IDENTITY_ALIASES = (
+     (".NET", "dotnet", "dot net"),
+     ("Amazon Web Services", "AWS"),
+     ("Google Cloud Platform", "GCP"),
++    ("REST API", "REST APIs", "RESTful API", "RESTful APIs"),
+ )
+ 
+ 
+diff --git a/app/stage3_evaluation/llm_client.py b/app/stage3_evaluation/llm_client.py
+index d537535..d2ce14d 100644
+--- a/app/stage3_evaluation/llm_client.py
++++ b/app/stage3_evaluation/llm_client.py
+@@ -216,12 +216,15 @@ class LLMClientWrapper:
+         }
+         payload = {
+             "model": settings.GROQ_MODEL,
++            "max_completion_tokens": settings.GROQ_MAX_COMPLETION_TOKENS,
+             "messages": [{"role": "system", "content": system_prompt},
+                          {"role": "user", "content": user_prompt}],
+             "temperature": 0.1,
+             "response_format": self._get_structured_response_format(),
+         }
+ 
++        if settings.GROQ_MODEL.startswith("openai/gpt-oss-"):
++            payload["reasoning_effort"] = "low"
+         return await self._execute_openai_compatible_http(url, headers, payload, "Groq", candidate_id,
+                                                           max_provider_attempts)
+ 
+diff --git a/tests/test_provider_deadline.py b/tests/test_provider_deadline.py
+index aef68f0..41172eb 100644
+--- a/tests/test_provider_deadline.py
++++ b/tests/test_provider_deadline.py
+@@ -28,6 +28,20 @@ async def test_total_deadline_cancels_a_request_that_never_finishes(monkeypatch)
+     assert cancelled==[True]
+ 
+ 
++@pytest.mark.asyncio
++async def test_groq_completion_budget_and_reasoning_are_forwarded(monkeypatch):
++    wrapper = LLMClientWrapper()
++    sent = []
++    async def execute(url, headers, payload, *args):
++        sent.append(payload)
++        return {}
++    monkeypatch.setattr(wrapper, '_execute_openai_compatible_http', execute)
++    monkeypatch.setattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
++    await wrapper._call_groq('system', 'synthetic', 'candidate', 1)
++    assert sent[0]['max_completion_tokens'] == settings.GROQ_MAX_COMPLETION_TOKENS
++    assert sent[0]['reasoning_effort'] == 'low'
++
++
+ @pytest.mark.asyncio
+ async def test_openrouter_completion_budget_is_forwarded(monkeypatch):
+     wrapper=LLMClientWrapper()
+diff --git a/tests/test_stage1_exclusions.py b/tests/test_stage1_exclusions.py
+index 938bc1f..e2272c0 100644
+--- a/tests/test_stage1_exclusions.py
++++ b/tests/test_stage1_exclusions.py
+@@ -4,6 +4,13 @@ from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
+ from app.stage1_rules.experience import extract_experience
+ 
+ 
++@pytest.mark.parametrize('term', ['REST API', 'REST APIs', 'RESTful API', 'RESTful APIs'])
++def test_rest_api_identity_variants_satisfy_required_plural(term):
++    from app.stage1_rules.jd_matcher import required_skill_evidence
++    assert required_skill_evidence('Built services using ' + term,
++                                   {'canonical': 'REST APIs'})['match_weight'] == 1
++
++
+ def evaluate(text, skills=None, years=None):
+     return evaluate_stage1_hard_filters(years, text, None, {
+         "require_work_authorization": False, "min_years_experience": 5,

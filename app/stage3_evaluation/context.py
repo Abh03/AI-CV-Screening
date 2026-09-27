@@ -19,8 +19,13 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
     evidence = {category: list(chunks) for category, chunks in
                 payload.get("evidence_by_category", {}).items()}
     used = sum(len(chunk["text"]) for chunks in evidence.values() for chunk in chunks)
-    if used > limit:
-        raise ValueError("Retrieved evidence exceeds context budget")
+    omitted_retrieval = []
+    # Keep complete source chunks; never turn truncation into a fabricated quote.
+    while used > limit:
+        category = max(evidence, key=lambda cat: sum(len(c["text"]) for c in evidence[cat]))
+        removed = evidence[category].pop()
+        omitted_retrieval.append(removed.get("chunk_id", "retrieved:" + stable_identity(removed["text"])))
+        used -= len(removed["text"])
     document_id = "context:" + stable_identity(candidate_id, text)
     headers = list(SECTION_HEADER_PATTERN.finditer(text))
     boundaries = [(0, "UNCLASSIFIED")]
@@ -66,13 +71,14 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
     priority_ids = {passage["chunk_id"] for passage in priority}
     ordered = priority + [passage for passage in ordered if passage["chunk_id"] not in priority_ids]
     included = 0
-    omitted = []
+    omitted = omitted_retrieval
     for passage in ordered:
         source = passage["category"]
         categories = (["EXPERIENCE", "PROJECTS", "SKILLS", "EDUCATION"] if source == "CONTEXT"
                       else ["EXPERIENCE", "PROJECTS", "SKILLS"] if source == "EXPERIENCE"
                       else ["PROJECTS", "EXPERIENCE", "SKILLS"] if source == "PROJECTS" else [source])
-        cost = len(passage["text"]) * len(categories)
+        # The provider prompt shares source text across category citation tags.
+        cost = len(passage["text"])
         if used + cost > limit:
             omitted.append(passage["chunk_id"])
             continue
@@ -81,7 +87,41 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
         used += cost
         included += len(passage["text"])
     return dict(payload, evidence_by_category=evidence, context_metadata={
-        "version": "citable-cv-v1", "source_chars": len(text),
+        "version": "citable-cv-v2", "source_chars": len(text),
+        "budget_basis": "unique_context_and_retrieved_chars",
         "included_context_chars": included, "evidence_chars": used,
         "omitted_passage_ids": omitted, "complete": not omitted,
         "require_claim_support": True})
+
+
+def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=None):
+    """Bound escaped XML too, with the registry built from exactly what is sent."""
+    from app.config import settings
+    from app.stage3_evaluation.evidence import build_evidence_registry
+    from app.stage3_evaluation.prompts import build_stage3_user_prompt
+    limit = settings.STAGE3_PROMPT_MAX_BYTES if max_bytes is None else max_bytes
+    prepared = prepare_evaluation_context(candidate_id, payload)
+    evidence = {cat: list(chunks) for cat, chunks in prepared.get("evidence_by_category", {}).items()}
+    metadata = dict(prepared.get("context_metadata") or {})
+    metadata["omitted_passage_ids"] = list(metadata.get("omitted_passage_ids", []))
+    while True:
+        prepared = dict(prepared, evidence_by_category=evidence, context_metadata=metadata)
+        registry = build_evidence_registry(candidate_id, prepared)
+        prompt = build_stage3_user_prompt(candidate_id, jd_profile, prepared, registry=registry, compact=True)
+        if len(prompt.encode("utf-8")) <= limit:
+            return prepared, registry, prompt
+        choices = [(cat, index, chunk) for cat, chunks in evidence.items()
+                   for index, chunk in enumerate(chunks)]
+        if not choices:
+            raise ValueError("JD and prompt metadata exceed the provider prompt budget")
+        # Retain category coverage and ranked retrieval before extra source context.
+        cat, index, chunk = max(choices, key=lambda item: (
+            len(evidence[item[0]]) > 1,
+            str(item[2].get("document_id", "")).startswith("context:"),
+            len(item[2]["text"])))
+        evidence[cat].pop(index)
+        metadata["complete"] = False
+        metadata["require_claim_support"] = True
+        # Counts stay bounded even for very large legacy snapshots.
+        metadata["prompt_omitted_chunk_count"] = metadata.get("prompt_omitted_chunk_count", 0) + 1
+        metadata["evidence_chars"] = sum(len(c["text"]) for chunks in evidence.values() for c in chunks)

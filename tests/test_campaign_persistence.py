@@ -83,6 +83,15 @@ async def test_multi_jd_pairs_retry_owner_rank_and_extraction_failure(monkeypatc
             assert all(pair.status == "EXTRACTION_FAILED" for pair in records["pairs"]
                        if pair.cv_id == broken.id)
             assert (await campaign_counts(db, campaign_id=campaign.id, owner_id="owner-a"))["terminal_pairs"] == 5
+            assert (await campaign_counts(db, campaign_id=campaign.id, owner_id="owner-a"))["selected_pairs"] == 3
+            review_pair = next(pair for pair in records["pairs"] if pair.status == "PENDING")
+            review_pair.status = "REVIEW_REQUIRED"
+            review_pair.stage3_attempt_count = 0
+            await db.commit()
+            assert (await campaign_counts(db, campaign_id=campaign.id, owner_id="owner-a"))["selected_pairs"] == 3
+            review_pair.stage3_attempt_count = 1
+            await db.commit()
+            assert (await campaign_counts(db, campaign_id=campaign.id, owner_id="owner-a"))["selected_pairs"] == 4
             assert (await jd_counts(db, campaign_id=campaign.id, owner_id="owner-a",
                                     jd_key="engineering"))["terminal_pairs"] == 3
             assert all(row.encrypted_pdf is None for row in (await db.execute(sa.select(CampaignCVModel))).scalars())

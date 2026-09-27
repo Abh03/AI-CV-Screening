@@ -29,6 +29,20 @@ async def test_total_deadline_cancels_a_request_that_never_finishes(monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_groq_completion_budget_and_reasoning_are_forwarded(monkeypatch):
+    wrapper = LLMClientWrapper()
+    sent = []
+    async def execute(url, headers, payload, *args):
+        sent.append(payload)
+        return {}
+    monkeypatch.setattr(wrapper, '_execute_openai_compatible_http', execute)
+    monkeypatch.setattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
+    await wrapper._call_groq('system', 'synthetic', 'candidate', 1)
+    assert sent[0]['max_completion_tokens'] == settings.GROQ_MAX_COMPLETION_TOKENS
+    assert sent[0]['reasoning_effort'] == 'low'
+
+
+@pytest.mark.asyncio
 async def test_openrouter_completion_budget_is_forwarded(monkeypatch):
     wrapper=LLMClientWrapper()
     sent=[]

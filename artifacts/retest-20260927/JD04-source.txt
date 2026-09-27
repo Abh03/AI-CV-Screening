@@ -1,0 +1,29 @@
+Data Engineer
+Technical role | Engineering and delivery
+1
+TEAM AND CONTEXT
+Join a cross-functional logistics team supporting business-critical services. The role includes design reviews,
+delivery and a shared support rotation.
+RESPONSIBILITIES
+Build incremental shipment-event ingestion and curated warehouse tables.
+Implement backfills, source reconciliation and data quality monitoring.
+Tune batch workloads and document lineage, retention and access controls.
+REQUIRED TECHNICAL SKILLS
+Python
+SQL
+Apache Spark or PySpark
+Airflow or ETL
+PREFERRED SKILLS
+Kafka
+AWS
+Azure
+Databricks
+dbt
+EXPERIENCE
+At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is
+expected.
+EDUCATION
+Degree in a relevant technical discipline or equivalent practical experience; no degree filter.
+SELECTION CRITERIA
+Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking
+signals, not mandatory filters.

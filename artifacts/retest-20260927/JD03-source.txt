@@ -1,0 +1,27 @@
+Test Automation Engineer
+Technical role | Engineering and delivery
+1
+TEAM AND CONTEXT
+Join a cross-functional retail fulfilment team supporting business-critical services. The role includes design reviews,
+delivery and a shared support rotation.
+RESPONSIBILITIES
+Develop reliable browser and API regression suites for checkout and fulfilment.
+Design test data, investigate flaky checks and report reproducible defects.
+Integrate smoke packs into CI and assess release risk with product teams.
+REQUIRED TECHNICAL SKILLS
+Selenium or Playwright or Cypress
+API Testing or Postman
+SQL
+JUnit or TestNG or Python or Java
+PREFERRED SKILLS
+Jenkins
+Docker
+Jira
+EXPERIENCE
+At least 2 years of relevant professional experience. Evidence of implementation and operational ownership is
+expected.
+EDUCATION
+Degree in a relevant technical discipline or equivalent practical experience; no degree filter.
+SELECTION CRITERIA
+Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking
+signals, not mandatory filters.

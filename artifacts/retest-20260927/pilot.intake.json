@@ -1,0 +1,153 @@
+{
+  "campaign_id": "9be091e0-b82d-4846-9682-adb98569eca7",
+  "status": "RUNNING",
+  "accepted_count": 36,
+  "rejected_count": 0,
+  "accepted": [
+    {
+      "name": "CV0001.pdf",
+      "candidate_id": "db6aa169-9762-5e19-9388-4b9b50aac193"
+    },
+    {
+      "name": "CV0002.pdf",
+      "candidate_id": "353f4b6d-7b3a-5bb2-8537-8b4ed644db65"
+    },
+    {
+      "name": "CV0003.pdf",
+      "candidate_id": "89543885-7b5a-5dd3-9af7-69bb89ddf102"
+    },
+    {
+      "name": "CV0004.pdf",
+      "candidate_id": "b4b33575-636f-5f28-a382-7a2011b39b66"
+    },
+    {
+      "name": "CV0005.pdf",
+      "candidate_id": "c6f4afb2-fe86-5230-be9e-952aa4138c9c"
+    },
+    {
+      "name": "CV0006.pdf",
+      "candidate_id": "a83dbf82-60cf-52a4-94cb-19279fbe58b1"
+    },
+    {
+      "name": "CV0008.pdf",
+      "candidate_id": "f6049883-f20a-59d6-a328-2bb7b2d584da"
+    },
+    {
+      "name": "CV0009.pdf",
+      "candidate_id": "d6812440-aeae-574d-baf9-823553677076"
+    },
+    {
+      "name": "CV0010.pdf",
+      "candidate_id": "deb6af03-283f-5438-9928-da0451573b5b"
+    },
+    {
+      "name": "CV0016.pdf",
+      "candidate_id": "f79746b5-d678-5ad5-a541-2d2cd887650f"
+    },
+    {
+      "name": "CV0019.pdf",
+      "candidate_id": "d96d204f-01ee-5a8d-85cf-0d050bb9a3b7"
+    },
+    {
+      "name": "CV0024.pdf",
+      "candidate_id": "29de0455-d834-5226-bf75-7e4e11e1b03e"
+    },
+    {
+      "name": "CV0029.pdf",
+      "candidate_id": "400cb7ca-63be-5330-8213-6a2a45fc9e53"
+    },
+    {
+      "name": "CV0031.pdf",
+      "candidate_id": "435db507-185a-588e-b179-110c252eafbc"
+    },
+    {
+      "name": "CV0040.pdf",
+      "candidate_id": "959610d9-b4a4-5510-9064-ea7ae2f45942"
+    },
+    {
+      "name": "CV0044.pdf",
+      "candidate_id": "4f3e8035-5e90-5591-92e7-3016a9c4183f"
+    },
+    {
+      "name": "CV0047.pdf",
+      "candidate_id": "8db266c8-c9b4-5e8d-964e-557d81ae0564"
+    },
+    {
+      "name": "CV0070.pdf",
+      "candidate_id": "82977f3a-a9b6-56a0-bd86-157c45556b2b"
+    },
+    {
+      "name": "CV0074.pdf",
+      "candidate_id": "da07fa8e-109d-5554-9c15-8a40789ec615"
+    },
+    {
+      "name": "CV0099.pdf",
+      "candidate_id": "96a14b76-30ea-5aec-ba1c-39c05a534623"
+    },
+    {
+      "name": "CV0102.pdf",
+      "candidate_id": "f35db990-eef9-512d-9e49-ecbddeb6b5e2"
+    },
+    {
+      "name": "CV0138.pdf",
+      "candidate_id": "bacadb9d-c52d-57dd-9509-ceb5f853cc80"
+    },
+    {
+      "name": "CV0141.pdf",
+      "candidate_id": "d5b92ca2-3bc8-5e80-a43b-955bbe798653"
+    },
+    {
+      "name": "CV0301.pdf",
+      "candidate_id": "dc788819-0ee6-5e83-80bb-8b31d6cb635d"
+    },
+    {
+      "name": "CV0302.pdf",
+      "candidate_id": "e2c603a2-1bd5-5170-ae1d-239e2071239e"
+    },
+    {
+      "name": "CV0303.pdf",
+      "candidate_id": "cc2e3f93-a3f5-5155-baed-74f67f569664"
+    },
+    {
+      "name": "CV0304.pdf",
+      "candidate_id": "3adba5e2-e818-559f-8e07-3c5596c0e6a4"
+    },
+    {
+      "name": "CV0308.pdf",
+      "candidate_id": "35b34698-6311-5d69-8c82-3d83c221737c"
+    },
+    {
+      "name": "CV0526.pdf",
+      "candidate_id": "81fc8fe1-ff7a-5ef3-8c5a-d0312723a987"
+    },
+    {
+      "name": "CV0553.pdf",
+      "candidate_id": "cf6ffe7f-2490-5808-bddf-3a9db794caa7"
+    },
+    {
+      "name": "CV0554.pdf",
+      "candidate_id": "72d96246-c24d-57f9-ae98-ac4011227d32"
+    },
+    {
+      "name": "CV0555.pdf",
+      "candidate_id": "7df8374f-1567-5be6-b257-866d0c479ab8"
+    },
+    {
+      "name": "CV0754.pdf",
+      "candidate_id": "a473fe4e-d510-5105-8fc0-c9e2cf066b3c"
+    },
+    {
+      "name": "CV0755.pdf",
+      "candidate_id": "7abed0f3-5532-5844-a672-d76053d78923"
+    },
+    {
+      "name": "CV0757.pdf",
+      "candidate_id": "881c4c00-4237-5b87-bc2b-fd1a98726673"
+    },
+    {
+      "name": "CV0888.pdf",
+      "candidate_id": "d0f94414-ff66-55b2-a53e-d6fb36cb8a58"
+    }
+  ],
+  "rejected": []
+}

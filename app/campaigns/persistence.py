@@ -249,7 +249,8 @@ async def campaign_counts(db, *, campaign_id: str, owner_id: str):
     counts = dict(rows)
     if sum(counts.values()) != jd_count * cv_count:
         raise RuntimeError("Campaign pair accounting is incomplete")
-    return {"jds": jd_count, "cvs": cv_count, "pairs": counts,
+    selected = await selected_pair_count(db, CampaignPairModel.campaign_id == campaign_id)
+    return {"jds": jd_count, "cvs": cv_count, "pairs": counts, "selected_pairs": selected,
             "terminal_pairs": sum(count for status, count in rows if status in TERMINAL_PAIR_STATUSES)}
 
 
@@ -265,5 +266,14 @@ async def jd_counts(db, *, campaign_id: str, owner_id: str, jd_key: str):
     counts = dict(rows)
     if sum(counts.values()) != cv_count:
         raise RuntimeError("JD pair accounting is incomplete")
-    return {"cvs": cv_count, "pairs": counts,
+    selected = await selected_pair_count(db, CampaignPairModel.jd_id == jd.id)
+    return {"cvs": cv_count, "pairs": counts, "selected_pairs": selected,
             "terminal_pairs": sum(count for status, count in rows if status in TERMINAL_PAIR_STATUSES)}
+
+
+async def selected_pair_count(db, scope):
+    """Stage 2 reviews never entered the LLM shortlist."""
+    from sqlalchemy import or_
+    return (await db.execute(select(func.count()).select_from(CampaignPairModel).where(
+        scope, or_(CampaignPairModel.stage3_attempt_count > 0,
+                   CampaignPairModel.status.in_(("SHORTLISTED", "STAGE3_RUNNING", "SUCCESS")))))).scalar_one()

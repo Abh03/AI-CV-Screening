@@ -86,7 +86,7 @@ async def readiness_check():
         async with engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
             revision = (await connection.execute(text("SELECT version_num FROM alembic_version"))).scalar_one()
-            if revision != "d91a2b3c4e50":
+            if revision != "a27c9d410e62":
                 raise RuntimeError("migration pending")
         redis = Redis.from_url(settings.REDIS_URL, socket_connect_timeout=2, socket_timeout=2)
         try:

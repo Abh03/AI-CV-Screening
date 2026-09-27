@@ -1,0 +1,260 @@
+{
+  "approved_jd_id": "d859bb02fb754dda922d4cc6de1fd4a4",
+  "profile": {
+    "job_id": "d859bb02fb754dda922d4cc6de1fd4a4",
+    "title": "Test Automation Engineer",
+    "jd_category_queries": {
+      "SKILLS": "Selenium or Playwright or Cypress, API Testing or Postman, SQL, JUnit or TestNG or Python or Java",
+      "EXPERIENCE": "At least 2 years of relevant professional experience. Evidence of implementation and operational ownership is expected. Develop reliable browser and API regression suites for checkout and fulfilment. Design test data, investigate flaky checks and report reproducible defects. Integrate smoke packs into CI and assess release risk with product teams.",
+      "PROJECTS": "No explicit requirement",
+      "EDUCATION": "No explicit requirement"
+    },
+    "relevance_contract": {
+      "version": "relevance-v1",
+      "targets": [
+        {
+          "target_id": "required_0",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Selenium or Playwright or Cypress",
+          "source_quote": "Selenium or Playwright or Cypress",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "Selenium",
+              "Playwright",
+              "Cypress"
+            ]
+          ]
+        },
+        {
+          "target_id": "required_1",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "API Testing or Postman",
+          "source_quote": "API Testing or Postman",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "API Testing",
+              "Postman"
+            ]
+          ]
+        },
+        {
+          "target_id": "required_2",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "SQL",
+          "source_quote": "SQL",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "SQL"
+            ]
+          ]
+        },
+        {
+          "target_id": "required_3",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "JUnit or TestNG or Python or Java",
+          "source_quote": "JUnit or TestNG or Python or Java",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "JUnit",
+              "TestNG",
+              "Python",
+              "Java"
+            ]
+          ]
+        },
+        {
+          "target_id": "preferred_0",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Jenkins",
+          "source_quote": "Jenkins",
+          "importance": 1.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Jenkins"
+            ]
+          ]
+        },
+        {
+          "target_id": "preferred_1",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Docker",
+          "source_quote": "Docker",
+          "importance": 1.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Docker"
+            ]
+          ]
+        },
+        {
+          "target_id": "preferred_2",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Jira",
+          "source_quote": "Jira",
+          "importance": 1.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "Jira"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_regression_suites",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Develop reliable browser and API regression test suites for checkout and fulfilment.",
+          "source_quote": "Develop reliable browser and API regression suites for checkout and fulfilment.",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "regression test suite",
+              "browser"
+            ],
+            [
+              "API"
+            ],
+            [
+              "checkout"
+            ],
+            [
+              "fulfilment"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_test_data",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Design test data, troubleshoot flaky tests, and report reproducible defects.",
+          "source_quote": "Design test data, investigate flaky checks and report reproducible defects.",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "test data"
+            ],
+            [
+              "flaky tests"
+            ],
+            [
+              "defect reporting"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_ci_smoke",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Integrate smoke test packs into CI pipelines and assess release risk with product teams.",
+          "source_quote": "Integrate smoke packs into CI and assess release risk with product teams.",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "smoke tests"
+            ],
+            [
+              "CI"
+            ],
+            [
+              "release risk"
+            ],
+            [
+              "product teams"
+            ]
+          ]
+        },
+        {
+          "target_id": "domain_retail_fulfilment",
+          "category": "PROJECTS",
+          "kind": "domain",
+          "text": "Work within a cross\u2011functional retail fulfilment team supporting business\u2011critical services.",
+          "source_quote": "Join a cross-functional retail fulfilment team supporting business-critical services.",
+          "importance": 3.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "retail fulfilment"
+            ],
+            [
+              "business\u2011critical services"
+            ]
+          ]
+        }
+      ],
+      "minimum_coverage": 0.0
+    },
+    "hard_filter_rules": {
+      "min_years_experience": 2.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "must_have_skills": [
+      {
+        "canonical": "Selenium",
+        "aliases": [],
+        "substitutes": [
+          "Playwright",
+          "Cypress"
+        ]
+      },
+      {
+        "canonical": "API Testing",
+        "aliases": [],
+        "substitutes": [
+          "Postman"
+        ]
+      },
+      {
+        "canonical": "SQL",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "JUnit",
+        "aliases": [],
+        "substitutes": [
+          "TestNG",
+          "Python",
+          "Java"
+        ]
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Jenkins",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Docker",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Jira",
+        "aliases": [],
+        "substitutes": []
+      }
+    ]
+  }
+}

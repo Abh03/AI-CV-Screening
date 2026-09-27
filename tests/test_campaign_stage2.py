@@ -48,7 +48,7 @@ async def test_global_cutoff_waits_for_every_pair_and_is_idempotent(monkeypatch)
                                else "STAGE2_READY")
                 pair.stage1_decision = "REVIEW" if candidate == "c" else "PASS"
                 if pair.status == "STAGE2_READY":
-                    pair.result_snapshot = {"stage2_evidence": {"scoring_version": "stage2-coverage-v1", "shortlist_eligible": True}}
+                    pair.result_snapshot = {"stage2_evidence": {"scoring_version": "stage2-coverage-v2", "shortlist_eligible": True}}
                     pair.stage2_score = {"a": 0.8, "b": 0.9, "c": 0.9, "d": 0.1}[candidate]
                 else:
                     pair.stage2_score = 999.0
@@ -164,7 +164,7 @@ async def test_default_cap_applies_to_entire_jd_pool(count, monkeypatch):
             for pair, candidate in rows:
                 pair.status = "STAGE2_READY"
                 pair.stage1_decision = "REVIEW"
-                pair.result_snapshot = {"stage2_evidence": {"scoring_version": "stage2-coverage-v1", "shortlist_eligible": True}}
+                pair.result_snapshot = {"stage2_evidence": {"scoring_version": "stage2-coverage-v2", "shortlist_eligible": True}}
                 pair.stage2_score = 0.5
             await db.commit()
             assert len(await finalize_ready_jds(db, campaign.id)) == 1

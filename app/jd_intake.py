@@ -133,7 +133,7 @@ async def extract_profile(text: str) -> ExtractedJD:
         if client.provider == "gemini":
             from google.genai import types
             response = await asyncio.wait_for(client.gemini_client.aio.models.generate_content(
-                model="gemini-3.6-flash", contents=prompt,
+                model=settings.GEMINI_MODEL, contents=prompt,
                 config=types.GenerateContentConfig(system_instruction=SYSTEM,
                     response_mime_type="application/json", response_json_schema=schema,
                     max_output_tokens=8192, temperature=0)), timeout=settings.PROVIDER_TIMEOUT_SECONDS)

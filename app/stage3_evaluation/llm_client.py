@@ -216,12 +216,15 @@ class LLMClientWrapper:
         }
         payload = {
             "model": settings.GROQ_MODEL,
+            "max_completion_tokens": settings.GROQ_MAX_COMPLETION_TOKENS,
             "messages": [{"role": "system", "content": system_prompt},
                          {"role": "user", "content": user_prompt}],
             "temperature": 0.1,
             "response_format": self._get_structured_response_format(),
         }
 
+        if settings.GROQ_MODEL.startswith("openai/gpt-oss-"):
+            payload["reasoning_effort"] = "low"
         return await self._execute_openai_compatible_http(url, headers, payload, "Groq", candidate_id,
                                                           max_provider_attempts)
 
@@ -397,10 +400,8 @@ async def evaluate_single_candidate_async(
     if is_mock and settings.ENVIRONMENT.lower() not in {"development", "test", "testing"}:
         return failed_evaluation(candidate_id, "MOCK_NOT_ALLOWED", "Mock evaluation is disabled in this environment.", is_mock=True)
     try:
-        from app.stage3_evaluation.context import prepare_evaluation_context
-        candidate_payload = prepare_evaluation_context(candidate_id, candidate_payload)
-        registry = build_evidence_registry(candidate_id, candidate_payload)
-        user_prompt = build_stage3_user_prompt(candidate_id, jd_profile, candidate_payload, registry=registry)
+        from app.stage3_evaluation.context import bounded_evaluation_prompt
+        candidate_payload, registry, user_prompt = bounded_evaluation_prompt(candidate_id, jd_profile, candidate_payload)
         jd_text = "\n".join([jd_profile.get("title", ""), *jd_profile.get("jd_category_queries", {}).values()])
         injection_signals = ["JD_INJECTION_SIGNAL"] if scan_for_injection_anomalies(jd_text)["is_flagged"] else []
         if scan_for_injection_anomalies(candidate_id)["is_flagged"]:
@@ -430,6 +431,17 @@ async def evaluate_single_candidate_async(
         except (json.JSONDecodeError, ValidationError) as exc:
             if attempt == max_retries:
                 return failed_evaluation(candidate_id, "INVALID_LLM_OUTPUT", "Evaluation failed: invalid provider response.", is_mock=is_mock)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 413 and attempt < max_retries:
+                try:
+                    candidate_payload, registry, user_prompt = bounded_evaluation_prompt(
+                        candidate_id, jd_profile, candidate_payload,
+                        max_bytes=max(3000, len(user_prompt.encode("utf-8")) // 2))
+                except (ValueError, TypeError, AttributeError):
+                    return failed_evaluation(candidate_id, "PROVIDER_CONTEXT_TOO_LARGE", "Evaluation context exceeds provider capacity.", is_mock=is_mock)
+                continue
+            return failed_evaluation(candidate_id, "PROVIDER_CONTEXT_TOO_LARGE" if exc.response.status_code == 413 else "PROVIDER_ERROR",
+                                     "Evaluation failed: provider request could not complete.", is_mock=is_mock)
         except ProviderTransientFailure:
             if raise_rate_limits:
                 raise

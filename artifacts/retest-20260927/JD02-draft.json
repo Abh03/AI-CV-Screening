@@ -1,0 +1,540 @@
+{
+  "draft_id": "1b74e352a0f1498298565d336dbd48a8",
+  "status": "REVIEW",
+  "pages": [
+    {
+      "page_number": 1,
+      "ocr_used": false,
+      "blocks": [
+        {
+          "block_number": 0,
+          "text": "C# / .NET Backend Engineer",
+          "bbox": [
+            42.0,
+            40.66999816894531,
+            296.4669494628906,
+            66.83300018310547
+          ]
+        },
+        {
+          "block_number": 1,
+          "text": "Technical role | Engineering and delivery",
+          "bbox": [
+            42.0,
+            68.4000015258789,
+            186.35997009277344,
+            79.39199829101562
+          ]
+        },
+        {
+          "block_number": 2,
+          "text": "TEAM AND CONTEXT",
+          "bbox": [
+            42.0,
+            115.16000366210938,
+            165.99600219726562,
+            131.6840057373047
+          ]
+        },
+        {
+          "block_number": 3,
+          "text": "Join a cross-functional insurance claims team supporting business-critical services. The role includes design\nreviews, delivery and a shared support rotation.",
+          "bbox": [
+            42.0,
+            138.25,
+            520.4898681640625,
+            165.99000549316406
+          ]
+        },
+        {
+          "block_number": 4,
+          "text": "RESPONSIBILITIES",
+          "bbox": [
+            42.0,
+            176.16000366210938,
+            153.36000061035156,
+            192.6840057373047
+          ]
+        },
+        {
+          "block_number": 5,
+          "text": "Build claims workflow APIs and background processing services.",
+          "bbox": [
+            42.0,
+            199.25,
+            328.75994873046875,
+            212.99000549316406
+          ]
+        },
+        {
+          "block_number": 6,
+          "text": "Maintain database migrations, audit records and access controls.",
+          "bbox": [
+            42.0,
+            218.25,
+            329.8999328613281,
+            231.99000549316406
+          ]
+        },
+        {
+          "block_number": 7,
+          "text": "Support staged cloud releases and diagnose production incidents.",
+          "bbox": [
+            42.0,
+            237.25,
+            334.37994384765625,
+            250.99000549316406
+          ]
+        },
+        {
+          "block_number": 8,
+          "text": "REQUIRED TECHNICAL SKILLS",
+          "bbox": [
+            42.0,
+            261.1600036621094,
+            224.00401306152344,
+            277.6839904785156
+          ]
+        },
+        {
+          "block_number": 9,
+          "text": "C#",
+          "bbox": [
+            42.0,
+            284.25,
+            54.78000259399414,
+            297.989990234375
+          ]
+        },
+        {
+          "block_number": 10,
+          "text": ".NET or ASP.NET Core",
+          "bbox": [
+            42.0,
+            303.25,
+            146.47000122070312,
+            316.989990234375
+          ]
+        },
+        {
+          "block_number": 11,
+          "text": "Web API",
+          "bbox": [
+            42.0,
+            322.2499694824219,
+            81.46000671386719,
+            335.9899597167969
+          ]
+        },
+        {
+          "block_number": 12,
+          "text": "SQL Server or Entity Framework",
+          "bbox": [
+            42.0,
+            341.2499694824219,
+            186.47999572753906,
+            354.9899597167969
+          ]
+        },
+        {
+          "block_number": 13,
+          "text": "PREFERRED SKILLS",
+          "bbox": [
+            42.0,
+            365.15997314453125,
+            162.01199340820312,
+            381.6839599609375
+          ]
+        },
+        {
+          "block_number": 14,
+          "text": "Azure",
+          "bbox": [
+            42.0,
+            388.2499694824219,
+            68.1199951171875,
+            401.9899597167969
+          ]
+        },
+        {
+          "block_number": 15,
+          "text": "Docker",
+          "bbox": [
+            42.0,
+            407.2499694824219,
+            73.66999816894531,
+            420.9899597167969
+          ]
+        },
+        {
+          "block_number": 16,
+          "text": "Git",
+          "bbox": [
+            42.0,
+            426.2499694824219,
+            54.779998779296875,
+            439.9899597167969
+          ]
+        },
+        {
+          "block_number": 17,
+          "text": "EXPERIENCE",
+          "bbox": [
+            42.0,
+            450.15997314453125,
+            119.35200500488281,
+            466.6839599609375
+          ]
+        },
+        {
+          "block_number": 18,
+          "text": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is\nexpected.",
+          "bbox": [
+            42.0,
+            473.2499694824219,
+            527.2198486328125,
+            500.9899597167969
+          ]
+        },
+        {
+          "block_number": 19,
+          "text": "EDUCATION",
+          "bbox": [
+            42.0,
+            511.1600036621094,
+            113.3280029296875,
+            527.6840209960938
+          ]
+        },
+        {
+          "block_number": 20,
+          "text": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+          "bbox": [
+            42.0,
+            534.25,
+            444.9498596191406,
+            547.989990234375
+          ]
+        },
+        {
+          "block_number": 21,
+          "text": "SELECTION CRITERIA",
+          "bbox": [
+            42.0,
+            558.1599731445312,
+            170.67599487304688,
+            574.6840209960938
+          ]
+        },
+        {
+          "block_number": 22,
+          "text": "Each required group needs at least one listed alternative. Preferred tools and domain experience are ranking\nsignals, not mandatory filters.",
+          "bbox": [
+            42.0,
+            581.25,
+            522.789794921875,
+            608.989990234375
+          ]
+        },
+        {
+          "block_number": 23,
+          "text": "1",
+          "bbox": [
+            548.8275756835938,
+            812.289794921875,
+            553.2755737304688,
+            823.2817993164062
+          ]
+        }
+      ]
+    }
+  ],
+  "profile": {
+    "schema_version": "jd-v1",
+    "title": "C# / .NET Backend Engineer",
+    "must_have_skills": [
+      {
+        "canonical": "C#",
+        "aliases": [
+          "CSharp"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": ".NET",
+        "aliases": [
+          ".NET Core",
+          "dotnet"
+        ],
+        "substitutes": [
+          "ASP.NET Core"
+        ]
+      },
+      {
+        "canonical": "Web API",
+        "aliases": [
+          "REST API"
+        ],
+        "substitutes": []
+      },
+      {
+        "canonical": "SQL Server",
+        "aliases": [
+          "Microsoft SQL Server"
+        ],
+        "substitutes": [
+          "Entity Framework"
+        ]
+      }
+    ],
+    "nice_to_have_skills": [
+      {
+        "canonical": "Azure",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Docker",
+        "aliases": [],
+        "substitutes": []
+      },
+      {
+        "canonical": "Git",
+        "aliases": [],
+        "substitutes": []
+      }
+    ],
+    "hard_filter_rules": {
+      "min_years_experience": 3.0,
+      "degree_requirement": null,
+      "require_work_authorization": false
+    },
+    "jd_category_queries": {
+      "SKILLS": "C#, .NET/ASP.NET Core, Web API, SQL Server/Entity Framework, Azure, Docker, Git",
+      "EXPERIENCE": "At least 3 years of relevant professional experience with implementation and operational ownership.",
+      "PROJECTS": "No explicit requirement",
+      "EDUCATION": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter."
+    },
+    "relevance_contract": {
+      "version": "relevance-v1",
+      "targets": [
+        {
+          "target_id": "skill_csharp",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Proficient in C# programming language",
+          "source_quote": "C#",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "C#"
+            ],
+            [
+              "CSharp"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_dotnet",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Experience with .NET/.NET Core or ASP.NET Core frameworks",
+          "source_quote": ".NET or ASP.NET Core",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              ".NET"
+            ],
+            [
+              ".NET Core"
+            ],
+            [
+              "ASP.NET Core"
+            ],
+            [
+              "ASP.NET"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_webapi",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Develop Web API services",
+          "source_quote": "Web API",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "Web API"
+            ],
+            [
+              "REST API"
+            ]
+          ]
+        },
+        {
+          "target_id": "skill_dataaccess",
+          "category": "SKILLS",
+          "kind": "skill",
+          "text": "Experience with SQL Server or Entity Framework for data access",
+          "source_quote": "SQL Server or Entity Framework",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "SQL Server"
+            ],
+            [
+              "Microsoft SQL Server"
+            ],
+            [
+              "Entity Framework"
+            ],
+            [
+              "EF"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_build_claims",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Build claims workflow APIs and background processing services",
+          "source_quote": "Build claims workflow APIs and background processing services.",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "claims workflow"
+            ],
+            [
+              "API"
+            ],
+            [
+              "background processing"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_maintain_db",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Maintain database migrations, audit records and access controls",
+          "source_quote": "Maintain database migrations, audit records and access controls.",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "database migrations"
+            ],
+            [
+              "audit records"
+            ],
+            [
+              "access controls"
+            ]
+          ]
+        },
+        {
+          "target_id": "resp_cloud_release",
+          "category": "EXPERIENCE",
+          "kind": "responsibility",
+          "text": "Support staged cloud releases and diagnose production incidents",
+          "source_quote": "Support staged cloud releases and diagnose production incidents.",
+          "importance": 4.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "cloud releases"
+            ],
+            [
+              "production incidents"
+            ],
+            [
+              "diagnose"
+            ]
+          ]
+        },
+        {
+          "target_id": "domain_insurance",
+          "category": "SKILLS",
+          "kind": "domain",
+          "text": "Insurance claims domain",
+          "source_quote": "insurance claims team",
+          "importance": 3.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "insurance"
+            ],
+            [
+              "claims"
+            ]
+          ]
+        },
+        {
+          "target_id": "edu_degree",
+          "category": "EDUCATION",
+          "kind": "education",
+          "text": "Degree in a relevant technical discipline or equivalent practical experience",
+          "source_quote": "Degree in a relevant technical discipline or equivalent practical experience; no degree filter.",
+          "importance": 2.0,
+          "treatment": "preference",
+          "evidence_terms": [
+            [
+              "degree"
+            ],
+            [
+              "technical discipline"
+            ],
+            [
+              "practical experience"
+            ]
+          ]
+        },
+        {
+          "target_id": "exp_years",
+          "category": "EXPERIENCE",
+          "kind": "experience",
+          "text": "At least 3 years of relevant professional experience with implementation and operational ownership",
+          "source_quote": "At least 3 years of relevant professional experience. Evidence of implementation and operational ownership is expected.",
+          "importance": 5.0,
+          "treatment": "requirement",
+          "evidence_terms": [
+            [
+              "3 years"
+            ],
+            [
+              "professional experience"
+            ],
+            [
+              "implementation"
+            ],
+            [
+              "operational ownership"
+            ]
+          ]
+        }
+      ],
+      "minimum_coverage": 0.0
+    },
+    "uncertainties": [
+      "Degree requirement is optional, treated as preference"
+    ]
+  },
+  "error_code": null,
+  "expires_at": "2026-10-04T05:50:53.757765+00:00",
+  "provenance": {
+    "pdf_hash": "91b2c6c19eebc00b3d745f9c2e727ee03e08c6462228a41bbd34952216ff7edd",
+    "schema_version": "jd-v1",
+    "extraction_version": "jd-pdf-v1",
+    "prompt_version": "jd-prompt-v1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "processing_started_at": "2026-09-27T05:50:53.757912+00:00",
+    "attempt_token": "dc52e75fadcb419e838e52880d8eced2"
+  }
+}
