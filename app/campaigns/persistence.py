@@ -33,7 +33,7 @@ async def get_campaign(db, campaign_id: str, owner_id: str):
 
 async def reserve_campaign(db, *, owner_id: str, request_hash: str, job_snapshots: list[dict],
                            policy_snapshots: list[dict], idempotency_key: str | None = None,
-                           stage3_cap: int = 15):
+                           stage3_cap: int = 15, name: str | None = None):
     """Reserve an immutable JD set. Returns (created, campaign)."""
     if not job_snapshots or len(job_snapshots) != len(policy_snapshots):
         raise ValueError("A campaign needs at least one JD and one policy per JD")
@@ -49,7 +49,7 @@ async def reserve_campaign(db, *, owner_id: str, request_hash: str, job_snapshot
                 raise ValueError("Idempotency key belongs to a different campaign request")
             return False, existing
     campaign = CampaignModel(id=str(uuid4()), owner_id=owner_id, request_hash=request_hash,
-                             idempotency_key=idempotency_key, status="INTAKE")
+                             idempotency_key=idempotency_key, status="INTAKE", name=name)
     db.add(campaign)
     try:
         await db.flush()

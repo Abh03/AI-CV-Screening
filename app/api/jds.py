@@ -128,25 +128,30 @@ async def get_draft(draft_id: str, db: AsyncSession = Depends(get_db),
 
 @router.post("/drafts/{draft_id}/approve")
 async def approve(draft_id: str, payload: ExtractedJD, db: AsyncSession = Depends(get_db),
-                  principal: Principal = Depends(current_principal)):
+                  principal: Principal = Depends(current_principal), revise: bool = False):
     draft = await owned_draft(db, draft_id, principal, lock=True)
     existing = (await db.execute(select(ApprovedJDModel).where(
-        ApprovedJDModel.draft_id == draft.id))).scalar_one_or_none()
+        ApprovedJDModel.draft_id == draft.id).order_by(ApprovedJDModel.approved_at.desc(), ApprovedJDModel.id.desc()).limit(1))).scalar_one_or_none()
     if existing:
-        if existing.profile != payload.screening_profile(existing.id):
-            raise HTTPException(409, "Approved versions are immutable; upload a new PDF version")
-        return {"approved_jd_id": existing.id, "profile": existing.profile}
-    if draft.status != "REVIEW":
+        if existing.profile == payload.screening_profile(existing.id):
+            return {"approved_jd_id": existing.id, "profile": existing.profile}
+        if not revise:
+            raise HTTPException(409, "Approved versions are immutable; explicitly revise the reviewed JD")
+    if draft.status != "REVIEW" and not (existing and revise):
         raise HTTPException(409, "Only a successfully extracted review draft can be approved")
     source = " ".join(" ".join(block.get("text", "").split())
                        for page in draft.pages for block in page.get("blocks", []))
     for target in payload.relevance_contract.targets:
-        if " ".join(target.source_quote.split()) not in source:
+        quote = " ".join(target.source_quote.split())
+        approved_quotes = {" ".join(t["source_quote"].split()) for t in
+                           (existing.profile.get("relevance_contract") or {}).get("targets", [])} if existing else set()
+        if not any(quote in approved_quote for approved_quote in approved_quotes) and quote not in source:
             raise HTTPException(422, "Relevance target source quote must occur in the extracted JD")
     identifier = uuid4().hex
     approved = ApprovedJDModel(id=identifier, owner_id=principal.id, draft_id=draft.id,
         profile=payload.screening_profile(identifier),
-        provenance={**draft.provenance, "owner_id": principal.id, "version": 1,
+        provenance={**draft.provenance, "owner_id": principal.id, "version": existing.provenance.get("version", 1) + 1 if existing else 1,
+                    "previous_approved_jd_id": existing.id if existing else None,
                     "review_uncertainties": payload.uncertainties}, approved_at=datetime.now(timezone.utc))
     db.add(approved)
     draft.status = "APPROVED"

@@ -35,12 +35,23 @@ describe('JD review and approval', () => {
     jd.controls.relevanceTargets.at(0).controls.text.setValue('Build Python services');
     component.create(); expect(api.create).not.toHaveBeenCalled();
     jd.controls.title.setValue('Edited Engineer'); component.approve(jd);
-    expect(api.approveJd.mock.calls[0]).toEqual(['draft', expect.objectContaining({ title: 'Edited Engineer', must_have_skills: profile.must_have_skills })]);
+    expect(api.approveJd.mock.calls[0]).toEqual(['draft', expect.objectContaining({ title: 'Edited Engineer', must_have_skills: profile.must_have_skills }), false]);
     expect(api.approveJd.mock.calls[0]).toEqual(['draft', expect.objectContaining({ relevance_contract: {
       ...profile.relevance_contract, targets: [{ ...profile.relevance_contract.targets[0], text: 'Build Python services' }]
-    } })]);
+    } }), false]);
     expect(jd.disabled).toBe(true);
     component.create(); expect(api.create.mock.calls[0]).toEqual([expect.objectContaining({ approved_jd_ids: ['approved'] })]);
+  });
+  it('reopens an approval and requires approval of the edited version', () => {
+    const { component, api } = setup(); const jd = component.jds.at(0);
+    component.chooseJd({ target: { files: [new File(['pdf'], 'jd.pdf')] } } as unknown as Event, jd);
+    component.approve(jd); component.editJd(jd);
+    expect(jd.enabled).toBe(true); expect(component.state(jd).approvedId).toBeUndefined();
+    component.create(); expect(api.create).not.toHaveBeenCalled();
+    jd.controls.title.setValue('Revised Engineer'); component.approve(jd);
+    expect(api.approveJd.mock.calls[1]).toEqual(['draft', expect.objectContaining({ title: 'Revised Engineer' }), true]);
+    component.form.controls.name.setValue('September engineers'); component.create();
+    expect(api.create.mock.calls[0]).toEqual([expect.objectContaining({ name: 'September engineers' })]);
   });
   it('blocks campaign creation until every uploaded JD is approved', () => {
     const { component, api } = setup(); const jd = component.jds.at(0);

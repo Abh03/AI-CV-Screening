@@ -35,3 +35,9 @@ export const csrfInterceptor: HttpInterceptorFn = (request, next) => {
   const csrf = document.cookie.split('; ').find(part => part.startsWith('cv_csrf='))?.slice('cv_csrf='.length);
   return next(csrf ? request.clone({ setHeaders: { 'X-CSRF-Token': decodeURIComponent(csrf) } }) : request);
 };
+
+export const requireGuest: CanActivateFn = () => {
+  const session = inject(AuthSession);
+  const router = inject(Router);
+  return session.me().pipe(map(() => router.createUrlTree(['/'])), catchError(() => of(true)));
+};

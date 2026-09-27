@@ -1,10 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterOutlet, Routes } from '@angular/router';
 import { Router } from '@angular/router';
-import { AuthSession, requireSession } from './core/session';
+import { AuthSession, requireSession, requireGuest } from './core/session';
 
 export const routes: Routes = [
-  { path: 'login', title: 'Sign in', loadComponent: () => import('./features/login').then(m => m.LoginComponent) },
+  { path: 'login', title: 'Sign in', canActivate: [requireGuest], loadComponent: () => import('./features/login').then(m => m.LoginComponent) },
   { path: '', title: 'Campaigns', canActivate: [requireSession], loadComponent: () => import('./features/home').then(m => m.HomeComponent) },
   { path: 'campaigns/new', title: 'New campaign', canActivate: [requireSession], loadComponent: () => import('./features/create').then(m => m.CreateComponent) },
   { path: 'campaigns/:id', title: 'Campaign', canActivate: [requireSession], loadComponent: () => import('./features/campaign-detail').then(m => m.CampaignDetailComponent) },

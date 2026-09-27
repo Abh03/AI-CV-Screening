@@ -22,6 +22,7 @@ class JobProfileInputSchema(StrictModel):
     nice_to_have_skills: List[SkillCluster] = Field(default_factory=list, max_length=100)
 
 class CampaignCreateSchema(StrictModel):
+    name: Optional[str] = Field(default=None, max_length=255)
     job_profiles: List[JobProfileInputSchema] = Field(default_factory=list)
     approved_jd_ids: List[str] = Field(default_factory=list, max_length=100)
     idempotency_key: Optional[str] = Field(default=None, min_length=1, max_length=128)

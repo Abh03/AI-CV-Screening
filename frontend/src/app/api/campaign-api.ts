@@ -15,11 +15,11 @@ export class CampaignApi {
     return this.http.post<JdDraft>(`${publicConfig.apiBase}/jds/extract`, file,
       { headers: { 'Content-Type': 'application/pdf' }, params: { retry } });
   }
-  approveJd(id: string, profile: ExtractedJD): Observable<{ approved_jd_id: string; profile: JobProfile }> {
-    return this.http.post<{ approved_jd_id: string; profile: JobProfile }>(`${publicConfig.apiBase}/jds/drafts/${encodeURIComponent(id)}/approve`, profile);
+  approveJd(id: string, profile: ExtractedJD, revise = false): Observable<{ approved_jd_id: string; profile: JobProfile }> {
+    return this.http.post<{ approved_jd_id: string; profile: JobProfile }>(`${publicConfig.apiBase}/jds/drafts/${encodeURIComponent(id)}/approve`, profile, revise ? { params: { revise: true } } : {});
   }
-  list(limit: number, offset: number): Observable<CampaignListPage> {
-    return this.http.get<CampaignListPage>(this.base, { params: { limit, offset } });
+  list(limit: number, offset: number, search = ''): Observable<CampaignListPage> {
+    return this.http.get<CampaignListPage>(this.base, { params: { limit, offset, search } });
   }
   definition(id: string, jd: string): Observable<JdDefinition> {
     return this.http.get<JdDefinition>(`${this.base}/${encodeURIComponent(id)}/jds/${encodeURIComponent(jd)}/definition`);

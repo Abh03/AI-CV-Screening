@@ -42,16 +42,18 @@ async def create_campaign(payload: CampaignCreateSchema, db: AsyncSession = Depe
         if approved is None or approved.owner_id != principal.id:
             raise HTTPException(404, "Approved JD not found")
         jobs.append(approved.profile)
-    digest = hashlib.sha256(json.dumps(jobs, sort_keys=True).encode()).hexdigest()
+    name = (payload.name or "").strip() or None
+    request_data = {"jobs": jobs, "name": name} if name else jobs
+    digest = hashlib.sha256(json.dumps(request_data, sort_keys=True).encode()).hexdigest()
     try:
         created, campaign = await reserve_campaign(
             db, owner_id=principal.id, request_hash=digest, job_snapshots=jobs,
             policy_snapshots=[{"version": "campaign-v1", "stage3_cap": 15,
                                **policy_snapshot(15)} for _ in jobs],
-            idempotency_key=payload.idempotency_key)
+            idempotency_key=payload.idempotency_key, name=name)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {"campaign_id": campaign.id, "status": campaign.status, "created": created,
+    return {"campaign_id": campaign.id, "name": campaign.name, "status": campaign.status, "created": created,
             "upload_url": f"/api/v1/campaigns/{campaign.id}/archive"}
 
 
@@ -110,9 +112,13 @@ async def upload_archive(campaign_id: str, request: Request, db: AsyncSession = 
 @router.get("")
 async def list_campaigns(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
                          db: AsyncSession = Depends(get_db),
-                         principal: Principal = Depends(current_principal)):
+                         principal: Principal = Depends(current_principal),
+                         search: str = Query("", max_length=255)):
     # Even administrators see their own list; opening another owner's ID remains an explicit action.
     scope = CampaignModel.owner_id == principal.id
+    if search.strip():
+        term = search.strip()
+        scope = scope & (CampaignModel.name.icontains(term, autoescape=True) | CampaignModel.id.icontains(term, autoescape=True))
     total = (await db.execute(select(func.count()).select_from(CampaignModel).where(scope))).scalar_one()
     jd_count = (select(func.count()).select_from(CampaignJDModel)
                 .where(CampaignJDModel.campaign_id == CampaignModel.id).correlate(CampaignModel).scalar_subquery())
@@ -122,7 +128,7 @@ async def list_campaigns(limit: int = Query(20, ge=1, le=100), offset: int = Que
             .order_by(CampaignModel.created_at.desc(), CampaignModel.id.desc())
             .limit(limit).offset(offset))).all()
     return {"total": total, "limit": limit, "offset": offset, "campaigns": [
-        {"campaign_id": campaign.id, "status": campaign.status,
+        {"campaign_id": campaign.id, "name": campaign.name, "status": campaign.status,
          "created_at": campaign.created_at, "updated_at": campaign.updated_at,
          "completed_at": campaign.completed_at, "jd_count": jds, "accepted_count": cvs}
         for campaign, jds, cvs in rows]}
@@ -141,7 +147,7 @@ async def campaign_status(campaign_id: str, db: AsyncSession = Depends(get_db),
         CampaignPairModel.campaign_id == campaign.id,
         CampaignPairModel.status == "SHORTLISTED",
         CampaignPairModel.lease_until > datetime.now(timezone.utc)))).scalar_one()
-    return {"campaign_id": campaign.id, "status": campaign.status,
+    return {"campaign_id": campaign.id, "name": campaign.name, "status": campaign.status,
             "counts": counts, "stage0": stage0, "stage3_retry_waiting": retry_waiting,
             "intake_report": campaign.intake_report}
 

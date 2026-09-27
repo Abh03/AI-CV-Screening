@@ -12,7 +12,7 @@ import { HttpEventType } from '@angular/common/http';
 import { IntakeReport } from '../api/contracts';
 
 @Component({ standalone: true, imports: [RouterLink], template: `
-  <div class="page-heading"><div><p class="eyebrow">Campaign monitor</p><h1>Campaign {{ id }}</h1><p>Updates while this tab is visible. Results are separate for each JD.</p></div><button type="button" class="secondary" (click)="refresh()" [disabled]="loading()">Refresh now</button></div>
+  <div class="page-heading"><div><p class="eyebrow">Campaign monitor</p><h1>{{ campaign()?.name || 'Campaign ' + id }}</h1><p>Updates while this tab is visible. Results are separate for each JD.</p></div><button type="button" class="secondary" (click)="refresh()" [disabled]="loading()">Refresh now</button></div>
   @if (error()) { <div class="error-banner" role="alert">{{ error() }}</div> }
   @if (loading() && !campaign()) { <p role="status">Loading campaign…</p> }
   @if (campaign(); as c) {

@@ -10,7 +10,7 @@ import { describeError } from '../core/http-errors';
 import { LocalCampaigns } from '../core/local-campaigns';
 
 type JdForm = ReturnType<CreateComponent['newJd']>;
-type DraftState = { busy: boolean; error: string; draft?: JdDraft; approvedId?: string; file?: File };
+type DraftState = { busy: boolean; error: string; draft?: JdDraft; approvedId?: string; revising?: boolean; file?: File };
 const degreeLevels = ['NONE', 'SECONDARY', 'HIGHER SECONDARY', 'DIPLOMA', 'BACHELOR', 'MASTER', 'PHD'];
 
 @Component({ standalone: true, imports: [ReactiveFormsModule, RouterLink], template: `
@@ -28,6 +28,7 @@ const degreeLevels = ['NONE', 'SECONDARY', 'HIGHER SECONDARY', 'DIPLOMA', 'BACHE
     }
   </section> } @else {
     <form [formGroup]="form" (ngSubmit)="review()" novalidate>
+      <div class="campaign-name"><label for="campaign-name">Campaign name (optional)</label><input id="campaign-name" formControlName="name" maxlength="255" placeholder="e.g. Backend engineers, September"></div>
       <div formArrayName="jds">@for (jd of jds.controls; track jd; let i = $index) {
         <section class="card" [formGroupName]="i"><div class="card-title"><h2>Job description {{ i + 1 }}</h2><div class="compact-actions"><button type="button" class="secondary" (click)="move(i, -1)" [disabled]="i === 0">Move up</button><button type="button" class="secondary" (click)="move(i, 1)" [disabled]="i === jds.length - 1">Move down</button><button type="button" class="secondary" (click)="remove(i)" [disabled]="jds.length === 1">Remove</button></div></div>
           <label [for]="'pdf-' + i">Upload JD PDF (up to 10 MiB)</label><input [id]="'pdf-' + i" type="file" accept=".pdf,application/pdf" (change)="chooseJd($event, jd)" [disabled]="state(jd).busy || !!state(jd).approvedId">
@@ -43,17 +44,13 @@ const degreeLevels = ['NONE', 'SECONDARY', 'HIGHER SECONDARY', 'DIPLOMA', 'BACHE
             <div class="grid two">@for (category of categories; track category) { <div><label [for]="category + '-' + i">{{ categoryLabel(category) }}</label><textarea [id]="category + '-' + i" [formControl]="queryControl(jd, category)" rows="2"></textarea></div> }</div></fieldset>
           <fieldset><legend>Job relevance</legend><p>Review responsibilities, applied skills and domain context against the PDF. These guide ranking and do not add hard filters. Domain context must be a preference.</p>
             <div formArrayName="relevanceTargets">@for (target of jd.controls.relevanceTargets.controls; track target; let t = $index) {
-              <fieldset [formGroupName]="t"><legend>Relevance target {{ t + 1 }}</legend>
-                <label [for]="'target-id-' + i + '-' + t">Target ID</label><input [id]="'target-id-' + i + '-' + t" formControlName="targetId">
-                <label [for]="'target-text-' + i + '-' + t">Expectation</label><textarea [id]="'target-text-' + i + '-' + t" formControlName="text" rows="2"></textarea>
-                <label [for]="'target-source-' + i + '-' + t">Supporting quote from the JD</label><textarea [id]="'target-source-' + i + '-' + t" formControlName="sourceQuote" rows="2"></textarea>
-                <div class="grid three"><div><label [for]="'target-category-' + i + '-' + t">Category</label><select [id]="'target-category-' + i + '-' + t" formControlName="category">@for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }</select></div>
-                <div><label [for]="'target-kind-' + i + '-' + t">Target type</label><select [id]="'target-kind-' + i + '-' + t" formControlName="kind">@for (kind of targetKinds; track kind) { <option [value]="kind">{{ kind }}</option> }</select></div>
-                <div><label [for]="'target-treatment-' + i + '-' + t">Requirement or preference</label><select [id]="'target-treatment-' + i + '-' + t" formControlName="treatment"><option value="requirement">Requirement (soft relevance)</option><option value="preference">Preference</option></select></div></div>
-                <label [for]="'target-weight-' + i + '-' + t">Importance (1 to 5)</label><input [id]="'target-weight-' + i + '-' + t" type="number" min="1" max="5" formControlName="importance">
-                <label [for]="'target-terms-' + i + '-' + t">Evidence concepts</label><textarea [id]="'target-terms-' + i + '-' + t" formControlName="evidenceTerms" rows="3"></textarea><small>One concept per line; comma-separated equivalent wording on the same line. All concepts support a full match. For example: payment API, payment APIs.</small>
-                <button type="button" class="secondary" (click)="jd.controls.relevanceTargets.removeAt(t)" [disabled]="!!state(jd).approvedId">Remove target</button>
-              </fieldset>
+              <div class="target-row" [formGroupName]="t">
+<div class="target-skill"><label [for]="'target-text-' + i + '-' + t">Skill / responsibility</label><input [id]="'target-text-' + i + '-' + t" formControlName="text" maxlength="600"></div>
+<div><label [for]="'target-category-' + i + '-' + t">Category</label><select [id]="'target-category-' + i + '-' + t" formControlName="category">@for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }</select></div>
+<div><label [for]="'target-kind-' + i + '-' + t">Target type</label><select [id]="'target-kind-' + i + '-' + t" formControlName="kind">@for (kind of targetKinds; track kind) { <option [value]="kind">{{ kind }}</option> }</select></div>
+<div><label [for]="'target-treatment-' + i + '-' + t">Treatment</label><select [id]="'target-treatment-' + i + '-' + t" formControlName="treatment"><option value="requirement">Requirement</option><option value="preference">Preference</option></select></div>
+<div><label [for]="'target-importance-' + i + '-' + t">Importance</label><input [id]="'target-importance-' + i + '-' + t" formControlName="importance" type="number" min="1" max="5"></div>
+<button type="button" class="secondary" (click)="jd.controls.relevanceTargets.removeAt(t)" [disabled]="!!state(jd).approvedId" [attr.aria-label]="'Remove ' + target.controls.text.value">Remove</button></div>
             }</div><button type="button" class="secondary" (click)="jd.controls.relevanceTargets.push(newTarget())" [disabled]="!!state(jd).approvedId || jd.controls.relevanceTargets.length >= 48">Add relevance target</button>
           </fieldset>
           <fieldset><legend>Hard filters</legend><div class="grid three"><div><label [for]="'years-' + i">Minimum years of experience</label><input [id]="'years-' + i" type="number" min="0" step="0.5" formControlName="years"></div><div><label [for]="'degree-' + i">Minimum degree</label><select [id]="'degree-' + i" formControlName="degree">@for (level of degreeLevels; track level) { <option [value]="level">{{ level }}</option> }</select></div><div><label [for]="'fields-' + i">Degree fields</label><input [id]="'fields-' + i" formControlName="fields" placeholder="Computer Science, Engineering"><small>Comma-separated. Requires a degree level.</small></div></div>
@@ -63,6 +60,7 @@ const degreeLevels = ['NONE', 'SECONDARY', 'HIGHER SECONDARY', 'DIPLOMA', 'BACHE
             <label [for]="'required-' + i">Required skills</label><textarea [id]="'required-' + i" formControlName="requiredSkills" rows="4"></textarea>
             <label [for]="'preferred-' + i">Preferred skills</label><textarea [id]="'preferred-' + i" formControlName="preferredSkills" rows="3"></textarea></fieldset>
           <button type="button" (click)="approve(jd)" [disabled]="state(jd).busy || !!state(jd).approvedId">{{ state(jd).approvedId ? 'Approved' : 'Approve reviewed JD' }}</button>
+          @if (state(jd).approvedId) { <button type="button" class="secondary" (click)="editJd(jd)">Edit JD</button> }
           }
         </section> }
       </div>
@@ -82,7 +80,7 @@ export class CreateComponent {
   readonly targetKinds = ['skill', 'responsibility', 'domain', 'experience', 'project', 'education'];
   readonly cap = publicConfig.stage3Cap;
   readonly maxJds = publicConfig.maxJds;
-  readonly form = this.fb.group({ jds: this.fb.array([this.newJd()]) });
+  readonly form = this.fb.group({ name: ['', Validators.maxLength(255)], jds: this.fb.array([this.newJd()]) });
   readonly formError = signal(''); readonly reviewing = signal(false); readonly creating = signal(false);
   readonly createError = signal(''); readonly campaignId = signal(''); readonly file = signal<File | null>(null);
   readonly fileError = signal(''); readonly uploadError = signal(''); readonly uploading = signal(false);
@@ -125,9 +123,14 @@ export class CreateComponent {
     const job = this.jobs()[this.jds.controls.indexOf(jd)];
     const { job_id, ...profile } = job;
     this.setState(jd, { ...state, busy: true, error: '' });
-    this.api.approveJd(state.draft.draft_id, { ...profile, schema_version: 'jd-v1', uncertainties: state.draft.profile.uncertainties }).subscribe({
+    this.api.approveJd(state.draft.draft_id, { ...profile, schema_version: 'jd-v1', uncertainties: state.draft.profile.uncertainties }, !!state.revising).subscribe({
       next: result => { jd.disable(); this.setState(jd, { ...state, busy: false, approvedId: result.approved_jd_id }); },
       error: error => this.setState(jd, { ...state, busy: false, error: describeError(error) }) });
+  }
+  editJd(jd: JdForm): void {
+    const state = this.state(jd); if (state.busy || !state.approvedId) return;
+    jd.enable(); this.setState(jd, { ...state, approvedId: undefined, revising: true, error: '' });
+    this.reviewing.set(false); this.formError.set(''); this.idempotencyKey = crypto.randomUUID();
   }
   private idempotencyKey = crypto.randomUUID();
   get jds(): FormArray<JdForm> { return this.form.controls.jds; }
@@ -137,9 +140,9 @@ export class CreateComponent {
     kind: this.fb.control<RelevanceTarget['kind']>(target?.kind ?? 'responsibility', { nonNullable: true }),
     treatment: this.fb.control<RelevanceTarget['treatment']>(target?.treatment ?? 'requirement', { nonNullable: true }),
     text: [target?.text ?? '', [Validators.required, Validators.maxLength(600)]],
-    sourceQuote: [target?.source_quote ?? '', [Validators.required, Validators.maxLength(2000)]],
+    sourceQuote: [target?.source_quote ?? '', [Validators.maxLength(2000)]],
     importance: [target?.importance ?? 1, [Validators.required, Validators.min(1), Validators.max(5)]],
-    evidenceTerms: [target?.evidence_terms.map(group => group.join(', ')).join('\n') ?? '', Validators.required]
+    evidenceTerms: [target?.evidence_terms.map(group => group.join(', ')).join('\n') ?? '']
   }); }
   newJd() { return this.fb.group({ relevanceTargets: this.fb.array<ReturnType<CreateComponent['newTarget']>>([]), minimumCoverage: [0], requiredSkills: [''], preferredSkills: [''], jobId: ['', [Validators.required, Validators.maxLength(64)]], title: ['', [Validators.required, Validators.maxLength(255)]],
     skills: [''], experience: [''], projects: [''], education: [''], years: [0, [Validators.required, Validators.min(0), Validators.max(100)]], degree: ['NONE'], fields: [''], fieldAliases: [''], levelAliases: [''], authorization: [false] }); }
@@ -155,8 +158,8 @@ export class CreateComponent {
       relevance_contract: { version: 'relevance-v1', minimum_coverage: v.minimumCoverage ?? 0,
         targets: (v.relevanceTargets ?? []).map(target => ({ target_id: target.targetId ?? '',
           category: target.category, kind: target.kind, treatment: target.treatment,
-          text: (target.text ?? '').trim(), source_quote: (target.sourceQuote ?? '').trim(), importance: Number(target.importance),
-          evidence_terms: (target.evidenceTerms ?? '').split('\n').filter(line => line.trim()).map(line => line.split(',').map(term => term.trim()).filter(Boolean)) })) },
+          text: (target.text ?? '').trim(), source_quote: (target.sourceQuote || target.text || '').trim(), importance: Number(target.importance),
+          evidence_terms: (target.evidenceTerms || (target.text ?? '').slice(0, 120)).split('\n').filter(line => line.trim()).map(line => line.split(',').map(term => term.trim()).filter(Boolean)) })) },
       must_have_skills: this.parseSkills(v.requiredSkills ?? ''), nice_to_have_skills: this.parseSkills(v.preferredSkills ?? ''),
       hard_filter_rules: { min_years_experience: Number(v.years), require_work_authorization: !!v.authorization,
         degree_requirement: v.degree === 'NONE' ? null : { level: v.degree ?? 'NONE', fields,
@@ -175,7 +178,7 @@ export class CreateComponent {
   create(): void {
     this.review(); if (this.formError()) return;
     this.creating.set(true); this.createError.set('');
-    this.api.create({ approved_jd_ids: this.jds.controls.map(jd => this.state(jd).approvedId!), idempotency_key: this.idempotencyKey }).pipe(finalize(() => this.creating.set(false))).subscribe({
+    this.api.create({ name: this.form.controls.name.value?.trim() || undefined, approved_jd_ids: this.jds.controls.map(jd => this.state(jd).approvedId!), idempotency_key: this.idempotencyKey }).pipe(finalize(() => this.creating.set(false))).subscribe({
       next: response => { this.campaignId.set(response.campaign_id); this.local.remember(response.campaign_id); },
       error: error => this.createError.set(describeError(error))
     });

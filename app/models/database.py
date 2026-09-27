@@ -35,7 +35,7 @@ class ApprovedJDModel(Base):
     __tablename__ = "approved_jds"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     owner_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    draft_id: Mapped[str] = mapped_column(ForeignKey("jd_drafts.id"), nullable=False, unique=True)
+    draft_id: Mapped[str] = mapped_column(ForeignKey("jd_drafts.id"), nullable=False, index=True)
     profile: Mapped[dict] = mapped_column(JSON, nullable=False)
     provenance: Mapped[dict] = mapped_column(JSON, nullable=False)
     approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -203,6 +203,8 @@ class CandidateOutcomeModel(Base):
 
 class CampaignModel(Base):
     __tablename__ = "campaigns"
+
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     owner_id: Mapped[str] = mapped_column(String(64), nullable=False)

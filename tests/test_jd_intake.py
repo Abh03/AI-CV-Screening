@@ -109,6 +109,19 @@ async def test_upload_edit_approve_campaign_and_reuse(client_db, monkeypatch):
     assert campaign.status_code == 201
     repeat = await client.post("/api/v1/campaigns", json={"approved_jd_ids": [approved_id], "idempotency_key": "approved"})
     assert repeat.json()["campaign_id"] == campaign.json()["campaign_id"]
+    revised = await client.post(f"/api/v1/jds/drafts/{draft['draft_id']}/approve?revise=true", json={**edited, "title": "Changed"})
+    assert revised.status_code == 200
+    revised_id = revised.json()["approved_jd_id"]
+    assert revised_id != approved_id
+    async with sessions() as db:
+        assert (await db.get(ApprovedJDModel, approved_id)).profile["title"] == "Reviewed Engineer"
+    named = await client.post("/api/v1/campaigns", json={"approved_jd_ids": [revised_id], "name": "September engineers", "idempotency_key": "named"})
+    assert named.status_code == 201
+    listing = await client.get("/api/v1/campaigns", params={"search": "september"})
+    assert listing.json()["total"] == 1
+    assert listing.json()["campaigns"][0]["name"] == "September engineers"
+    assert (await client.get(f"/api/v1/campaigns/{named.json()['campaign_id']}")).json()["name"] == "September engineers"
+    assert (await client.get("/api/v1/campaigns", params={"search": "missing name"})).json()["total"] == 0
     content = io.BytesIO()
     with zipfile.ZipFile(content, "w") as archive:
         archive.writestr("cv.pdf", pdf("Jane Doe\nSKILLS\nPython and Java software development\nEXPERIENCE\nThe developer worked on software systems and projects.\nEDUCATION\nBachelor of Computer Science at university."))
@@ -163,7 +176,7 @@ async def test_upload_edit_approve_campaign_and_reuse(client_db, monkeypatch):
         assert pair.stage1_decision == "PASS"
         assert pair.stage1_details["checks"][-1]["canonical"] == "Python"
     async with sessions() as db:
-        snapshot = (await db.execute(select(CampaignJDModel))).scalar_one().job_snapshot
+        snapshot = (await db.execute(select(CampaignJDModel).where(CampaignJDModel.campaign_id == campaign.json()["campaign_id"]))).scalar_one().job_snapshot
         assert snapshot == (await db.get(ApprovedJDModel, approved_id)).profile
     assert len(calls) == 1
     app.dependency_overrides[current_principal] = lambda: Principal("bob", "recruiter")

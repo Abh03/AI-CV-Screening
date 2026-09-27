@@ -2,18 +2,32 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AuthSession, csrfInterceptor } from './session';
+import { provideRouter, Router, UrlTree } from '@angular/router';
+import { firstValueFrom, Observable } from 'rxjs';
+import { AuthSession, csrfInterceptor, requireGuest } from './session';
 
 describe('recruiter session', () => {
   let session: AuthSession;
   let http: HttpTestingController;
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(withXhr(), withInterceptors([csrfInterceptor])), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(withXhr(), withInterceptors([csrfInterceptor])), provideHttpClientTesting(), provideRouter([])] });
     session = TestBed.inject(AuthSession);
     http = TestBed.inject(HttpTestingController);
     document.cookie = 'cv_csrf=test-csrf; path=/';
   });
   afterEach(() => { http.verify(); document.cookie = 'cv_csrf=; max-age=0; path=/'; });
+  it('redirects a signed-in visitor away from the login route after a reload or Back', async () => {
+    const guard = TestBed.runInInjectionContext(() => requireGuest({} as never, {} as never)) as Observable<UrlTree>;
+    const result = firstValueFrom(guard);
+    http.expectOne('/api/v1/auth/me').flush({ user: { id: 'alice', username: 'alice', role: 'recruiter', email: 'alice@example.test' } });
+    expect(TestBed.inject(Router).serializeUrl(await result)).toBe('/');
+  });
+  it('allows the sign-in screen when the cookie session has expired', async () => {
+    const guard = TestBed.runInInjectionContext(() => requireGuest({} as never, {} as never)) as Observable<boolean>;
+    const result = firstValueFrom(guard);
+    http.expectOne('/api/v1/auth/me').flush({}, { status: 401, statusText: 'Unauthorized' });
+    expect(await result).toBe(true);
+  });
   it('keeps login credentials in the request and sends CSRF on later writes', () => {
     session.login('alice@example.test', 'sample-password').subscribe();
     const login = http.expectOne('/api/v1/auth/login');

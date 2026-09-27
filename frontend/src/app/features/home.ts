@@ -17,11 +17,12 @@ import { LocalCampaigns } from '../core/local-campaigns';
     @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
   </section>
   <section class="card"><h2>Your campaigns</h2>
+    <form (ngSubmit)="searchCampaigns()" class="inline-form"><label for="campaign-search">Search by campaign name or ID</label><input id="campaign-search" name="search" [(ngModel)]="search" maxlength="255"><button type="submit">Search</button></form>
     @if (listLoading()) { <p role="status">Loading campaigns…</p> }
     @if (listError()) { <p class="error" role="alert">{{ listError() }}</p> }
     @if (campaigns(); as listPage) {
       @if (listPage.campaigns.length) { <div class="table-scroll"><table><thead><tr><th scope="col">Campaign</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col">JDs</th><th scope="col">Accepted CVs</th></tr></thead><tbody>
-        @for (item of listPage.campaigns; track item.campaign_id) { <tr><td><a [routerLink]="['/campaigns', item.campaign_id]">{{ item.campaign_id }}</a></td><td>{{ item.status }}</td><td>{{ item.created_at | date:'medium' }}</td><td>{{ item.jd_count }}</td><td>{{ item.accepted_count }}</td></tr> }
+        @for (item of listPage.campaigns; track item.campaign_id) { <tr><td><a [routerLink]="['/campaigns', item.campaign_id]">{{ item.name || item.campaign_id }}</a>@if (item.name) { <small>{{ item.campaign_id }}</small> }</td><td>{{ item.status }}</td><td>{{ item.created_at | date:'medium' }}</td><td>{{ item.jd_count }}</td><td>{{ item.accepted_count }}</td></tr> }
       </tbody></table></div><div class="pagination"><button type="button" class="secondary" (click)="goPage(-1)" [disabled]="page() === 1">Previous</button><span>Page {{ page() }}</span><button type="button" class="secondary" (click)="goPage(1)" [disabled]="page() * pageSize >= listPage.total">Next</button></div> }
       @else { <p>No campaigns in your account yet.</p> }
     }
@@ -46,19 +47,22 @@ export class HomeComponent {
   readonly page = signal(1);
   readonly pageSize = 20;
   id = '';
+  search = '';
   constructor() {
     this.http.get<{ status: string }>('/health').subscribe({ next: response => this.service.set(response.status === 'healthy' ? 'Available' : 'Degraded'), error: () => this.service.set('Unavailable') });
     this.route.queryParamMap.pipe(map(params => {
+      this.search = params.get('search') ?? '';
       const value = Number(params.get('page'));
       return Number.isSafeInteger(value) && value > 0 ? value : 1;
     }), switchMap(page => {
       this.page.set(page); this.listLoading.set(true); this.listError.set(''); this.campaigns.set(null);
-      return this.api.list(this.pageSize, (page - 1) * this.pageSize).pipe(catchError(error => {
+      return this.api.list(this.pageSize, (page - 1) * this.pageSize, this.search).pipe(catchError(error => {
         this.listError.set(describeError(error)); this.listLoading.set(false); return EMPTY;
       }));
     }), takeUntilDestroyed(this.destroyRef)).subscribe(response => { this.campaigns.set(response); this.listLoading.set(false); });
   }
-  goPage(delta: number): void { void this.router.navigate([], { relativeTo: this.route, queryParams: { page: this.page() + delta } }); }
+  goPage(delta: number): void { void this.router.navigate([], { relativeTo: this.route, queryParams: { page: this.page() + delta, search: this.search.trim() || null } }); }
+  searchCampaigns(): void { void this.router.navigate([], { relativeTo: this.route, queryParams: { page: 1, search: this.search.trim() || null } }); }
   open(): void {
     const id = this.id.trim();
     if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) { this.error.set('Enter a valid campaign ID.'); return; }

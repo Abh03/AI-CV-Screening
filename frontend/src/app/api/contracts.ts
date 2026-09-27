@@ -21,15 +21,15 @@ export interface RelevanceTarget {
 }
 export interface ExtractedJD extends Omit<JobProfile, 'job_id'> { schema_version: 'jd-v1'; uncertainties: string[] }
 export interface JdDraft { draft_id: string; status: string; profile: ExtractedJD | null; error_code: string | null; pages: { page_number: number; blocks: { text: string }[] }[] }
-export interface CampaignCreate { job_profiles?: JobProfile[]; approved_jd_ids?: string[]; idempotency_key: string }
+export interface CampaignCreate { name?: string; job_profiles?: JobProfile[]; approved_jd_ids?: string[]; idempotency_key: string }
 export interface CampaignCreated { campaign_id: string; status: string; created: boolean; upload_url: string }
-export interface CampaignListItem { campaign_id: string; status: string; created_at: string; updated_at: string; completed_at: string | null; jd_count: number; accepted_count: number }
+export interface CampaignListItem { name?: string | null; campaign_id: string; status: string; created_at: string; updated_at: string; completed_at: string | null; jd_count: number; accepted_count: number }
 export interface CampaignListPage { total: number; limit: number; offset: number; campaigns: CampaignListItem[] }
 export interface JdDefinition { campaign_id: string; jd_key: string; job_profile: JobProfile; stage3_cap: number }
 export interface IntakeReport { accepted_count: number; rejected_count: number; accepted: { name: string; candidate_id: string }[]; rejected: { name: string; code: string }[] }
 export interface UploadResponse extends IntakeReport { campaign_id: string; status: string }
 export interface CampaignCounts { jds: number; cvs: number; pairs: Record<string, number>; terminal_pairs: number }
-export interface CampaignStatus { campaign_id: string; status: string; counts: CampaignCounts; stage0: Record<string, number>; stage3_retry_waiting: number; intake_report: IntakeReport | null }
+export interface CampaignStatus { name?: string | null; campaign_id: string; status: string; counts: CampaignCounts; stage0: Record<string, number>; stage3_retry_waiting: number; intake_report: IntakeReport | null }
 export interface JdSummary { jd_key: string; title: string; status: string; stage3_cap: number; counts: Record<string, number>; stage3_retry_waiting: number }
 export interface JdsResponse { campaign_id: string; jds: JdSummary[] }
 export interface EvidenceRef { citation: string; document_id: string | null; chunk_id: string | null; source_location: Record<string, unknown> | null }

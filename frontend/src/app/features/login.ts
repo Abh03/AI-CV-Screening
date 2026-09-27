@@ -25,7 +25,7 @@ export class LoginComponent {
     this.busy.set(true); this.error.set('');
     const { identifier, password } = this.form.getRawValue();
     this.session.login(identifier, password).subscribe({
-      next: () => { this.form.controls.password.setValue(''); void this.router.navigateByUrl('/'); },
+      next: () => { this.form.controls.password.setValue(''); void this.router.navigateByUrl('/', { replaceUrl: true }); },
       error: error => { this.form.controls.password.setValue(''); this.error.set(error?.status === 401 ? 'Incorrect credentials or account unavailable.' : describeError(error)); this.busy.set(false); }
     });
   }
