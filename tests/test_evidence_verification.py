@@ -200,9 +200,12 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
     from app.stage3_evaluation.budget import selection_schema
     for assessment in [response_data[c] for c in ("skills", "experience", "projects", "education")]:
         assessment.pop("claims", None)
-    for tag, ref in sentence_registry(build_evidence_registry("a", payload())).items():
+    from app.stage3_evaluation.compact import evidence_manifest
+    manifest = evidence_manifest(sentence_registry(build_evidence_registry("a", payload())), "a")
+    response_data["evidence_scope"] = manifest.scope
+    for handle, ref in manifest.handles.items():
         assessment = response_data[ref.category.lower()]
-        assessment["citations"] = [ref.evidence_id]
+        assessment["citations"] = [handle]
     monkeypatch.setattr(llm_client, "provider", provider)
     monkeypatch.setattr(llm_client, "_initialized", True)
     if provider == "gemini":
@@ -227,16 +230,18 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
         assert captured["messages"][0] == {"role": "system", "content": SYSTEM_PROMPT_STAGE3}
         assert captured["messages"][1]["role"] == "user"
         schema = captured["response_format"]["json_schema"]["schema"]
-        for name in ("SentenceSelectionAssessment", "SentenceSelectionFlag"):
-            assert set(schema["$defs"][name]["required"]) == set(schema["$defs"][name]["properties"])
-        assert "claims" not in schema["$defs"]["SentenceSelectionAssessment"]["properties"]
+        assert "claims" not in schema["properties"]["skills"]["properties"]
+        for category in ("skills", "experience", "projects", "education"):
+            node=schema["properties"][category]
+            assert set(node["required"]) == set(node["properties"])
         user_content = captured["messages"][1]["content"]
     assert SYSTEM_PROMPT_STAGE3 not in user_content
     root = ET.fromstring(user_content)
-    for tag, ref in result.evidence_verification.registry.items():
-        snippet = root.find(f'.//snippet[@tag="{tag}"]')
-        source = root.find(f'.//source[@id="{snippet.attrib["source_id"]}"]') if 'source_id' in snippet.attrib else snippet
-        assert source.text == ref.text
+    assert root.attrib['evidence_scope'] == manifest.scope
+    for handle, ref in manifest.handles.items():
+        snippet = next(node for node in root.findall('.//evidence/p/e')
+                       if handle in node.attrib['ids'].split())
+        assert snippet.text == ref.text
 
 
 @pytest.mark.asyncio

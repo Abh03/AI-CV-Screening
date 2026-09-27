@@ -122,10 +122,10 @@ def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=No
             from app.stage3_evaluation.evidence import sentence_registry
             registry = sentence_registry(registry)
         prompt = build_stage3_user_prompt(candidate_id, jd_profile, prepared, registry=registry,
-                                         compact=True, neutral_sources=True)
+                                         compact=True, neutral_sources=True, selection_handles=sentence_selections)
         from app.stage3_evaluation.budget import request_budget
         budget = request_budget(prompt, settings.LLM_PROVIDER.lower()) if sentence_selections else None
-        if len(prompt.encode("utf-8")) <= limit and (budget is None or budget["total"] <= budget["limit"]):
+        if len(prompt.encode("utf-8")) <= limit and (budget is None or budget["fits"]):
             if budget is not None:
                 metadata["token_budget"] = budget
             return prepared, registry, prompt
@@ -142,7 +142,8 @@ def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=No
             groups.setdefault(key, []).append((cat, index, chunk))
         def priority(group):
             body = group[0][2]['text'].casefold()
-            return (any(term in body for term in mandatory),
+            return (any(len(evidence[cat]) == 1 for cat, _, _ in group),
+                    any(term in body for term in mandatory),
                     str(group[0][2].get('document_id', '')).startswith('context:'),
                     any(cat in ('EXPERIENCE', 'PROJECTS') for cat, _, _ in group),
                     -len(body))

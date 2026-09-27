@@ -9,3 +9,8 @@ MODELS = (
 for repo, revision, destination in MODELS:
     snapshot_download(repo_id=repo, revision=revision, local_dir=destination,
                       ignore_patterns=["*.bin", "*.onnx", "*.msgpack", "*.h5", "*.ot", "*.xml"])
+
+# Only the pinned tokenizer, never the 196 GB generation model weights.
+snapshot_download(repo_id="openai/gpt-oss-120b",
+    revision="b5c939de8f754692c1647ca79fbf85e8c1e70f8a", local_dir="/opt/models/gpt-oss",
+    allow_patterns=["tokenizer.json"])

@@ -12,7 +12,7 @@ from app.config import settings
 from app.models.database import CandidateOutcomeModel, EvaluationResultModel, JobProfileModel, ScreeningRunModel
 from app.stage3_evaluation.prompts import SYSTEM_PROMPT_STAGE3
 from app.stage3_evaluation.scoring import CATEGORY_WEIGHTS, SCORING_POLICY_VERSION
-from app.stage3_evaluation.schemas import LLMEvaluationOutput
+from app.stage3_evaluation.schemas import LLMEvaluationOutput, CompactSentenceSelectionOutput
 from app.stage1_rules.rules_engine import STAGE1_POLICY_VERSION
 from app.stage2_retrieval.embeddings import EMBEDDING_MODEL_NAME, EMBEDDING_MODEL_VERSION
 from app.stage2_retrieval.repository import CHUNKING_VERSION, REDACTION_VERSION
@@ -20,7 +20,7 @@ from app.stage2_retrieval.evidence_extractor import DEFAULT_CATEGORY_WEIGHTS
 from app.stage2_retrieval.coverage import SCORING_VERSION as STAGE2_SCORING_VERSION
 from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME, RERANKER_MODEL_VERSION
 
-PROMPT_VERSION = "stage3-prompt-v13"
+PROMPT_VERSION = "stage3-prompt-v14"
 RUN_POLICY_VERSION = "orchestration-v3"
 
 
@@ -48,11 +48,12 @@ def policy_snapshot(cutoff):
             "tier_thresholds": {"TIER_1": 75, "TIER_2": 55},
             "prompt_version": PROMPT_VERSION, "prompt_sha256": hashlib.sha256(SYSTEM_PROMPT_STAGE3.encode()).hexdigest(),
             "claim_support_version": "source-excerpt-v1",
-            "evidence_selection_version": "sentence-v1",
+            "evidence_selection_version": "sentence-handles-v1",
             "provider_context_tokens": getattr(settings, f"{provider.upper()}_CONTEXT_TOKENS", None),
             "provider_completion_tokens": (settings.GROQ_MAX_COMPLETION_TOKENS if provider == "groq" else
                 settings.OPENROUTER_MAX_TOKENS if provider == "openrouter" else 8192),
             "output_schema_sha256": canonical_hash(LLMEvaluationOutput.model_json_schema()),
+            "provider_output_schema_sha256": canonical_hash(CompactSentenceSelectionOutput.model_json_schema()),
             "model_temperature": 0.1,
             "provider": provider, "model": model, "stage2_cutoff": cutoff,
             "stage2_backend": settings.STAGE2_BACKEND,

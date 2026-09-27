@@ -5,7 +5,8 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     TORCH_HOME=/app/.cache/torch
 ENV EMBEDDING_MODEL_PATH=/opt/models/embedding \
-    RERANKER_MODEL_PATH=/opt/models/reranker
+    RERANKER_MODEL_PATH=/opt/models/reranker \
+    GROQ_TOKENIZER_PATH=/opt/models/gpt-oss/tokenizer.json
 
 WORKDIR /app
 

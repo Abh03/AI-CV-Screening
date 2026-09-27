@@ -216,3 +216,7 @@ class SentenceSelectionOutput(StrictBaseModel):
     education: SentenceSelectionAssessment
     flags: List[SentenceSelectionFlag]
     executive_summary: str
+
+
+class CompactSentenceSelectionOutput(SentenceSelectionOutput):
+    evidence_scope: str

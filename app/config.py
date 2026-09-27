@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
+    GROQ_TOKENIZER_PATH: Optional[str] = None
     GROQ_CONTEXT_TOKENS: int = Field(default=32768, ge=1024)
     OPENROUTER_CONTEXT_TOKENS: int = Field(default=32768, ge=1024)
     GEMINI_CONTEXT_TOKENS: int = Field(default=131072, ge=1024)

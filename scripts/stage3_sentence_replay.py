@@ -84,18 +84,37 @@ async def live(source, output):
         remaining.remove(row)
         selected.append(row)
     results = []
+    metrics = []
+    import logging
+    class SafeMetrics(logging.Handler):
+        def emit(self, record):
+            if getattr(record, "event", None) == "provider_response":
+                metrics.append({key: getattr(record, key) for key in
+                    ("status", "error_code", "input_tokens", "output_tokens", "total_tokens", "count")
+                    if hasattr(record, key)})
+    logger = logging.getLogger("cv_screening")
+    handler = SafeMetrics()
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
     try:
-        for row in selected:
+        for index, row in enumerate(selected):
+            if index:
+                # Each bounded request can consume the full minute allowance.
+                await asyncio.sleep(61)
             payload, jd = prepare(row)
             result = await evaluate_single_candidate_async(payload, jd, max_retries=0, max_provider_attempts=1)
             results.append({'cv':row['cv'],'jd':row['jd'],'result':result.model_dump(mode='json')})
             output.write_text(json.dumps({'mode':'three_case_live_validation','provider':'groq',
-                'model':settings.GROQ_MODEL,'results':results},indent=2),encoding='utf-8')
+                'model':settings.GROQ_MODEL,'requests_per_minute':settings.PROVIDER_REQUESTS_PER_MINUTE,
+                'tokens_per_minute':settings.PROVIDER_TOKENS_PER_MINUTE,
+                'completion_allowance':settings.GROQ_MAX_COMPLETION_TOKENS,
+                'metrics':metrics,'results':results},indent=2),encoding='utf-8')
             print(json.dumps({'cv':row['cv'],'jd':row['jd'],'status':result.evaluation_status.value,
                 'review_reasons':result.review_reasons,'error_code':result.error_code}),flush=True)
             if result.error_code == 'PROVIDER_RATE_LIMITED':
                 break
     finally:
+        logger.removeHandler(handler)
         await llm_client.aclose()
 
 
@@ -104,7 +123,22 @@ if __name__ == '__main__':
     parser.add_argument('source',type=Path)
     parser.add_argument('output',type=Path)
     parser.add_argument('--live',action='store_true')
+    parser.add_argument('--env-file',type=Path)
+    parser.add_argument('--completion-tokens',type=int)
     args=parser.parse_args()
+    if args.env_file:
+        from app.config import Settings, settings
+        configured = Settings(_env_file=str(args.env_file))
+        for name in ("LLM_PROVIDER", "GROQ_API_KEY", "GROQ_MODEL", "PROVIDER_REQUESTS_PER_MINUTE",
+                     "PROVIDER_TOKENS_PER_MINUTE", "GROQ_MAX_COMPLETION_TOKENS", "GROQ_CONTEXT_TOKENS"):
+            setattr(settings, name, getattr(configured, name))
+        from app.stage3_evaluation.llm_client import llm_client
+        llm_client.provider = settings.LLM_PROVIDER.lower()
+    if args.completion_tokens is not None:
+        from app.config import settings
+        if not 256 <= args.completion_tokens <= 32768:
+            raise SystemExit("Completion allowance must be between 256 and 32768")
+        settings.GROQ_MAX_COMPLETION_TOKENS = args.completion_tokens
     if args.output.exists():
         raise SystemExit('Output already exists; choose a new path to preserve history')
     if args.live:

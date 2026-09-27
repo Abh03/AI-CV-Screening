@@ -12,8 +12,9 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.stage3_evaluation.schemas import LLMEvaluationOutput, FinalCandidateEvaluation, EvidenceSelectionOutput, SentenceSelectionOutput
+from app.stage3_evaluation.schemas import LLMEvaluationOutput, FinalCandidateEvaluation, EvidenceSelectionOutput, SentenceSelectionOutput, CompactSentenceSelectionOutput
 from app.stage3_evaluation.budget import selection_schema
+from app.stage3_evaluation.compact import resolve_compact_selection, SelectionScopeMismatch
 
 logger = logging.getLogger("cv_screening")
 
@@ -449,8 +450,7 @@ async def evaluate_single_candidate_async(
             else:
                 from app.stage3_evaluation.evidence import resolve_evidence_selection
                 if llm_provider is None:
-                    from app.stage3_evaluation.evidence import resolve_sentence_selection
-                    parsed_output = resolve_sentence_selection(SentenceSelectionOutput.model_validate(data), registry, candidate_id)
+                    parsed_output = resolve_compact_selection(CompactSentenceSelectionOutput.model_validate(data), registry, candidate_id)
                 else:
                     parsed_output = resolve_evidence_selection(EvidenceSelectionOutput.model_validate(data), registry, candidate_id)
                 candidate_payload = dict(candidate_payload, context_metadata={
@@ -459,7 +459,7 @@ async def evaluate_single_candidate_async(
                 candidate_id, parsed_output, candidate_payload, registry=registry,
                 injection_signals=injection_signals, is_mock=is_mock
             )
-        except (json.JSONDecodeError, ValidationError) as exc:
+        except (json.JSONDecodeError, ValidationError, SelectionScopeMismatch) as exc:
             if attempt == max_retries:
                 return failed_evaluation(candidate_id, "INVALID_LLM_OUTPUT", "Evaluation failed: invalid provider response.", is_mock=is_mock)
         except httpx.HTTPStatusError as exc:
