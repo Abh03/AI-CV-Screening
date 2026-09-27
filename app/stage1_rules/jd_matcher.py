@@ -17,6 +17,8 @@ IDENTITY_ALIASES = (
     ("Amazon Web Services", "AWS"),
     ("Google Cloud Platform", "GCP"),
     ("REST API", "REST APIs", "RESTful API", "RESTful APIs"),
+    ("Apache Spark", "Spark"),
+    ("ETL", "extract-transform-load", "extract transform load"),
 )
 
 

@@ -14,6 +14,53 @@ from app.stage3_evaluation.llm_client import LLMClientWrapper, evaluate_single_c
 from app.stage3_evaluation.schemas import LLMEvaluationOutput, SupportedClaim
 
 
+def test_spark_identity_recognized_in_filters_and_applied_coverage():
+    from app.stage1_rules.rules_engine import evaluate_stage1_hard_filters
+    skill = {'canonical': 'Apache Spark', 'aliases': [], 'substitutes': ['PySpark']}
+    result = evaluate_stage1_hard_filters(None,
+        'PROFILE\n5 years of industry experience\nTECHNICAL SKILLS\nSpark\n'
+        'WORK EXPERIENCE\nBuilt Spark ingestion pipelines.', None,
+        {'min_years_experience': 3}, required_skills=[skill])
+    assert result['status'] == 'REVIEW'
+    assert next(c for c in result['checks'] if c['rule'] == 'skill')['matched_term'] == 'Spark'
+    targets, minimum = resolve_targets({'EXPERIENCE': 'Delivery'}, required_skills=[skill])
+    evidence = {'EXPERIENCE': [{'chunk_id': 'work', 'category': 'EXPERIENCE',
+                              'text': 'Built Spark ingestion pipelines.'}]}
+    assert score_coverage(targets, evidence, DEFAULT_CATEGORY_WEIGHTS, minimum)['shortlist_eligible']
+    rejected = evaluate_stage1_hard_filters(None, 'No Spark experience.', None,
+        {'min_years_experience': 0}, required_skills=[skill])
+    assert rejected['status'] == 'FAIL'
+
+
+def test_etl_full_form_is_an_identity_but_airflow_is_not():
+    from app.stage1_rules.jd_matcher import required_skill_evidence
+    group = {'canonical': 'Airflow', 'substitutes': ['ETL']}
+    assert required_skill_evidence('Built extract-transform-load pipelines.', group)['match_weight'] == .75
+    assert required_skill_evidence('Built extract-transform-load pipelines.',
+        {'canonical': 'Airflow'})['match_weight'] == 0
+
+
+@pytest.mark.asyncio
+async def test_daily_quota_diagnostic_logs_only_safe_limit_metadata(caplog):
+    from app.stage3_evaluation.llm_client import ProviderRateLimited
+    caplog.set_level('INFO', logger='cv_screening')
+    wrapper = LLMClientWrapper()
+    wrapper.http_client = httpx.AsyncClient(transport=httpx.MockTransport(lambda request:
+        httpx.Response(429, headers={'retry-after': '3600'}, json={'error': {'message':
+            'Rate limit for private-account-id on tokens per day. Requested 5280.'}})))
+    try:
+        with pytest.raises(ProviderRateLimited) as error:
+            await wrapper._execute_openai_compatible_http('https://example.test', {},
+                {'model': 'test'}, 'Groq', 'a', max_provider_attempts=1)
+        assert error.value.retry_after == 3600
+        record = next(r for r in caplog.records if getattr(r, 'event', None) == 'provider_response')
+        assert record.error_code == 'PROVIDER_DAILY_TOKEN_LIMIT'
+        assert record.count == 5280
+        assert 'private-account-id' not in caplog.text
+    finally:
+        await wrapper.aclose()
+
+
 @pytest.mark.parametrize("history,months", [
     ("Engineer | A\nJan 2020 - Jan 2022\nEngineer | B\n01/2021 - 01/2023", 36),
     ("Engineer | A\n01/2020 - 01/2021\nEngineer | B\n01/2022 - 01/2023", 24),
@@ -99,10 +146,25 @@ def test_complete_shared_context_is_sent_once_with_category_citations():
     root = ET.fromstring(prompt)
     assert prepared["context_metadata"]["complete"]
     assert prompt.count("Built Python services.") == 1
-    assert root.findall(".//snippet[@source_tag]")
-    for snippet in root.findall(".//snippet[@source_tag]"):
-        source = root.find(f'.//snippet[@tag="{snippet.attrib["source_tag"]}"]')
+    assert root.findall(".//snippet[@source_id]")
+    assert not root.findall(".//snippet[@source_tag]")
+    for snippet in root.findall(".//snippet[@source_id]"):
+        source = root.find(f'.//source[@id="{snippet.attrib["source_id"]}"]')
         assert source.text == registry[snippet.attrib["tag"]].text
+        assert snippet.attrib['tag'].split(':')[0] == registry[snippet.attrib['tag']].category
+
+
+def test_shared_retrieval_does_not_exhaust_context_budget_four_times():
+    from app.stage3_evaluation.context import prepare_evaluation_context
+    text = 'PROFILE\nPython services.\nWORK EXPERIENCE\nBuilt Python APIs.'
+    chunk = {'document_id': 'doc', 'chunk_id': 'shared', 'text': 'Built Python APIs.'}
+    evidence = {category: [dict(chunk)] for category in ('SKILLS', 'EXPERIENCE', 'PROJECTS')}
+    prepared = prepare_evaluation_context('a', {'candidate_cv_text': text,
+        'evidence_by_category': evidence}, max_chars=len(text) + len(chunk['text']))
+    assert prepared['context_metadata']['complete']
+    assert prepared['context_metadata']['evidence_chars'] == len(text) + len(chunk['text'])
+    assert all(prepared['evidence_by_category'][category][0]['chunk_id'] == 'shared'
+               for category in evidence)
 
 
 @pytest.mark.parametrize("quote", ["Built ... services", "Built … services"])
@@ -128,7 +190,7 @@ def test_serialized_unicode_xml_is_bounded_and_matches_registry():
     assert len(original["evidence_by_category"]["SKILLS"]) == 4
     for snippet in ET.fromstring(prompt).findall(".//snippet"):
         if snippet.attrib["tag"] != "NONE":
-            source = ET.fromstring(prompt).find(f'.//snippet[@tag="{snippet.attrib["source_tag"]}"]') if "source_tag" in snippet.attrib else snippet
+            source = ET.fromstring(prompt).find(f'.//source[@id="{snippet.attrib["source_id"]}"]') if "source_id" in snippet.attrib else snippet
             assert registry[snippet.attrib["tag"]].text == source.text
 
 

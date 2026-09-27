@@ -9,6 +9,9 @@ inside a snippet. NONE is a placeholder, never a valid citation.
 CV context and retrieved passages are supplied together as citable snippets.
 When a snippet has source_tag, its full text is the text of that other snippet.
 Use the local snippet's tag for category citations and copy quotes from its source.
+When a snippet has source_id, read its text from candidate_sources/source with
+that id. Source IDs locate text and are NEVER citations. Only a snippet's local
+tag is a citation; use the tag from the category being assessed.
 Use all supplied evidence, including full CV context, to assess the candidate.
 Prefer complete role/project context over an isolated date line or title. A valid
 citation tag alone does not establish experience relevance, depth or duration.
@@ -77,10 +80,26 @@ Use this interpretation:
 
 OUTPUT FORMAT:
 Respond strictly with valid JSON conforming to the required schema with keys:
-'skills', 'experience', 'projects', 'education', 'flags', 'executive_summary'."""
+'skills', 'experience', 'projects', 'education', 'flags', 'executive_summary'.
+
+Before returning JSON, check each assessment independently:
+- skills uses SKILLS tags; experience uses EXPERIENCE tags; projects uses PROJECTS
+  tags; education uses EDUCATION tags. source_tag only locates shared text. Never
+  copy source_tag into the assessment when its prefix differs from that category.
+- The citations list contains exactly the unique citation values in that
+  assessment's supported claims. Do not list additional passages just because
+  they influenced your reading. Prefer a few focused claims over a long reference list.
+- Copy each quote directly from one contiguous span of its source text. If two
+  terms occur apart, use two claims with separate quotes, never an ellipsis.
+  Do not add bullet markers, change punctuation, or rewrite a date format.
+- A numeric claim needs that number in its quote. Instead of deriving a total
+  tenure in a claim, quote the documented dates and describe their limits in the
+  rationale. Use an explicit total-years source claim when one exists.
+- Each rationale's factual assertions must be covered by those supported claims.
+  Keep uncertain or unsubstantiated assertions out of the executive summary too."""
 
 
-def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, registry=None, compact=False) -> str:
+def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, registry=None, compact=False, neutral_sources=False) -> str:
     """Serialize escaped data; registry and prompt use the same evidence snapshot."""
     from xml.etree import ElementTree as ET
     from app.stage3_evaluation.evidence import CATEGORIES, build_evidence_registry, checked_text
@@ -113,6 +132,7 @@ def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, regi
     if "context_metadata" in evidence_payload:
         import json
         ET.SubElement(root, "context_metadata").text = json.dumps(evidence_payload["context_metadata"])
+    sources = ET.SubElement(root, 'candidate_sources') if compact and neutral_sources else None
     evidence = ET.SubElement(root, "candidate_evidence")
     source_tags = {}
     for category in CATEGORIES:
@@ -120,7 +140,13 @@ def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, regi
         entries = [(tag, ref) for tag, ref in registry.items() if ref.category == category]
         for tag, ref in entries:
             source = source_tags.get((ref.document_id, ref.chunk_id, ref.text)) if compact else None
-            if source:
+            if sources is not None:
+                if not source:
+                    source = f'source_{len(source_tags) + 1}'
+                    ET.SubElement(sources, 'source', id=source).text = ref.text
+                    source_tags[(ref.document_id, ref.chunk_id, ref.text)] = source
+                ET.SubElement(node, 'snippet', tag=tag, source_id=source)
+            elif source:
                 ET.SubElement(node, "snippet", tag=tag, source_tag=source)
             else:
                 ET.SubElement(node, "snippet", tag=tag).text = ref.text

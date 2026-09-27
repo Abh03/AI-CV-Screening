@@ -1,4 +1,5 @@
 import json
+import re
 import logging
 import asyncio
 import time
@@ -277,6 +278,21 @@ class LLMClientWrapper:
                 metrics = {"event": "provider_response", "provider": provider_name,
                            "model": payload.get("model"), "status": response.status_code,
                            "latency_ms": round((time.monotonic() - started) * 1000, 3)}
+                if response.status_code == 429:
+                    # Keep provider account identifiers and request text out of logs.
+                    try:
+                        message = str(response.json().get('error', {}).get('message', '')).lower()
+                        if 'tokens per day' in message or 'tokens per day' in message.replace('_', ' '):
+                            metrics['error_code'] = 'PROVIDER_DAILY_TOKEN_LIMIT'
+                        elif 'tokens per minute' in message:
+                            metrics['error_code'] = 'PROVIDER_MINUTE_TOKEN_LIMIT'
+                        else:
+                            metrics['error_code'] = 'PROVIDER_RATE_LIMITED'
+                        requested = re.search(r'requested\s*[:=]?\s*(\d+)', message)
+                        if requested:
+                            metrics['count'] = int(requested.group(1))
+                    except (ValueError, AttributeError, TypeError):
+                        metrics['error_code'] = 'PROVIDER_RATE_LIMITED'
                 if response.status_code < 400:
                     try:
                         usage = response.json().get("usage", {})

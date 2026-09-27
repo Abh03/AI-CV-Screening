@@ -1,5 +1,6 @@
 """Compare an exported campaign with generator truth, preserving stage artifacts."""
 import argparse
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -8,8 +9,11 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('export', type=Path)
+    parser.add_argument('--system-prompt', type=Path, help='Exact system prompt used by this run')
     args = parser.parse_args()
-    data = json.loads(args.export.read_text(encoding='utf-8-sig'))
+    raw = args.export.read_bytes()
+    # Windows PowerShell redirects native stdout as UTF-16 by default.
+    data = json.loads(raw.decode('utf-16' if raw.startswith((b'\xff\xfe', b'\xfe\xff')) else 'utf-8-sig'))
     truth = json.loads(Path('C:/Abhyudit_Files/Infinite/CV-Benchmark-Dataset-Generator/output/ground_truth.json').read_text())
     source_jds = json.loads(Path('C:/Abhyudit_Files/Infinite/CV-Benchmark-Dataset-Generator/output/jds/jds.json').read_text())
     titles = {j['title']: j['jd_id'] for j in source_jds}
@@ -19,6 +23,12 @@ def main():
     summaries = []
     stage_io = []
     from app.stage3_evaluation.prompts import build_stage3_user_prompt, SYSTEM_PROMPT_STAGE3
+    from app.stage3_evaluation.context import bounded_evaluation_prompt
+    from app.stage3_evaluation.schemas import EvidenceReference
+    system_prompt = args.system_prompt.read_text(encoding='utf-8') if args.system_prompt else SYSTEM_PROMPT_STAGE3
+    system_hash = hashlib.sha256(system_prompt.encode()).hexdigest()
+    if args.system_prompt:
+        assert all(jd['policy_snapshot']['prompt_sha256'] == system_hash for jd in data['campaign_jds']), 'System prompt does not match the persisted run policy'
     for jd in data['campaign_jds']:
         benchmark_jd = titles[jd['job_snapshot']['title']]
         pairs = [p for p in data['campaign_pairs'] if p['jd_id'] == jd['id']]
@@ -32,6 +42,20 @@ def main():
             rows.append(row)
             joined.append(row)
             evidence = (pair['result_snapshot'] or {}).get('stage2_evidence')
+            evaluation = (pair['result_snapshot'] or {}).get('stage3_evaluation') or {}
+            verification = evaluation.get('evidence_verification') or {}
+            registry = verification.get('registry')
+            prompt = None
+            if registry and evidence:
+                prompt = build_stage3_user_prompt(cvs[pair['cv_id']]['candidate_id'],
+                    jd['job_snapshot'], dict(evidence,
+                        context_metadata=verification.get('context_metadata', {})),
+                    registry={tag: EvidenceReference.model_validate(ref) for tag, ref in registry.items()},
+                    compact=True, neutral_sources=jd['policy_snapshot'].get('prompt_version') == 'stage3-prompt-v10')
+            elif evidence and pair['stage3_attempt_count']:
+                _, _, prompt = bounded_evaluation_prompt(cvs[pair['cv_id']]['candidate_id'],
+                    jd['job_snapshot'], dict(evidence, candidate_cv_text=cvs[pair['cv_id']]['redacted_text']),
+                    max_bytes=jd['policy_snapshot'].get('stage3_prompt_max_bytes', 16000))
             stage_io.append({'jd': benchmark_jd, 'cv': candidate,
                 'stage0': {'input': cvs[pair['cv_id']]['source_filename'],
                            'output': cvs[pair['cv_id']]['redacted_text'],
@@ -43,9 +67,8 @@ def main():
                            'output': evidence, 'rank': pair['stage2_rank'],
                            'selected_for_stage3': selected},
                 'stage3': {'attempts': pair['stage3_attempt_count'],
-                           'input_reconstructed': build_stage3_user_prompt(cvs[pair['cv_id']]['candidate_id'],
-                               jd['job_snapshot'], dict(evidence, candidate_cv_text=cvs[pair['cv_id']]['redacted_text']))
-                               if evidence and pair['stage3_attempt_count'] and evidence.get('scoring_version') in {'stage2-coverage-v1', 'stage2-coverage-v2'} else None,
+                           'input_reconstructed': prompt,
+                           'input_basis': 'persisted verification registry' if registry else 'current prompt builder; exact failed request not persisted',
                            'output': (pair['result_snapshot'] or {}).get('stage3_evaluation'),
                            'status': pair['stage3_status'], 'failure': pair['failure_code']}})
         eligible = [r for r in joined if r['expected']['expected_stage1'] != 'FAIL']
@@ -72,7 +95,10 @@ def main():
                               'Benchmark top membership is tie-sensitive; high-band share is the primary shortlist metric.']}
     args.export.with_suffix('.comparison.json').write_text(json.dumps(report, indent=2))
     args.export.with_suffix('.stage-details.json').write_text(json.dumps(rows, indent=2))
-    args.export.with_suffix('.stage-io.json').write_text(json.dumps({'stage3_system_prompt': SYSTEM_PROMPT_STAGE3, 'comparisons': stage_io}, indent=2))
+    args.export.with_suffix('.stage-io.json').write_text(json.dumps({
+        'stage3_system_prompt': system_prompt,
+        'system_prompt_matches_run': all(jd['policy_snapshot']['prompt_sha256'] == system_hash for jd in data['campaign_jds']),
+        'comparisons': stage_io}, indent=2))
     print(json.dumps(report, indent=2))
 
 if __name__ == '__main__':

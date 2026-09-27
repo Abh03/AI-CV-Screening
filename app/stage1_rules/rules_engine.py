@@ -7,7 +7,7 @@ from app.stage1_rules.contracts import (
 )
 from app.stage2_retrieval.chunker import SECTION_HEADER_PATTERN
 
-STAGE1_POLICY_VERSION = "stage1-v1.3.0"
+STAGE1_POLICY_VERSION = "stage1-v1.3.1"
 EDUCATION_CONTEXT_ANCHORS = re.compile(
     r"(?i)\b(?:university|college|campus|institute|gpa|cgpa|graduated|degree|faculty|board|school|passed|major|specialization)\b"
 )

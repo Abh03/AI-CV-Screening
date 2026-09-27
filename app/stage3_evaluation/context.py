@@ -3,6 +3,13 @@ from app.stage2_retrieval.chunker import SECTION_HEADER_PATTERN, CATEGORY_MAP, n
 from app.stage3_evaluation.evidence import stable_identity, checked_text
 
 
+def unique_evidence_chars(evidence):
+    """The compact prompt sends shared source chunks once across categories."""
+    sources = {(chunk.get('document_id'), chunk.get('chunk_id') or stable_identity(chunk['text']),
+                chunk['text']) for chunks in evidence.values() for chunk in chunks}
+    return sum(len(text) for _, _, text in sources)
+
+
 def prepare_evaluation_context(candidate_id, payload, max_chars=None):
     from app.config import settings
     if payload.get("candidate_id", candidate_id) != candidate_id:
@@ -18,14 +25,14 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
         raise ValueError("Invalid context budget")
     evidence = {category: list(chunks) for category, chunks in
                 payload.get("evidence_by_category", {}).items()}
-    used = sum(len(chunk["text"]) for chunks in evidence.values() for chunk in chunks)
+    used = unique_evidence_chars(evidence)
     omitted_retrieval = []
     # Keep complete source chunks; never turn truncation into a fabricated quote.
     while used > limit:
         category = max(evidence, key=lambda cat: sum(len(c["text"]) for c in evidence[cat]))
         removed = evidence[category].pop()
         omitted_retrieval.append(removed.get("chunk_id", "retrieved:" + stable_identity(removed["text"])))
-        used -= len(removed["text"])
+        used = unique_evidence_chars(evidence)
     document_id = "context:" + stable_identity(candidate_id, text)
     headers = list(SECTION_HEADER_PATTERN.finditer(text))
     boundaries = [(0, "UNCLASSIFIED")]
@@ -87,7 +94,7 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None):
         used += cost
         included += len(passage["text"])
     return dict(payload, evidence_by_category=evidence, context_metadata={
-        "version": "citable-cv-v2", "source_chars": len(text),
+        "version": "citable-cv-v3", "source_chars": len(text),
         "budget_basis": "unique_context_and_retrieved_chars",
         "included_context_chars": included, "evidence_chars": used,
         "omitted_passage_ids": omitted, "complete": not omitted,
@@ -107,7 +114,8 @@ def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=No
     while True:
         prepared = dict(prepared, evidence_by_category=evidence, context_metadata=metadata)
         registry = build_evidence_registry(candidate_id, prepared)
-        prompt = build_stage3_user_prompt(candidate_id, jd_profile, prepared, registry=registry, compact=True)
+        prompt = build_stage3_user_prompt(candidate_id, jd_profile, prepared, registry=registry,
+                                         compact=True, neutral_sources=True)
         if len(prompt.encode("utf-8")) <= limit:
             return prepared, registry, prompt
         choices = [(cat, index, chunk) for cat, chunks in evidence.items()
@@ -124,4 +132,4 @@ def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=No
         metadata["require_claim_support"] = True
         # Counts stay bounded even for very large legacy snapshots.
         metadata["prompt_omitted_chunk_count"] = metadata.get("prompt_omitted_chunk_count", 0) + 1
-        metadata["evidence_chars"] = sum(len(c["text"]) for chunks in evidence.values() for c in chunks)
+        metadata["evidence_chars"] = unique_evidence_chars(evidence)

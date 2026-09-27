@@ -227,7 +227,9 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
     assert SYSTEM_PROMPT_STAGE3 not in user_content
     root = ET.fromstring(user_content)
     for tag, ref in result.evidence_verification.registry.items():
-        assert root.find(f'.//snippet[@tag="{tag}"]').text == ref.text
+        snippet = root.find(f'.//snippet[@tag="{tag}"]')
+        source = root.find(f'.//source[@id="{snippet.attrib["source_id"]}"]') if 'source_id' in snippet.attrib else snippet
+        assert source.text == ref.text
 
 
 @pytest.mark.asyncio
