@@ -56,12 +56,23 @@ def test_invalid_scores_rejected(score):
 def test_flag_matrix(kind, severity):
     flag = FlagDetail(type=kind, severity=severity, description="test", citations=["EXPERIENCE:1"])
     result = score_evaluation("a", output(flags=[flag]), [], [])
-    review = kind == FlagType.MISSING_INFORMATION or severity in (Severity.HIGH, Severity.CRITICAL)
+    review = severity in (Severity.HIGH, Severity.CRITICAL)
     assert result.composite_score == 80  # No extra deduction for flags.
     assert (result.evaluation_status == EvaluationStatus.REVIEW_REQUIRED) == review
     assert (result.tier is None) == review
     if kind == FlagType.MISSING_INFORMATION:
         assert not result.has_critical_flags
+
+
+def test_low_missing_information_does_not_hide_structural_errors():
+    flag = FlagDetail(type=FlagType.MISSING_INFORMATION, severity=Severity.LOW,
+                      description="Optional detail unspecified", citations=["EDUCATION:1"])
+    assessment = output(flags=[flag])
+    assessment.projects.citations = ["PROJECTS:99"]
+    result = score_evaluation("a", assessment)
+    assert result.evaluation_status == EvaluationStatus.REVIEW_REQUIRED
+    assert result.tier is None
+    assert result.review_reasons == ["INVALID_CITATIONS:projects"]
 
 
 def test_failure_is_distinct_from_valid_zero_and_sort_is_stable():

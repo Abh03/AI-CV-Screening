@@ -7,7 +7,7 @@ from app.stage3_evaluation.schemas import (
     FlagType, LLMEvaluationOutput, Severity, EvidenceVerification,
 )
 
-SCORING_POLICY_VERSION = "stage3-v1.1.0"
+SCORING_POLICY_VERSION = "stage3-v1.2.0"
 CATEGORY_WEIGHTS = MappingProxyType({
     "skills": Decimal("0.40"),
     "experience": Decimal("0.30"),
@@ -44,11 +44,10 @@ def score_evaluation(candidate_id: str, output: LLMEvaluationOutput,
     composite = weighted_score(scores)
     reasons = set(verification.review_reasons)
     for flag in output.flags:
-        if flag.type == FlagType.MISSING_INFORMATION:
-            reasons.add("MISSING_INFORMATION")
-        elif flag.severity in (Severity.HIGH, Severity.CRITICAL):
+        if flag.severity in (Severity.HIGH, Severity.CRITICAL):
             reasons.add("HIGH_OR_CRITICAL_FLAG_REQUIRES_REVIEW")
-    # Citation membership is not proof of a flag's semantic truth: require review.
+    # LOW/MEDIUM flags are annotations; independent verification failures still
+    # require review. Citation membership is not proof of semantic truth.
     status = EvaluationStatus.REVIEW_REQUIRED if reasons else EvaluationStatus.SUCCESS
     return FinalCandidateEvaluation(
         candidate_id=candidate_id, evaluation_status=status,

@@ -142,7 +142,8 @@ async def test_api_preserves_review_and_failure_outcomes(monkeypatch, review_kin
         assert by_id["success"].llm_raw_output["verification_required"] is True
         assert by_id["success"].llm_raw_output["stage1_filter_details"]["checks"][0]["code"] == "AUTHORIZATION_UNKNOWN"
         assert by_id["review"].tier is None
-        assert by_id["review"].scoring_policy_version == "stage3-v1.1.0"
+        from app.stage3_evaluation.scoring import SCORING_POLICY_VERSION
+        assert by_id["review"].scoring_policy_version == SCORING_POLICY_VERSION
         stored = by_id["review"].llm_raw_output
         assert stored["is_mock"] is True
         assert stored["evidence_verification"]["registry"]["SKILLS:1"]["text"] == "Test evidence"

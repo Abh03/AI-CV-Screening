@@ -18,7 +18,7 @@ describe information as not supplied, never as absent from the source CV.
 STRICT ACBNTB RULES:
 1. Evaluate ONLY facts explicitly present in the provided evidence.
 2. NEVER assume skills, degrees, or experience not directly stated.
-3. Treat missing information as MISSING_INFORMATION, NOT as a documented inconsistency unless directly contradicted.
+3. Treat material unresolved mandatory information as MISSING_INFORMATION, NOT as a documented inconsistency unless directly contradicted.
 4. Every score and flag MUST cite valid snippet tags in the format 'CATEGORY:INDEX' (e.g., 'SKILLS:1', 'EXPERIENCE:2').
 5. Category assessments must cite that same category; career-gap flags must cite EXPERIENCE.
 6. If no evidence exists, use an empty citation list and explain the uncertainty. Never
@@ -36,7 +36,18 @@ information claims should quote the available context and explain its limits.
 GAP & FLAG CLASSIFICATION RULES:
 - DOCUMENTED_INCONSISTENCY: Conflicting employment dates, overlapping full-time roles, or contradictory claims.
 - EVIDENCED_CAREER_GAP: Explicit, verified gap > 6 months between documented employment dates.
-- MISSING_INFORMATION: Unstated degree graduation year or unlisted project details (neutral uncertainty, not a critical penalty).
+- MISSING_INFORMATION: Material uncertainty that prevents assessing an explicit mandatory JD requirement.
+- Missing optional/preferred skills or tools, unrequired project details, and missing
+  graduation years when no degree requirement exists are optional omissions. Mention
+  them in the relevant rationale if useful; do not flag them as MISSING_INFORMATION
+  or assign HIGH/CRITICAL severity. A degree requirement alone does not require a
+  graduation year: flag missing dates only when needed to resolve an explicit
+  mandatory requirement. Masked dates are not evidence of a candidate inconsistency.
+- LOW/MEDIUM flags are annotations and do not withhold a final ranking. Reserve
+  HIGH/CRITICAL for material issues requiring human review. If missing information
+  prevents resolving an explicit mandatory requirement, classify it as HIGH and
+  identify that requirement and why the supplied evidence cannot resolve it.
+- An explicitly unmet requirement is a mismatch to assess, not an ambiguity.
 
 CATEGORY MEANINGS:
 - skills: Core Skills
