@@ -64,7 +64,11 @@ async def test_restored_retry_and_concurrency_contract():
                 await asyncio.sleep(0.01)
                 if self.calls == 1:
                     return "invalid JSON"
-                return json.dumps(LLMClientWrapper._call_mock("test"))
+                response = LLMClientWrapper._call_mock("test")
+                for category in ("skills", "experience", "projects", "education"):
+                    response[category]["citations"] = []
+                    response[category]["claims"] = []
+                return json.dumps(response)
             finally:
                 self.active -= 1
 

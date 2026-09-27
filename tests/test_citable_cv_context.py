@@ -111,10 +111,10 @@ async def test_provider_receives_citable_full_context_and_support_is_verified():
             for category in ("skills", "experience", "projects", "education"):
                 snippets = root.findall(f'.//category[@name="{category.upper()}"]/snippet')
                 snippet = snippets[-1]
-                result[category]["citations"] = [snippet.attrib["tag"]]
+                result[category]["citations"] = [snippet.attrib["evidence_id"]]
                 source = root.find(f'.//source[@id="{snippet.attrib["source_id"]}"]') if "source_id" in snippet.attrib else snippet
-                result[category]["claims"] = [{"claim": "The CV supplies this context.",
-                    "citation": snippet.attrib["tag"], "quote": source.text}]
+                result[category]["claims"] = [{"claim": source.text,
+                    "citation": snippet.attrib["evidence_id"]}]
             assert "Built a Python pipeline" in user_prompt
             return json.dumps(result)
 

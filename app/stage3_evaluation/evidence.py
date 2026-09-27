@@ -76,6 +76,8 @@ def build_evidence_registry(candidate_id: str, payload: dict) -> Mapping[str, Ev
             registry[f"{category}:{index}"] = EvidenceReference(
                 candidate_id=candidate_id, category=category, source_category=source_category,
                 chunk_id=chunk_id, document_id=document_id, source_location=location, text=text,
+                evidence_id="ev_" + stable_identity(candidate_id, category, document_id, chunk_id,
+                                                     source_category, location.model_dump(), text),
             )
     return MappingProxyType(registry)
 
@@ -129,10 +131,19 @@ def verify_evidence(output: LLMEvaluationOutput, registry: Mapping[str, Evidence
                 reason = "INVALID_CLAIM_CITATION"
             elif not claim.claim.strip() or not claim.quote.strip():
                 reason = "EMPTY_CLAIM_SUPPORT"
-            elif "..." in claim.quote or "…" in claim.quote:
+            elif not claim.evidence_id and ("..." in claim.quote or "…" in claim.quote):
                 reason = "ELLIPSIS_IN_QUOTE"
             elif normalize(claim.quote) not in normalize(reference.text):
                 reason = "QUOTE_NOT_IN_SOURCE"
+            elif claim.evidence_id and claim.evidence_id != reference.evidence_id:
+                reason = "INVALID_EVIDENCE_ID"
+            elif claim.evidence_id and normalize(claim.claim) not in {
+                    normalize(reference.text),
+                    *(normalize(unit) for unit in re.split(r"(?<=[.!?])\s+|[\r\n]+", reference.text)
+                      if unit.strip()),
+            }:
+                # Arbitrary paraphrases require review; lexical overlap cannot prove entailment.
+                reason = "CLAIM_NOT_EXPLICIT_IN_SOURCE"
             elif not set(re.findall(r"\d+(?:\.\d+)?", claim.claim)).issubset(
                     set(re.findall(r"\d+(?:\.\d+)?", claim.quote))):
                 reason = "NUMERIC_CLAIM_NOT_IN_QUOTE"
@@ -164,3 +175,23 @@ def verify_evidence(output: LLMEvaluationOutput, registry: Mapping[str, Evidence
         reasons.add("INJECTION_SIGNAL_REQUIRES_REVIEW")
     return EvidenceVerification(registry=dict(registry), checks=checks, review_reasons=sorted(reasons),
                                 verified_flag_indices=verified_flags, injection_signals=sorted(signals))
+
+
+def resolve_evidence_selection(selection, registry, candidate_id):
+    """Attach trusted text without accepting any model-generated quotation."""
+    by_id = {}
+    for tag, ref in registry.items():
+        if ref.candidate_id != candidate_id:
+            raise ValueError("Cross-candidate registry")
+        if ref.evidence_id:
+            by_id[ref.evidence_id] = (tag, ref)
+    data = selection.model_dump()
+    for assessment in [*(data[c.lower()] for c in CATEGORIES), *data["flags"]]:
+        assessment["citations"] = [by_id[c][0] if c in by_id else "UNKNOWN_ID:" + c
+                                   for c in assessment["citations"]]
+        for claim in assessment["claims"]:
+            evidence_id = claim["citation"]
+            entry = by_id.get(evidence_id)
+            claim.update(citation=entry[0] if entry else "UNKNOWN_ID:" + evidence_id,
+                         quote=entry[1].text if entry else "", evidence_id=evidence_id)
+    return LLMEvaluationOutput.model_validate(data)

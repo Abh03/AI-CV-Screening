@@ -33,8 +33,8 @@ def test_stage3_user_prompt_xml_tagging():
     prompt = build_stage3_user_prompt("cand_201", jd_profile, mock_evidence)
 
     assert '<evaluation_request candidate_id="cand_201">' in prompt
-    assert '<snippet tag="SKILLS:1">' in prompt
-    assert '<snippet tag="EXPERIENCE:1">' in prompt
+    assert '<snippet tag="SKILLS:1" evidence_id="' in prompt
+    assert '<snippet tag="EXPERIENCE:1" evidence_id="' in prompt
     assert '<snippet tag="NONE">' in prompt  # Projects category empty fallback
 
 

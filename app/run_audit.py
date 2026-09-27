@@ -20,7 +20,7 @@ from app.stage2_retrieval.evidence_extractor import DEFAULT_CATEGORY_WEIGHTS
 from app.stage2_retrieval.coverage import SCORING_VERSION as STAGE2_SCORING_VERSION
 from app.stage2_retrieval.reranker import _MODEL_NAME as RERANKER_MODEL_NAME, RERANKER_MODEL_VERSION
 
-PROMPT_VERSION = "stage3-prompt-v10"
+PROMPT_VERSION = "stage3-prompt-v11"
 RUN_POLICY_VERSION = "orchestration-v3"
 
 

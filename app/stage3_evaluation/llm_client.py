@@ -12,7 +12,7 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.stage3_evaluation.schemas import LLMEvaluationOutput, FinalCandidateEvaluation
+from app.stage3_evaluation.schemas import LLMEvaluationOutput, FinalCandidateEvaluation, EvidenceSelectionOutput
 
 logger = logging.getLogger("cv_screening")
 
@@ -109,7 +109,7 @@ class LLMClientWrapper:
 
     def _get_structured_response_format(self) -> Dict[str, Any]:
         """Generates OpenAI-compatible structured outputs format from Pydantic schema."""
-        schema = LLMEvaluationOutput.model_json_schema()
+        schema = EvidenceSelectionOutput.model_json_schema()
 
         def require_properties(node):
             if isinstance(node, dict):
@@ -154,7 +154,7 @@ class LLMClientWrapper:
                 config = types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     response_mime_type="application/json",
-                    response_json_schema=LLMEvaluationOutput.model_json_schema(),
+                    response_json_schema=EvidenceSelectionOutput.model_json_schema(),
                     temperature=0.1,
                 )
 
@@ -439,7 +439,14 @@ async def evaluate_single_candidate_async(
                     system_prompt=SYSTEM_PROMPT_STAGE3, user_prompt=user_prompt
                 )
                 data = json.loads(raw_response)
-            parsed_output = LLMEvaluationOutput.model_validate(data)
+            if is_mock:
+                parsed_output = LLMEvaluationOutput.model_validate(data)
+            else:
+                from app.stage3_evaluation.evidence import resolve_evidence_selection
+                parsed_output = resolve_evidence_selection(
+                    EvidenceSelectionOutput.model_validate(data), registry, candidate_id)
+                candidate_payload = dict(candidate_payload, context_metadata={
+                    **candidate_payload.get("context_metadata", {}), "require_claim_support": True})
             return compute_deterministic_tier(
                 candidate_id, parsed_output, candidate_payload, registry=registry,
                 injection_signals=injection_signals, is_mock=is_mock

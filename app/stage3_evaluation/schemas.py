@@ -38,6 +38,7 @@ class SupportedClaim(StrictBaseModel):
     claim: str
     citation: str
     quote: str
+    evidence_id: str | None = None
 
 
 class FlagDetail(StrictBaseModel):
@@ -92,6 +93,7 @@ class EvidenceReference(StrictBaseModel):
     document_id: str | None = None
     source_location: SourceLocation
     text: str
+    evidence_id: str | None = None
 
 
 class CitationCheck(StrictBaseModel):
@@ -161,3 +163,32 @@ class FinalCandidateEvaluation(StrictBaseModel):
             elif self.tier is not None or not self.review_reasons:
                 raise ValueError("Review outcomes require reasons and no final tier")
         return self
+
+
+class EvidenceSelectionClaim(StrictBaseModel):
+    claim: str
+    citation: str  # Stable evidence ID, never a positional tag.
+
+
+class EvidenceSelectionAssessment(StrictBaseModel):
+    score: Score
+    rationale: str
+    citations: List[str]
+    claims: List[EvidenceSelectionClaim]
+
+
+class EvidenceSelectionFlag(StrictBaseModel):
+    type: FlagType
+    severity: Severity
+    description: str
+    citations: List[str]
+    claims: List[EvidenceSelectionClaim]
+
+
+class EvidenceSelectionOutput(StrictBaseModel):
+    skills: EvidenceSelectionAssessment
+    experience: EvidenceSelectionAssessment
+    projects: EvidenceSelectionAssessment
+    education: EvidenceSelectionAssessment
+    flags: List[EvidenceSelectionFlag]
+    executive_summary: str

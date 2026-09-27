@@ -205,7 +205,11 @@ async def test_413_retries_smaller_context_and_marks_review():
             if len(self.sizes) == 1:
                 response = httpx.Response(413, request=httpx.Request("POST", "https://example.test"))
                 raise httpx.HTTPStatusError("Too large", request=response.request, response=response)
-            return json.dumps(LLMClientWrapper._call_mock("a"))
+            response = LLMClientWrapper._call_mock("a")
+            for category in ("skills", "experience", "projects", "education"):
+                response[category]["citations"] = []
+                response[category]["claims"] = []
+            return json.dumps(response)
 
     provider = Provider()
     result = await evaluate_single_candidate_async(large_payload(), {}, provider)

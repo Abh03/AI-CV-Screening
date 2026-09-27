@@ -13,7 +13,7 @@ from app.stage3_evaluation.llm_client import (
     evaluate_single_candidate_async, llm_client,
 )
 from app.stage3_evaluation.prompts import SYSTEM_PROMPT_STAGE3, build_stage3_user_prompt
-from app.stage3_evaluation.schemas import EvaluationStatus, LLMEvaluationOutput
+from app.stage3_evaluation.schemas import EvaluationStatus, LLMEvaluationOutput, EvidenceSelectionOutput
 
 CATEGORIES = ("SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION")
 
@@ -196,6 +196,10 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
     captured = {}
     await llm_client.aclose()
     response_data = output().model_dump()
+    for tag, ref in build_evidence_registry("a", payload()).items():
+        assessment = response_data[ref.category.lower()]
+        assessment["citations"] = [ref.evidence_id]
+        assessment["claims"] = [{"claim": ref.text, "citation": ref.evidence_id}]
     monkeypatch.setattr(llm_client, "provider", provider)
     monkeypatch.setattr(llm_client, "_initialized", True)
     if provider == "gemini":
@@ -214,15 +218,15 @@ async def test_provider_channels_and_schema(monkeypatch, provider):
     assert not result.is_mock
     if provider == "gemini":
         assert captured["config"].system_instruction == SYSTEM_PROMPT_STAGE3
-        assert captured["config"].response_json_schema == LLMEvaluationOutput.model_json_schema()
+        assert captured["config"].response_json_schema == EvidenceSelectionOutput.model_json_schema()
         user_content = captured["contents"]
     else:
         assert captured["messages"][0] == {"role": "system", "content": SYSTEM_PROMPT_STAGE3}
         assert captured["messages"][1]["role"] == "user"
         schema = captured["response_format"]["json_schema"]["schema"]
-        for name in ("CategoryAssessment", "FlagDetail", "SupportedClaim"):
+        for name in ("EvidenceSelectionAssessment", "EvidenceSelectionFlag", "EvidenceSelectionClaim"):
             assert set(schema["$defs"][name]["required"]) == set(schema["$defs"][name]["properties"])
-        assert "claims" in schema["$defs"]["CategoryAssessment"]["required"]
+        assert "claims" in schema["$defs"]["EvidenceSelectionAssessment"]["required"]
         user_content = captured["messages"][1]["content"]
     assert SYSTEM_PROMPT_STAGE3 not in user_content
     root = ET.fromstring(user_content)
