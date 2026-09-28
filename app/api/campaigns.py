@@ -14,7 +14,7 @@ from app.campaigns.intake import ArchiveLimitError, import_zip
 from app.campaigns.persistence import campaign_counts, reserve_campaign, selected_pair_count
 from app.config import settings
 from app.core.auth import Principal, can_access, current_principal
-from app.models.database import CampaignModel, CampaignJDModel, CampaignPairModel, CampaignCVModel, get_db
+from app.models.database import CampaignModel, CampaignJDModel, CampaignPairModel, CampaignCVModel, CampaignMemberModel, get_db
 from app.run_audit import policy_snapshot
 from app.workers.tasks import campaign_stage0_task, campaign_coordinate_task
 
@@ -23,7 +23,8 @@ router = APIRouter(prefix="/api/v1/campaigns", tags=["Campaigns"])
 
 async def _owned(db, campaign_id, principal):
     campaign = await db.get(CampaignModel, campaign_id)
-    if campaign is None or not can_access(campaign.owner_id, principal):
+    shared = await db.get(CampaignMemberModel, (campaign_id, principal.id)) if campaign is not None else None
+    if campaign is None or not (can_access(campaign.owner_id, principal) or shared is not None):
         raise HTTPException(status_code=404, detail="Campaign not found")
     return campaign
 
@@ -61,6 +62,8 @@ async def create_campaign(payload: CampaignCreateSchema, db: AsyncSession = Depe
 async def upload_archive(campaign_id: str, request: Request, db: AsyncSession = Depends(get_db),
                          principal: Principal = Depends(current_principal)):
     campaign = await _owned(db, campaign_id, principal)
+    if not can_access(campaign.owner_id, principal):
+        raise HTTPException(403, "Only the campaign owner can upload CVs")
     if request.headers.get("content-type", "").split(";")[0].lower() != "application/zip":
         raise HTTPException(status_code=415, detail="Expected application/zip")
     length = request.headers.get("content-length")
@@ -115,7 +118,8 @@ async def list_campaigns(limit: int = Query(20, ge=1, le=100), offset: int = Que
                          principal: Principal = Depends(current_principal),
                          search: str = Query("", max_length=255)):
     # Even administrators see their own list; opening another owner's ID remains an explicit action.
-    scope = CampaignModel.owner_id == principal.id
+    shared = select(CampaignMemberModel.campaign_id).where(CampaignMemberModel.user_id == principal.id)
+    scope = (CampaignModel.owner_id == principal.id) | CampaignModel.id.in_(shared)
     if search.strip():
         term = search.strip()
         scope = scope & (CampaignModel.name.icontains(term, autoescape=True) | CampaignModel.id.icontains(term, autoescape=True))

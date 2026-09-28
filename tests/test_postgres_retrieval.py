@@ -81,7 +81,7 @@ async def test_migrations_scoped_retrieval_and_cache(migrated_database, monkeypa
         async with sessions() as session:
             assert 160000 <= int((await session.execute(text("SHOW server_version_num"))).scalar_one()) < 170000
             assert (await session.execute(text("SELECT extversion FROM pg_extension WHERE extname='vector'"))).scalar_one()
-            assert (await session.execute(text("SELECT version_num FROM alembic_version"))).scalar_one() == "e61c2a730b94"
+            assert (await session.execute(text("SELECT version_num FROM alembic_version"))).scalar_one() == "f04d8c912e63"
             repo = PostgresRetrievalRepository(session)
             first = generate_cv_chunks("SKILLS\nPython FastAPI PostgreSQL\n\nEXPERIENCE\nBuilt Python services")
             other = generate_cv_chunks("SKILLS\nPython and Kubernetes")

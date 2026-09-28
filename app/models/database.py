@@ -260,6 +260,8 @@ class CampaignCVModel(Base):
     source_locations: Mapped[list | None] = mapped_column(JSON)
     extraction_error_code: Mapped[str | None] = mapped_column(String(64))
     encrypted_pdf: Mapped[bytes | None] = mapped_column(LargeBinary)
+    # Recruiter document copy; processing's temporary encrypted_pdf is still purged.
+    encrypted_original_pdf: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -312,3 +314,43 @@ class CampaignPairModel(Base):
         CheckConstraint("stage2_rank IS NULL OR stage2_rank > 0", name="ck_campaign_pair_stage2_rank"),
         CheckConstraint("status IN ('PENDING','RUNNING','STAGE2_READY','EXTRACTION_FAILED','FILTER_REJECTED','PROCESSING_FAILED','CUTOFF_EXCLUDED','SHORTLISTED','STAGE3_RUNNING','SUCCESS','REVIEW_REQUIRED','EVALUATION_FAILED')", name="ck_campaign_pair_status"),
     )
+
+
+class CandidateReviewModel(Base):
+    __tablename__ = "candidate_reviews"
+    pair_id: Mapped[str] = mapped_column(ForeignKey("campaign_pairs.id", ondelete="CASCADE"), primary_key=True)
+    decision: Mapped[str] = mapped_column(String(24), nullable=False, default="UNREVIEWED")
+    notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    verified_facts: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    assignee_id: Mapped[str | None] = mapped_column(String(64))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    reviewer_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (CheckConstraint("decision IN ('UNREVIEWED','SHORTLIST','HOLD','NOT_PROCEEDING')", name="ck_candidate_review_decision"),)
+
+
+class CandidateReviewEventModel(Base):
+    __tablename__ = "candidate_review_events"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    pair_id: Mapped[str] = mapped_column(ForeignKey("campaign_pairs.id", ondelete="CASCADE"), nullable=False, index=True)
+    actor_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class RecruiterViewModel(Base):
+    __tablename__ = "recruiter_views"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    filters: Mapped[dict] = mapped_column(JSON, nullable=False)
+    columns: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+
+
+class CampaignMemberModel(Base):
+    __tablename__ = "campaign_members"
+    campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), nullable=False)

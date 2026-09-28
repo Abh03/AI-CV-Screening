@@ -10,10 +10,10 @@ export function safeApiError(error: unknown): SafeApiError {
     401: 'Your session has ended. Sign in again.',
     403: 'You do not have access to this campaign.',
     404: 'This campaign or JD could not be found.',
-    409: 'This request conflicts with the current campaign state. Refresh before retrying.',
+    409: 'The campaign or candidate decision has changed. Refresh before saving again.',
     413: 'The upload or request is too large.',
-    415: 'Only ZIP archives are accepted here.',
-    422: 'The server rejected some input. Check the JD fields or ZIP file.',
+    415: 'This file type is not supported. Choose a PDF for a CV or a ZIP for campaign intake.',
+    422: 'Check the filters and required fields. To restore a CV, choose its exact original PDF.',
     503: 'The service is temporarily unavailable. Please retry later.'
   };
   const id = error.headers?.get('X-Correlation-ID');

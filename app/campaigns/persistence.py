@@ -1,8 +1,9 @@
 """Campaign reservations and owner-scoped reads.
 
-Raw PDFs may exist only as encrypted_pdf while Stage 0 is pending. Both Stage 0
-terminal paths clear it. Redacted text, source locations and decisions are
-retained as sensitive data and must be served only through owner-scoped APIs.
+Processing PDFs exist as encrypted_pdf while Stage 0 is pending and both
+terminal paths clear it. A separate encrypted_original_pdf supports authenticated
+recruiter viewing. Text, originals, source locations and decisions are sensitive
+and must be served only through campaign access checks.
 """
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -90,7 +91,8 @@ async def reserve_cv(db, *, campaign_id: str, owner_id: str, candidate_id: str,
     cvs = CampaignCVModel(id=str(uuid4()), campaign_id=campaign_id, candidate_id=candidate_id,
                           source_filename=source_filename, content_hash=content_hash,
                           document_version=1, stage0_status="PENDING",
-                          encrypted_pdf=encrypt_payload(pdf_bytes) if pdf_bytes is not None else None)
+                          encrypted_pdf=encrypt_payload(pdf_bytes) if pdf_bytes is not None else None,
+                          encrypted_original_pdf=encrypt_payload(pdf_bytes) if pdf_bytes is not None else None)
     db.add(cvs)
     try:
         await db.flush()
@@ -121,6 +123,7 @@ async def stage_pdf(db, *, campaign_id: str, owner_id: str, candidate_id: str, p
     if cv.stage0_status != "PENDING":
         return False
     cv.encrypted_pdf = encrypt_payload(pdf_bytes)
+    cv.encrypted_original_pdf = encrypt_payload(pdf_bytes)
     cv.updated_at = _now()
     await db.commit()
     return True

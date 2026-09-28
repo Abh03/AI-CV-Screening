@@ -11,11 +11,11 @@ import { describeError } from '../core/http-errors';
 import { LocalCampaigns } from '../core/local-campaigns';
 
 @Component({ standalone: true, imports: [RouterLink, FormsModule, DatePipe], template: `
-  <div class="page-heading"><div><p class="eyebrow">Campaign workspace</p><h1>Campaigns</h1><p>Track CV screening for each job description.</p><p role="status">Service: {{ service() }}</p></div><a class="button" routerLink="/campaigns/new">New campaign</a></div>
-  <section class="card"><h2>Open a campaign</h2><p>Enter a campaign ID to reopen it directly.</p>
+  <div class="page-heading"><div><p class="eyebrow">Recruiting workspace</p><h1>Your campaigns</h1><p>Review candidate pools, resolve questions, and prepare shortlists.</p></div><div class="actions"><a class="button secondary" routerLink="/candidates">Find a candidate</a><a class="button" routerLink="/campaigns/new">New campaign</a></div></div>
+  <details class="card"><summary>Open a campaign by ID</summary><p>Enter a campaign ID to reopen it directly.</p>
     <form (ngSubmit)="open()" class="inline-form"><label for="campaign-id">Campaign ID</label><input id="campaign-id" name="id" [(ngModel)]="id" autocomplete="off" required><button type="submit">Open</button></form>
     @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-  </section>
+  </details>
   <section class="card"><h2>Your campaigns</h2>
     <form (ngSubmit)="searchCampaigns()" class="inline-form"><label for="campaign-search">Search by campaign name or ID</label><input id="campaign-search" name="search" [(ngModel)]="search" maxlength="255"><button type="submit">Search</button></form>
     @if (listLoading()) { <p role="status">Loading campaigns…</p> }

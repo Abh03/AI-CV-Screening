@@ -7,12 +7,13 @@ import { CampaignStatus, JdDefinition, JdSummary, categories } from '../api/cont
 import { publicConfig } from '../core/config';
 import { describeError } from '../core/http-errors';
 import { LocalCampaigns } from '../core/local-campaigns';
-import { countEntries, pairProgress } from '../shared/progress';
+import { pairProgress } from '../shared/progress';
 import { HttpEventType } from '@angular/common/http';
 import { IntakeReport } from '../api/contracts';
+import { recruiterLabel } from '../shared/recruiter-display';
 
 @Component({ standalone: true, imports: [RouterLink], template: `
-  <div class="page-heading"><div><p class="eyebrow">Campaign monitor</p><h1>{{ campaign()?.name || 'Campaign ' + id }}</h1><p>Updates while this tab is visible. Results are separate for each JD.</p></div><button type="button" class="secondary" (click)="refresh()" [disabled]="loading()">Refresh now</button></div>
+  <div class="page-heading"><div><p class="eyebrow">Campaign overview</p><h1>{{ campaign()?.name || 'Campaign ' + id }}</h1><p>Open a role to review its candidate pool and build a shortlist.</p></div><div class="actions"><a routerLink="/candidates" [queryParams]="{ campaign: id }">Find a candidate in this campaign</a><button type="button" class="secondary" (click)="refresh()" [disabled]="loading()">Refresh now</button></div></div>
   @if (error()) { <div class="error-banner" role="alert">{{ error() }}</div> }
   @if (loading() && !campaign()) { <p role="status">Loading campaign…</p> }
   @if (campaign(); as c) {
@@ -24,14 +25,14 @@ import { IntakeReport } from '../api/contracts';
       <button type="button" (click)="upload()" [disabled]="!file() || uploading()">Upload ZIP</button>
     </section> }
     <div class="grid three"><section class="stat"><span>Status</span><strong>{{ c.status }}</strong></section><section class="stat"><span>Accepted CVs</span><strong>{{ c.counts.cvs }}</strong></section><section class="stat"><span>Candidate–JD pairs</span><strong>{{ progress(c).complete }} / {{ progress(c).total }}</strong></section></div>
-    @if (progress(c).total) { <progress [value]="progress(c).complete" [max]="progress(c).total" [attr.aria-label]="'Terminal pairs: ' + progress(c).complete + ' of ' + progress(c).total"></progress><p class="muted">{{ progress(c).percent }}% of pairs terminal. No completion time estimate is available.</p> }
+    @if (progress(c).total) { <progress [value]="progress(c).complete" [max]="progress(c).total" [attr.aria-label]="'Completed screening outcomes: ' + progress(c).complete + ' of ' + progress(c).total"></progress><p class="muted">{{ progress(c).percent }}% of candidate-role screenings have reached an outcome. Candidate pools include unfinished and unevaluated candidates.</p> }
     <p class="muted" aria-live="polite">Last updated: {{ updated() ? updated()!.toLocaleTimeString() : 'Never' }}</p>
     @if (c.stage3_retry_waiting) { <div class="notice" role="status">{{ c.stage3_retry_waiting }} pair(s) waiting for Stage 3 rate-limit retry.</div> }
-    <section class="card"><h2>Stage 0 extraction</h2>@if (entries(c.stage0).length) { <ul class="counts">@for (entry of entries(c.stage0); track entry.label) { <li><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></li> }</ul> } @else { <p>No PDFs in extraction yet.</p> }</section>
+    <details class="card"><summary>CV extraction progress</summary>@if (entries(c.stage0).length) { <ul class="counts">@for (entry of entries(c.stage0); track entry.label) { <li><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></li> }</ul> } @else { <p>No PDFs in extraction yet.</p> }</details>
     @if (c.intake_report ?? uploadReport(); as report) { <section class="card"><h2>ZIP intake</h2><p>{{ report.accepted_count }} accepted · {{ report.rejected_count }} rejected</p>@if (report.rejected.length) { <table><caption>Rejected ZIP entries</caption><thead><tr><th scope="col">File</th><th scope="col">Code</th></tr></thead><tbody>@for (item of report.rejected; track $index) { <tr><td>{{ item.name }}</td><td>{{ item.code }}</td></tr> }</tbody></table> }@if (report.accepted_count === 0) { <p>No PDFs were accepted. Select another ZIP to continue intake.</p> }</section> }
-    <section><h2>Job descriptions</h2><div class="grid two">@for (jd of jds(); track jd.jd_key) { <article class="card"><div class="card-title"><h3>{{ jd.title }}</h3><span class="badge">{{ jd.status }}</span></div><p class="muted">ID: {{ jd.jd_key }} · Stage 3 cap: {{ jd.stage3_cap }}</p>
+    <section><h2>Roles and candidate pools</h2><div class="grid two">@for (jd of jds(); track jd.jd_key) { <article class="card"><div class="card-title"><h3>{{ jd.title }}</h3><span class="badge">{{ label(jd.status) }}</span></div><p class="muted">Detailed assessment limit: {{ jd.stage3_cap }} candidates</p>
       @if (jd.stage3_retry_waiting) { <p>{{ jd.stage3_retry_waiting }} waiting for Stage 3 retry</p> }
-      <ul class="counts">@for (entry of entries(jd.counts); track entry.label) { <li><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></li> }</ul><div class="actions"><a class="button" [routerLink]="['/campaigns', id, 'jds', jd.jd_key]">View results</a><button type="button" class="secondary" (click)="viewDefinition(jd.jd_key)">View submitted JD</button></div></article> } @empty { <p>JD summaries are not available yet.</p> }</div></section>
+      <ul class="counts">@for (entry of entries(jd.counts); track entry.label) { <li><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></li> }</ul><div class="actions"><a class="button" [routerLink]="['/campaigns', id, 'jds', jd.jd_key]">Review candidate pool</a><button type="button" class="secondary" (click)="viewDefinition(jd.jd_key)">View approved requirements</button></div></article> } @empty { <p>Role summaries are not available yet.</p> }</div></section>
     @if (definitionLoading()) { <p role="status">Loading submitted JD…</p> }
     @if (definitionError()) { <p class="error" role="alert">{{ definitionError() }}</p> }
     @if (definition(); as d) { <section class="card" id="jd-definition"><div class="card-title"><h2>Submitted JD: {{ d.job_profile.title }}</h2><button type="button" class="secondary" (click)="definition.set(null)">Close</button></div><p>ID: {{ d.jd_key }} · Stage 3 cap: {{ d.stage3_cap }}</p>
@@ -52,7 +53,9 @@ export class CampaignDetailComponent {
   readonly uploadError = signal(''); readonly uploadReport = signal<IntakeReport | null>(null);
   readonly definition = signal<JdDefinition | null>(null); readonly definitionLoading = signal(false);
   readonly definitionError = signal(''); readonly categories = categories;
-  readonly entries = countEntries; readonly progress = (c: CampaignStatus) => pairProgress(c.counts);
+  readonly label = recruiterLabel;
+  readonly entries = (counts: Record<string, number>) => Object.entries(counts).filter(([, count]) => count > 0).map(([key, count]) => ({ label: recruiterLabel(key), count }));
+  readonly progress = (c: CampaignStatus) => pairProgress(c.counts);
   constructor() {
     merge(timer(0, publicConfig.pollMs), fromEvent(document, 'visibilitychange')).pipe(
       filter(() => !document.hidden && !this.loading() && !this.isTerminal()),

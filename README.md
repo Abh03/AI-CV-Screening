@@ -3,6 +3,10 @@
 PDF-focused FastAPI screening pipeline with versioned scoring, evidence verification,
 PostgreSQL retrieval, and PDF ingestion.
 
+For an end-to-end explanation of the current pipeline, campaign architecture,
+evidence verification, deployment and synthetic benchmarks, see the
+[Engineering and Architecture Report](docs/ENGINEERING_ARCHITECTURE_REPORT.md).
+
 ## Local configuration
 
 Use Python 3.11 and install `requirements.txt` in a virtual environment. The

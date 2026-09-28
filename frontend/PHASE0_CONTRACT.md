@@ -1,5 +1,7 @@
 # Phase 0 contract and route map
 
+This historical Phase 0 snapshot is superseded by the implemented [Recruiter workspace](../docs/RECRUITER_WORKSPACE.md), including audited decisions, CV viewing, collaboration and full-pool search. Its original read-only scope and limits below describe the earlier baseline.
+
 Captured against `app/api/campaigns.py`, `app/api/schemas.py`, `app/campaigns/intake.py`, `app/campaigns/persistence.py` and `app/core/auth.py` on 25 September 2026.
 
 | Route | Purpose |
