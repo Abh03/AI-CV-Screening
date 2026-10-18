@@ -165,3 +165,4 @@ test-results.xml
 
 
 docs/*
+!docs/SIMPLIFIED_ARCH_DOC.md
