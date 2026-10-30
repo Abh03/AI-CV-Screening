@@ -517,7 +517,7 @@ async def execute_campaign_stage3(pair_id, lease_owner):
             else:
                 result = await evaluate_single_candidate_async(
                     evidence, job, max_retries=0, raise_rate_limits=True,
-                    max_provider_attempts=1)
+                    max_provider_attempts=1, single_cv=bool(policy.get("single_cv")))
         except (ProviderRateLimited, ProviderTransientFailure) as exc:
             delay = retry_delay(attempt, exc.retry_after)
             async with AsyncSessionLocal() as db:

@@ -219,10 +219,11 @@ def test_required_skill_policy():
     assert evaluate_stage1_hard_filters(candidate_cv_text="Python", **kwargs)["status"] == "PASS"
     assert evaluate_stage1_hard_filters(candidate_cv_text="Java", **kwargs)["status"] == "PASS"
     missing = evaluate_stage1_hard_filters(candidate_cv_text="Other skills", **kwargs)
-    assert missing["status"] == "FAIL"
-    assert missing["checks"][-1]["code"] == "MISSING_REQUIRED_SKILLS"
+    assert missing["status"] == "REVIEW"
+    assert missing["checks"][-1]["code"] == "REQUIRED_SKILL_NOT_DOCUMENTED"
     negated = evaluate_stage1_hard_filters(candidate_cv_text="No experience with Python", **kwargs)
     assert negated["status"] == "FAIL" and negated["checks"][-1]["negated"]
+    assert negated["checks"][-1]["code"] == "REQUIRED_SKILL_NEGATED"
     matched = evaluate_stage1_hard_filters(candidate_cv_text="Worked with Java", **kwargs)
     assert matched["checks"][-1]["matched_term"] == "Java"
 

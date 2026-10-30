@@ -49,6 +49,25 @@ def test_missing_evidence_keeps_weight_while_absent_requirement_is_not_applicabl
     assert result["target_assessments"][1]["status"] == "MISSING_INFORMATION"
 
 
+def test_approved_degree_fields_are_alternatives_for_education_coverage():
+    contract = {"version": "relevance-v1", "targets": [{
+        "target_id": "degree", "category": "EDUCATION", "kind": "education",
+        "text": "Bachelor's Degree in an IT-related subject",
+        "source_quote": "Bachelor's Degree in an IT-related subject",
+        "importance": 1, "treatment": "requirement",
+        "evidence_terms": [["Bachelor's Degree"], ["IT"], ["Information Technology"]]}]}
+    degree = {"level": "BACHELOR", "level_aliases": ["Bachelor"],
+              "fields": ["Information Technology", "Computer Engineering"],
+              "field_aliases": ["Computer Science"]}
+    targets, _ = resolve_targets({}, degree_requirement=degree, relevance_contract=contract)
+    supported = score_coverage(targets, {"EDUCATION": [chunk(
+        "Bachelor of Engineering in Computer Engineering", "EDUCATION")]}, DEFAULT_CATEGORY_WEIGHTS)
+    assert supported["target_assessments"][0]["status"] == "DIRECT"
+    unsupported = score_coverage(targets, {"EDUCATION": [chunk(
+        "Bachelor of Arts in History", "EDUCATION")]}, DEFAULT_CATEGORY_WEIGHTS)
+    assert unsupported["target_assessments"][0]["status"] == "PARTIAL"
+
+
 def test_domain_preferences_are_bounded_and_never_qualify_alone():
     domain = target("banking") | {"kind": "domain", "treatment": "preference", "evidence_terms": [["banking"]], "importance": 5}
     result = score_coverage([target(), domain], {"EXPERIENCE": [chunk("Digital banking") ]}, DEFAULT_CATEGORY_WEIGHTS)

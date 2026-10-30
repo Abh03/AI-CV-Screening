@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+import pymupdf
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
@@ -121,6 +122,40 @@ async def test_candidate_search_history_evidence_and_document_access(workspace):
     assert (await client.get(document)).status_code == 404
     assert (await client.get("/api/v1/recruiter/pairs/pair-35")).status_code == 404
     assert (await client.get("/api/v1/recruiter/candidates", params={"search": "Person"})).json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_single_cv_pdf_report_includes_rationale_and_is_private(workspace):
+    client, sessions, principal = workspace
+    url = "/api/v1/recruiter/pairs/pair-35/single-cv-report.pdf"
+    assert (await client.get(url)).status_code == 404  # Batch assessments have no single CV report.
+    async with sessions() as db:
+        jd = await db.get(CampaignJDModel, "role")
+        jd.policy_snapshot = {**jd.policy_snapshot, "single_cv": True}
+        pair = await db.get(CampaignPairModel, "pair-35")
+        snapshot = dict(pair.result_snapshot)
+        evaluation = dict(snapshot["stage3_evaluation"])
+        raw = dict(evaluation["llm_raw_output"])
+        raw["improvement_suggestions"] = ["Document testing examples"]
+        evaluation["llm_raw_output"] = raw
+        snapshot["stage3_evaluation"] = evaluation
+        pair.result_snapshot = snapshot
+        await db.commit()
+    response = await client.get(url)
+    assert response.status_code == 200
+    assert response.content.startswith(b"%PDF-")
+    assert response.headers["cache-control"] == "no-store"
+    with pymupdf.open(stream=response.content, filetype="pdf") as report:
+        report_text = "\n".join(page.get_text() for page in report)
+    assert "Person 35.pdf" in report_text
+    assert "Python delivery" in report_text
+    assert "Overall fit score" in report_text
+    assert "Stage trace" in report_text
+    assert "Document testing examples" in report_text
+    rejected = await client.get("/api/v1/recruiter/pairs/pair-0/single-cv-report.pdf")
+    assert rejected.status_code == 200 and rejected.content.startswith(b"%PDF-")
+    principal[0] = Principal("bob", "recruiter")
+    assert (await client.get(url)).status_code == 404
 
 
 @pytest.mark.asyncio

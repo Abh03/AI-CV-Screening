@@ -1,5 +1,5 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, fromEvent, merge, of, switchMap, timer, filter, EMPTY, catchError } from 'rxjs';
 import { CampaignApi } from '../api/campaign-api';
@@ -11,6 +11,7 @@ import { pairProgress } from '../shared/progress';
 import { HttpEventType } from '@angular/common/http';
 import { IntakeReport } from '../api/contracts';
 import { recruiterLabel } from '../shared/recruiter-display';
+import { RecruiterApi } from '../api/recruiter-api';
 
 @Component({ standalone: true, imports: [RouterLink], template: `
   <div class="page-heading"><div><p class="eyebrow">Campaign overview</p><h1>{{ campaign()?.name || 'Campaign ' + id }}</h1><p>Open a role to review its candidate pool and build a shortlist.</p></div><div class="actions"><a routerLink="/candidates" [queryParams]="{ campaign: id }">Find a candidate in this campaign</a><button type="button" class="secondary" (click)="refresh()" [disabled]="loading()">Refresh now</button></div></div>
@@ -32,7 +33,8 @@ import { recruiterLabel } from '../shared/recruiter-display';
     @if (c.intake_report ?? uploadReport(); as report) { <section class="card"><h2>ZIP intake</h2><p>{{ report.accepted_count }} accepted · {{ report.rejected_count }} rejected</p>@if (report.rejected.length) { <table><caption>Rejected ZIP entries</caption><thead><tr><th scope="col">File</th><th scope="col">Code</th></tr></thead><tbody>@for (item of report.rejected; track $index) { <tr><td>{{ item.name }}</td><td>{{ item.code }}</td></tr> }</tbody></table> }@if (report.accepted_count === 0) { <p>No PDFs were accepted. Select another ZIP to continue intake.</p> }</section> }
     <section><h2>Roles and candidate pools</h2><div class="grid two">@for (jd of jds(); track jd.jd_key) { <article class="card"><div class="card-title"><h3>{{ jd.title }}</h3><span class="badge">{{ label(jd.status) }}</span></div><p class="muted">Detailed assessment limit: {{ jd.stage3_cap }} candidates</p>
       @if (jd.stage3_retry_waiting) { <p>{{ jd.stage3_retry_waiting }} waiting for Stage 3 retry</p> }
-      <ul class="counts">@for (entry of entries(jd.counts); track entry.label) { <li><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></li> }</ul><div class="actions"><a class="button" [routerLink]="['/campaigns', id, 'jds', jd.jd_key]">Review candidate pool</a><button type="button" class="secondary" (click)="viewDefinition(jd.jd_key)">View approved requirements</button></div></article> } @empty { <p>Role summaries are not available yet.</p> }</div></section>
+      <ul class="counts">@for (entry of entries(jd.counts); track entry.label) { <li><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></li> }</ul><div class="actions"><a class="button" [routerLink]="['/campaigns', id, 'jds', jd.jd_key]">Review candidate pool</a><button type="button" class="secondary" (click)="viewDefinition(jd.jd_key)">View approved requirements</button><button type="button" class="secondary" (click)="singleRole.set(jd.jd_key)">Analyze one CV</button></div></article> } @empty { <p>Role summaries are not available yet.</p> }</div></section>
+    @if (singleRole()) { <section class="card"><h2>Analyze one CV against {{ singleRole() }}</h2><p>This separate analysis tracks every screening stage and requests CV improvement advice when Stage 3 runs.</p><label for="single-pdf">PDF CV</label><input id="single-pdf" type="file" accept=".pdf,application/pdf" (change)="chooseSingle($event)"><div class="actions"><button type="button" (click)="analyzeSingle()" [disabled]="!singleFile() || singleUploading()">{{ singleUploading() ? 'Starting analysis…' : 'Start single CV analysis' }}</button><button type="button" class="secondary" (click)="singleRole.set(null)">Cancel</button></div>@if (singleError()) { <p class="error" role="alert">{{ singleError() }}</p> }</section> }
     @if (definitionLoading()) { <p role="status">Loading submitted JD…</p> }
     @if (definitionError()) { <p class="error" role="alert">{{ definitionError() }}</p> }
     @if (definition(); as d) { <section class="card" id="jd-definition"><div class="card-title"><h2>Submitted JD: {{ d.job_profile.title }}</h2><button type="button" class="secondary" (click)="definition.set(null)">Close</button></div><p>ID: {{ d.jd_key }} · Stage 3 cap: {{ d.stage3_cap }}</p>
@@ -45,6 +47,9 @@ import { recruiterLabel } from '../shared/recruiter-display';
 ` })
 export class CampaignDetailComponent {
   private readonly route = inject(ActivatedRoute); private readonly api = inject(CampaignApi);
+  private readonly recruiterApi = inject(RecruiterApi); private readonly router = inject(Router);
+  readonly singleRole = signal<string | null>(null); readonly singleFile = signal<File | null>(null);
+  readonly singleUploading = signal(false); readonly singleError = signal('');
   private readonly local = inject(LocalCampaigns); private readonly destroyRef = inject(DestroyRef);
   readonly id = this.route.snapshot.paramMap.get('id') ?? '';
   readonly campaign = signal<CampaignStatus | null>(null); readonly jds = signal<JdSummary[]>([]);
@@ -56,6 +61,17 @@ export class CampaignDetailComponent {
   readonly label = recruiterLabel;
   readonly entries = (counts: Record<string, number>) => Object.entries(counts).filter(([, count]) => count > 0).map(([key, count]) => ({ label: recruiterLabel(key), count }));
   readonly progress = (c: CampaignStatus) => pairProgress(c.counts);
+  chooseSingle(event: Event): void { this.singleFile.set((event.target as HTMLInputElement).files?.[0] ?? null); this.singleError.set(''); }
+  analyzeSingle(): void {
+    const role = this.singleRole(); const file = this.singleFile();
+    if (!role || !file || this.singleUploading()) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) { this.singleError.set('Choose a PDF CV.'); return; }
+    this.singleUploading.set(true); this.singleError.set('');
+    this.recruiterApi.analyzeSingle(this.id, role, file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => void this.router.navigate(['/single-cv', result.pair_id]),
+      error: error => { this.singleError.set(describeError(error)); this.singleUploading.set(false); }
+    });
+  }
   constructor() {
     merge(timer(0, publicConfig.pollMs), fromEvent(document, 'visibilitychange')).pipe(
       filter(() => !document.hidden && !this.loading() && !this.isTerminal()),

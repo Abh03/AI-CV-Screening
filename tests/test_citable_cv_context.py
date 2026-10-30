@@ -5,7 +5,7 @@ import pytest
 
 from app.stage1_rules.experience import extract_experience
 from app.stage2_retrieval.chunker import generate_cv_chunks
-from app.stage3_evaluation.context import prepare_evaluation_context
+from app.stage3_evaluation.context import prepare_evaluation_context, bounded_evaluation_prompt
 from app.stage3_evaluation.evidence import build_evidence_registry, verify_evidence
 from app.stage3_evaluation.llm_client import LLMClientWrapper, evaluate_single_candidate_async
 from app.stage3_evaluation.prompts import build_stage3_user_prompt
@@ -57,6 +57,17 @@ def test_headerless_cv_has_citable_context_for_every_category():
     assert {ref.category for ref in registry.values()} == {"SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION"}
     assert {ref.source_category for ref in registry.values()} == {"CONTEXT"}
     assert all(ref.text == payload["candidate_cv_text"] for ref in registry.values())
+
+
+def test_stored_cv_control_character_still_builds_single_cv_prompt():
+    text = "Engineer\x12\nSKILLS\nPython and Git.\nEXPERIENCE\nBuilt APIs."
+    payload = {"candidate_id": "a", "candidate_cv_text": text,
+               "evidence_by_category": {"SKILLS": [{"category": "SKILLS",
+                   "text": "Engineer\x12 Python and Git."}]}}
+    prepared, registry, prompt = bounded_evaluation_prompt("a", {}, payload, single_cv=True)
+    assert prepared["candidate_cv_text"] == text.replace("\x12", " ")
+    assert all("\x12" not in ref.text for ref in registry.values())
+    assert ET.fromstring(prompt).attrib["single_cv"] == "true"
 
 
 @pytest.mark.parametrize("claim,quote,reason", [

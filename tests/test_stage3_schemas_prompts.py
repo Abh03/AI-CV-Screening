@@ -121,3 +121,16 @@ def test_current_high_flag_and_low_composite_tiers():
     res_flag = compute_deterministic_tier("cand_203", llm_out_flag, mock_evidence)
     assert res_flag.tier is None
     assert res_flag.evaluation_status == EvaluationStatus.REVIEW_REQUIRED
+def test_single_cv_schema_requires_improvement_advice_without_changing_batch_schema():
+    from app.stage3_evaluation.budget import selection_schema
+
+    batch = selection_schema('<evaluation_request transport="handles-v1" evidence_scope="one" />')
+    single = selection_schema('<evaluation_request transport="handles-v1" evidence_scope="one" single_cv="true" />')
+    assert "improvement_suggestions" not in batch["properties"]
+    assert "improvement_suggestions" in single["properties"]
+    assert "improvement_suggestions" in single["required"]
+
+    single_prompt = build_stage3_user_prompt("candidate", {}, {"evidence_by_category": {}}, single_cv=True)
+    batch_prompt = build_stage3_user_prompt("candidate", {}, {"evidence_by_category": {}})
+    assert "explain why its particular score and score band" in single_prompt
+    assert "explain why its particular score and score band" not in batch_prompt

@@ -51,19 +51,39 @@ def test_identity_variants_satisfy_mandatory_skills(canonical, text):
 
 
 @pytest.mark.parametrize("canonical,text", [("Java", "JavaScript"), ("C++", "C"),
-    (".NET", "net"), ("SQL", "No SQL experience"), ("Kubernetes", "kubectl")])
-def test_different_or_negated_skills_fail(canonical, text):
+    (".NET", "net"), ("Kubernetes", "kubectl")])
+def test_related_or_unmentioned_skills_require_review(canonical, text):
     result = evaluate(text, [{"canonical": canonical}], years=5)
+    assert result["status"] == "REVIEW"
+    assert result["checks"][-1]["code"] == "REQUIRED_SKILL_NOT_DOCUMENTED"
+
+
+def test_explicitly_negated_skill_remains_a_hard_failure():
+    result = evaluate("No SQL experience", [{"canonical": "SQL"}], years=5)
     assert result["status"] == "FAIL"
-    assert result["checks"][-1]["code"] == "MISSING_REQUIRED_SKILLS"
+    assert result["checks"][-1]["code"] == "REQUIRED_SKILL_NEGATED"
 
 
 def test_each_mandatory_group_is_required_and_explicit_substitute_is_accepted():
     skills = [{"canonical": "Python", "substitutes": ["Java"]}, {"canonical": "SQL"}]
     assert evaluate("Java and SQL", skills, years=5)["status"] != "FAIL"
     result = evaluate("Java", skills, years=5)
-    assert result["status"] == "FAIL"
+    assert result["status"] == "REVIEW"
     assert result["checks"][-1]["canonical"] == "SQL"
+
+
+def test_sdoc_style_cv_skill_gaps_continue_with_specific_review_checks():
+    skills = [{"canonical": term} for term in
+              ("API Development", "Programming", "Integration", "Unit Testing", "Debugging", "Git")]
+    cv = ("Software engineer with API development and service integration experience. "
+          "Built FastAPI services and PostgreSQL applications. Skills: Python, TypeScript, Git, Playwright.")
+    result = evaluate_stage1_hard_filters(None, cv, None,
+        {"min_years_experience": 0, "require_work_authorization": False}, required_skills=skills)
+    assert result["status"] == "REVIEW"
+    missing = {check["canonical"] for check in result["checks"]
+               if check["code"] == "REQUIRED_SKILL_NOT_DOCUMENTED"}
+    assert missing == {"Programming", "Unit Testing", "Debugging"}
+    assert not result["failed_reasons"]
 
 
 def test_jd_schema_requires_terms_for_every_cluster():

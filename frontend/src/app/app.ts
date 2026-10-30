@@ -9,6 +9,7 @@ export const routes: Routes = [
   { path: 'campaigns/new', title: 'New campaign', canActivate: [requireSession], loadComponent: () => import('./features/create').then(m => m.CreateComponent) },
   { path: 'candidates', title: 'Find a candidate', canActivate: [requireSession], loadComponent: () => import('./features/candidates').then(m => m.CandidatesComponent) },
   { path: 'campaigns/:id', title: 'Campaign', canActivate: [requireSession], loadComponent: () => import('./features/campaign-detail').then(m => m.CampaignDetailComponent) },
+  { path: 'single-cv/:pair', title: 'Single CV analysis', canActivate: [requireSession], loadComponent: () => import('./features/single-cv').then(m => m.SingleCvComponent) },
   { path: 'campaigns/:id/jds/:jd', title: 'Candidate workspace', canActivate: [requireSession], loadComponent: () => import('./features/recruiter-results').then(m => m.ResultsComponent) },
   { path: '**', redirectTo: '' }
 ];

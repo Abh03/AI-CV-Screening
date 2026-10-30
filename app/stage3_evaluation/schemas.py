@@ -63,6 +63,7 @@ class LLMEvaluationOutput(StrictBaseModel):
     education: CategoryAssessment
     flags: List[FlagDetail]
     executive_summary: str
+    improvement_suggestions: List[str] = Field(default_factory=list)
 
 
 class SourceBlock(StrictBaseModel):
@@ -194,6 +195,7 @@ class EvidenceSelectionOutput(StrictBaseModel):
     education: EvidenceSelectionAssessment
     flags: List[EvidenceSelectionFlag]
     executive_summary: str
+    improvement_suggestions: List[str] = Field(default_factory=list)
 
 
 class SentenceSelectionAssessment(StrictBaseModel):
@@ -216,6 +218,7 @@ class SentenceSelectionOutput(StrictBaseModel):
     education: SentenceSelectionAssessment
     flags: List[SentenceSelectionFlag]
     executive_summary: str
+    improvement_suggestions: List[str] = Field(default_factory=list)
 
 
 class CompactSentenceSelectionOutput(SentenceSelectionOutput):

@@ -7,7 +7,7 @@ from app.stage1_rules.contracts import (
 )
 from app.stage2_retrieval.chunker import SECTION_HEADER_PATTERN
 
-STAGE1_POLICY_VERSION = "stage1-v1.3.1"
+STAGE1_POLICY_VERSION = "stage1-v1.3.2"
 EDUCATION_CONTEXT_ANCHORS = re.compile(
     r"(?i)\b(?:university|college|campus|institute|gpa|cgpa|graduated|degree|faculty|board|school|passed|major|specialization)\b"
 )
@@ -185,9 +185,18 @@ def evaluate_stage1_hard_filters(
         cluster = SkillCluster.model_validate(value).model_dump()
         skill_evidence = required_skill_evidence(candidate_cv_text, cluster)
         weight = skill_evidence["match_weight"]
-        record("skill", "PASS" if weight else "FAIL", "REQUIRED_SKILL_FOUND" if weight else "MISSING_REQUIRED_SKILLS",
-               f"{cluster['canonical']}: " + ("approved substitute found" if weight == 0.75 else
-               "term found in CV" if weight else "mandatory skill, aliases and approved substitutes are absent or negated"))
+        # A CV that omits a term has not established the skill, but omission is
+        # not evidence that the candidate lacks it. Preserve a review check and
+        # let retrieval assess applied experience. An explicit negation remains
+        # a documented contradiction of the requirement.
+        status = "PASS" if weight else "FAIL" if skill_evidence["negated"] else "REVIEW"
+        code = ("REQUIRED_SKILL_FOUND" if weight else
+                "REQUIRED_SKILL_NEGATED" if skill_evidence["negated"] else "REQUIRED_SKILL_NOT_DOCUMENTED")
+        message = ("approved substitute found" if weight == 0.75 else
+                   "term found in CV" if weight else
+                   "CV explicitly negates this required skill" if skill_evidence["negated"] else
+                   "required skill is not explicitly documented; verify with the candidate")
+        record("skill", status, code, f"{cluster['canonical']}: {message}")
         checks[-1].update(canonical=cluster["canonical"], **skill_evidence, source="cv_extracted")
     failed = [check["message"] for check in checks if check["status"] == "FAIL"]
     review = [check["message"] for check in checks if check["status"] == "REVIEW"]

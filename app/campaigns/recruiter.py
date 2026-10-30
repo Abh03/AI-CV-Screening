@@ -62,17 +62,18 @@ def stage_history(pair, cv):
     stage1 = pair.stage1_decision
     stage2 = (pair.result_snapshot or {}).get("stage2_evidence")
     stage3 = (pair.result_snapshot or {}).get("stage3_evaluation")
+    stage2_review = pair.status == "REVIEW_REQUIRED" and not stage3 and bool(stage2)
     return [
         {"stage": "CV extraction", "state": "IN_PROGRESS" if cv.stage0_status == "RUNNING" else cv.stage0_status, "reason": cv.extraction_error_code},
         {"stage": "Eligibility checks", "state": stage1 or ("IN_PROGRESS" if extracted and pair.status == "RUNNING" else "NOT_REACHED"),
          "reason": "; ".join(check.get("message", "") for check in (pair.stage1_details or {}).get("checks", []) if check.get("status") != "PASS")},
-        {"stage": "Job requirement matching", "state": "COMPLETED" if stage2 else ("IN_PROGRESS" if stage1 in {"PASS", "REVIEW"} and pair.status == "RUNNING" else "NOT_REACHED"),
-         "reason": pair.failure_code if pair.status == "PROCESSING_FAILED" else None},
+        {"stage": "Job requirement matching", "state": "REVIEW_REQUIRED" if stage2_review else "COMPLETED" if stage2 else ("FAILED" if pair.status == "PROCESSING_FAILED" and stage1 in {"PASS", "REVIEW"} else "IN_PROGRESS" if stage1 in {"PASS", "REVIEW"} and pair.status == "RUNNING" else "NOT_REACHED"),
+         "reason": pair.failure_code if stage2_review or pair.status == "PROCESSING_FAILED" else None},
         {"stage": "Detailed assessment", "state": (stage3 or {}).get("evaluation_status") or pair.stage3_status or
-            ("NOT_SELECTED" if pair.status == "CUTOFF_EXCLUDED" else "IN_PROGRESS" if pair.status == "STAGE3_RUNNING" else
+            ("NOT_REACHED" if stage2_review else "NOT_SELECTED" if pair.status == "CUTOFF_EXCLUDED" else "IN_PROGRESS" if pair.status == "STAGE3_RUNNING" else
              "QUEUED" if pair.status == "SHORTLISTED" else "NOT_REACHED"),
          "reason": "Outside this role's detailed assessment limit; not a recruiter rejection." if pair.status == "CUTOFF_EXCLUDED" else
-             pair.failure_code if pair.status in {"EVALUATION_FAILED", "REVIEW_REQUIRED"} else None},
+             pair.failure_code if pair.status == "EVALUATION_FAILED" else None},
     ]
 
 
@@ -103,7 +104,8 @@ def candidate_view(pair, cv, jd, review=None, *, detail=False):
                   stage0_status=cv.stage0_status, updated_at=pair.updated_at,
                   review=review_view(review), summary=raw.get("executive_summary", ""),
                   flags=raw.get("flags", []), scoring_policy_version=evaluation.get("scoring_policy_version"),
-                  stage_history=stage_history(pair, cv))
+                  stage_history=stage_history(pair, cv),
+                  improvement_suggestions=raw.get("improvement_suggestions", []) if jd.policy_snapshot.get("single_cv") else [])
     result["effective_eligibility_checks"] = effective_checks
     result["effective_experience_years"] = verified.get("experience_years") if verified.get("experience_years") is not None else metrics.get("candidate_yoe")
     confirmed = {check.get("rule") for check in effective_checks if check.get("source") == "recruiter_verified" and check.get("status") == "PASS"}

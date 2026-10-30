@@ -131,7 +131,7 @@ Unsupported claims and incomplete context remain subject to human review.
 
 
 
-def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, registry=None, compact=False, neutral_sources=False, selection_handles=False) -> str:
+def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, registry=None, compact=False, neutral_sources=False, selection_handles=False, single_cv=False) -> str:
     """Serialize escaped data; registry and prompt use the same evidence snapshot."""
     from xml.etree import ElementTree as ET
     from app.stage3_evaluation.evidence import CATEGORIES, build_evidence_registry, checked_text
@@ -140,6 +140,17 @@ def build_stage3_user_prompt(candidate_id, jd_profile, evidence_payload, *, regi
     from app.stage3_evaluation.context import prepare_evaluation_context
     evidence_payload = prepare_evaluation_context(candidate_id, evidence_payload)
     root = ET.Element("evaluation_request", candidate_id=checked_text(candidate_id))
+    if single_cv:
+        root.set("single_cv", "true")
+        ET.SubElement(root, "assessment_instruction").text = (
+            "For each category rationale, explain why its particular score and score band "
+            "fit the cited evidence: name the strongest support and the main documented gap "
+            "or uncertainty that limits the score. Keep the existing category output structure "
+            "and use only supported facts. "
+            "Also return improvement_suggestions: concrete, job-specific ways this CV could "
+            "better document relevant experience, skills, or projects and potentially improve "
+            "its assessment. Distinguish missing evidence from missing qualifications; do not "
+            "invent achievements or promise a score increase.")
     jd = ET.SubElement(root, "job_description")
     ET.SubElement(jd, "title").text = checked_text(jd_profile.get("title", "Target Role"))
     for key in ("must_have_skills", "nice_to_have_skills"):

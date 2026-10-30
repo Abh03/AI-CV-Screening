@@ -13,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 from tests.jd_helpers import approved_jobs
 from app.config import settings
 from app.main import app
-from app.models.database import Base, CampaignCVModel, CampaignPairModel, get_db
+from app.models.database import Base, CampaignCVModel, CampaignPairModel, CampaignJDModel, CampaignModel, get_db
 from app.workers import tasks
 
 test_engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
@@ -53,6 +53,36 @@ def archive(entries):
 
 JOBS = [{"job_id": "ops", "title": "Operations", "jd_category_queries": {"EXPERIENCE": "operations"}},
         {"job_id": "sales", "title": "Sales", "jd_category_queries": {"EXPERIENCE": "sales"}}]
+
+
+@pytest.mark.asyncio
+async def test_single_cv_creates_isolated_tracked_run(monkeypatch):
+    monkeypatch.setattr(settings, "ENCRYPTION_SECRET_KEY", Fernet.generate_key().decode())
+    queued = []
+    monkeypatch.setattr(tasks.campaign_stage0_task, "delay", lambda cv_id: queued.append(cv_id))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        approved = await approved_jobs(TestingSessionLocal, [JOBS[0]])
+        source = (await client.post("/api/v1/campaigns", json={"approved_jd_ids": approved})).json()["campaign_id"]
+        url = f"/api/v1/campaigns/{source}/jds/ops/single-cv"
+        assert (await client.post(url, params={"filename": "../bad.pdf"}, content=pdf_bytes(),
+                                  headers={"Content-Type": "application/pdf"})).status_code == 422
+        assert (await client.post(url, params={"filename": "one.pdf"}, content=b"not pdf",
+                                  headers={"Content-Type": "application/pdf"})).status_code == 422
+        result = await client.post(url, params={"filename": "one.pdf"}, content=pdf_bytes(),
+                                   headers={"Content-Type": "application/pdf"})
+        assert result.status_code == 202
+        body = result.json()
+        assert body["campaign_id"] != source and len(queued) == 1
+        detail = await client.get(f"/api/v1/recruiter/pairs/{body['pair_id']}")
+        assert detail.status_code == 200
+        assert detail.json()["stage_history"][0]["state"] == "PENDING"
+    async with TestingSessionLocal() as db:
+        original = await db.get(CampaignModel, source)
+        analysis = await db.get(CampaignModel, body["campaign_id"])
+        job = (await db.execute(select(CampaignJDModel).where(CampaignJDModel.campaign_id == analysis.id))).scalar_one()
+        assert original.status == "INTAKE" and analysis.status == "RUNNING"
+        assert job.policy_snapshot["single_cv"] is True
+        assert analysis.intake_report["accepted_count"] == 1
 
 
 @pytest.mark.asyncio

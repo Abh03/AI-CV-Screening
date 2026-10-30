@@ -81,7 +81,7 @@ async def test_global_cutoff_waits_for_every_pair_and_is_idempotent(monkeypatch)
 @pytest.mark.parametrize("cv_text,filters,skills,expected", [
     ("Operations experience", {}, [], "STAGE2_READY"),
     ("Total experience: 2 years", {"min_years_experience": 5}, [], "FILTER_REJECTED"),
-    ("Operations experience", {}, [{"canonical": "Python"}], "FILTER_REJECTED"),
+    ("Operations experience", {}, [{"canonical": "Python"}], "STAGE2_READY"),
 ])
 async def test_pair_worker_reuses_redaction_and_fences_old_lease(monkeypatch, cv_text, filters, skills, expected):
     from app.campaigns import persistence

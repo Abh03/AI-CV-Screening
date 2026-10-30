@@ -13,6 +13,10 @@ def selection_schema(user_prompt=None):
     root = ET.fromstring(user_prompt) if user_prompt is not None else None
     compact = root is not None and root.attrib.get('transport') == 'handles-v1'
     schema = (CompactSentenceSelectionOutput if compact else SentenceSelectionOutput).model_json_schema()
+    if root is None or root.attrib.get('single_cv') != 'true':
+        schema['properties'].pop('improvement_suggestions', None)
+    else:
+        schema.setdefault('required', []).append('improvement_suggestions')
     if root is not None:
         ids = {}
         for category, prefix in zip(('skills', 'experience', 'projects', 'education'), 'SEPD'):

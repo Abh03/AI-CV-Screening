@@ -42,6 +42,18 @@ def resolve_targets(queries, required_skills=None, preferred_skills=None,
     contract = RelevanceContract.model_validate(relevance_contract or {})
     targets = [target.model_dump(mode="json") | {"origin": "approved"}
                for target in contract.targets]
+    # A reviewed degree rule supplies the approved level and acceptable fields.
+    # Use its alternatives for the matching education target instead of treating
+    # several LLM-extracted field synonyms as separate AND requirements.
+    if degree_requirement:
+        degree = data(degree_requirement)
+        level = degree.get("level", "NONE")
+        level_terms = list(dict.fromkeys([level.title(), *degree.get("level_aliases", [])]))
+        field_terms = list(dict.fromkeys([*degree.get("fields", []), *degree.get("field_aliases", [])]))
+        for target in targets:
+            if (target["kind"] == "education" and target["treatment"] == "requirement"
+                    and level != "NONE" and any(matching(term, target["text"]) for term in level_terms)):
+                target["evidence_terms"] = [level_terms, *([field_terms] if field_terms else [])]
     explicit_categories = {target["category"] for target in targets if target["treatment"] == "requirement"}
     # Applied use of mandatory technologies is useful retrieval guidance even
     # when approved responsibilities bundle several domain-specific concepts.

@@ -18,6 +18,7 @@ export interface RecruiterCandidate extends PairResult {
   stage1_checks: { rule: string; status: string; code: string; message: string }[];
   flags: { type: string; severity: string; description: string }[];
   stage_history: { stage: string; state: string; reason: string | null }[];
+  improvement_suggestions?: string[];
   assessments?: Record<string, Assessment>; scoring_policy_version?: string;
   evidence: (PairResult['evidence'][number] & { text?: string })[];
   history?: { actor_id: string; created_at: string; snapshot: Review }[];
@@ -63,6 +64,11 @@ export interface ReviewUpdate {
 export class RecruiterApi {
   private readonly http = inject(HttpClient);
   private readonly base = '/api/v1/recruiter';
+  analyzeSingle(campaign: string, role: string, file: File): Observable<{ campaign_id: string; pair_id: string; candidate_id: string }> {
+    return this.http.post<{ campaign_id: string; pair_id: string; candidate_id: string }>(
+      `/api/v1/campaigns/${encodeURIComponent(campaign)}/jds/${encodeURIComponent(role)}/single-cv`, file,
+      { params: { filename: file.name }, headers: { 'Content-Type': 'application/pdf' } });
+  }
   private scope(campaign: string, role: string): string {
     return `${this.base}/campaigns/${encodeURIComponent(campaign)}/roles/${encodeURIComponent(role)}`;
   }
@@ -73,6 +79,9 @@ export class RecruiterApi {
     return this.http.get<CandidateSearch>(`${this.base}/candidates`, { params: { search, campaign_id: campaign, limit: 30, offset } });
   }
   detail(pair: string): Observable<RecruiterCandidate> { return this.http.get<RecruiterCandidate>(`${this.base}/pairs/${encodeURIComponent(pair)}`); }
+  singleCvReport(pair: string): Observable<Blob> {
+    return this.http.get(`${this.base}/pairs/${encodeURIComponent(pair)}/single-cv-report.pdf`, { responseType: 'blob' });
+  }
   cv(campaign: string, candidate: string): Observable<CvDocument> {
     return this.http.get<CvDocument>(`${this.base}/campaigns/${encodeURIComponent(campaign)}/candidates/${encodeURIComponent(candidate)}/cv`);
   }

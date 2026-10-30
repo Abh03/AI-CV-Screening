@@ -11,14 +11,61 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import CampaignCreateSchema
 from app.campaigns.intake import ArchiveLimitError, import_zip
+from app.campaigns.intake import accept_pdf
 from app.campaigns.persistence import campaign_counts, reserve_campaign, selected_pair_count
 from app.config import settings
 from app.core.auth import Principal, can_access, current_principal
 from app.models.database import CampaignModel, CampaignJDModel, CampaignPairModel, CampaignCVModel, CampaignMemberModel, get_db
 from app.run_audit import policy_snapshot
 from app.workers.tasks import campaign_stage0_task, campaign_coordinate_task
+from uuid import uuid4
 
 router = APIRouter(prefix="/api/v1/campaigns", tags=["Campaigns"])
+
+
+@router.post("/{campaign_id}/jds/{jd_key}/single-cv", status_code=202)
+async def analyze_single_cv(campaign_id: str, jd_key: str, request: Request,
+                            filename: str = Query(..., min_length=1, max_length=255),
+                            db: AsyncSession = Depends(get_db),
+                            principal: Principal = Depends(current_principal)):
+    """Run one PDF against a copied, approved role in its own isolated campaign."""
+    source = await _owned(db, campaign_id, principal)
+    if not can_access(source.owner_id, principal):
+        raise HTTPException(403, "Only the campaign owner can start an analysis")
+    jd = await _jd(db, campaign_id, jd_key)
+    if request.headers.get("content-type", "").split(";")[0].lower() != "application/pdf":
+        raise HTTPException(415, "Expected application/pdf")
+    if filename in {".", ".."} or "/" in filename or "\\" in filename or not filename.lower().endswith(".pdf"):
+        raise HTTPException(422, "Choose one PDF file with a valid filename")
+    payload = bytearray()
+    async for chunk in request.stream():
+        if len(payload) + len(chunk) > settings.PDF_MAX_BYTES:
+            raise HTTPException(413, "PDF exceeds size limit")
+        payload.extend(chunk)
+    if not payload.startswith(b"%PDF-"):
+        raise HTTPException(422, "Invalid PDF file")
+    job = jd.job_snapshot
+    policy = {**jd.policy_snapshot, "single_cv": True, "source_campaign_id": campaign_id}
+    _, analysis = await reserve_campaign(db, owner_id=principal.id,
+        request_hash=hashlib.sha256(bytes(payload) + jd.id.encode()).hexdigest(),
+        job_snapshots=[job], policy_snapshots=[policy], idempotency_key=str(uuid4()),
+        name=f"Single CV: {job.get('title', jd_key)}")
+    error, cv_id = await accept_pdf(db, campaign_id=analysis.id, owner_id=principal.id,
+                                    source_name=filename, data=bytes(payload), ordinal=0)
+    if error or not cv_id:
+        raise HTTPException(422, error["code"] if error else "CV could not be queued")
+    analysis.status = "RUNNING"
+    analysis.intake_report = {"accepted_count": 1, "rejected_count": 0,
+        "accepted": [{"name": filename, "candidate_id": (await db.get(CampaignCVModel, cv_id)).candidate_id}],
+        "rejected": []}
+    await db.commit()
+    pair = (await db.execute(select(CampaignPairModel).where(CampaignPairModel.cv_id == cv_id))).scalar_one()
+    try:
+        campaign_stage0_task.delay(cv_id)
+        campaign_coordinate_task.delay(analysis.id)
+    except Exception:
+        pass  # Control queue recovery republishes pending work.
+    return {"campaign_id": analysis.id, "pair_id": pair.id, "candidate_id": analysis.intake_report["accepted"][0]["candidate_id"]}
 
 
 async def _owned(db, campaign_id, principal):

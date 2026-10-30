@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.campaigns import _owned, _jd
 from app.campaigns.recruiter import PoolFilters, analytics, candidate_view, matches, review_view, sorted_pool
+from app.campaigns.single_cv_report import render_single_cv_report
 from app.config import settings
 from app.core.auth import Principal, current_principal
 from app.core.security import decrypt_bytes, encrypt_payload
@@ -231,6 +232,21 @@ async def candidate_detail(pair_id: str, db: AsyncSession = Depends(get_db), pri
                 "role_title": role.job_snapshot.get("title"), "status": other.status, "score": other.composite_score})
     result["scoring_policy"] = jd.policy_snapshot
     return result
+
+
+@router.get("/pairs/{pair_id}/single-cv-report.pdf")
+async def single_cv_report(pair_id: str, db: AsyncSession = Depends(get_db),
+                           principal: Principal = Depends(current_principal)):
+    pair = await owned_pair(db, pair_id, principal)
+    jd = await db.get(CampaignJDModel, pair.jd_id)
+    if not jd.policy_snapshot.get("single_cv"):
+        raise HTTPException(404, "Single CV report not found")
+    cv = await db.get(CampaignCVModel, pair.cv_id)
+    cv.document_available = await db.scalar(select(CampaignCVModel.encrypted_original_pdf.is_not(None)).where(CampaignCVModel.id == cv.id))
+    row = candidate_view(pair, cv, jd, await db.get(CandidateReviewModel, pair.id), detail=True)
+    return Response(render_single_cv_report(row), media_type="application/pdf",
+                    headers={"Content-Disposition": 'attachment; filename="single-cv-analysis.pdf"',
+                             "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
 
 class VerifiedFacts(BaseModel):

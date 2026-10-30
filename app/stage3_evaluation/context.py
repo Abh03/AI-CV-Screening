@@ -1,5 +1,6 @@
 """Build bounded, citable CV context independently of retrieval ranking."""
 from app.stage2_retrieval.chunker import SECTION_HEADER_PATTERN, CATEGORY_MAP, normalize_header_to_canonical
+from app.core.text import xml_safe_text
 from app.stage3_evaluation.evidence import stable_identity, checked_text
 
 
@@ -14,6 +15,19 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None, *, complet
     from app.config import settings
     if payload.get("candidate_id", candidate_id) != candidate_id:
         raise ValueError("Evidence ownership mismatch")
+    # Older stored PDFs can contain font control characters that cannot be
+    # serialized into the provider's XML prompt. Replace one codepoint with one
+    # space so existing character offsets and citable source spans stay aligned.
+    payload = dict(payload)
+    if payload.get("candidate_cv_text") is not None:
+        payload["candidate_cv_text"] = xml_safe_text(payload["candidate_cv_text"])
+    evidence_map = payload.get("evidence_by_category")
+    if isinstance(evidence_map, dict):
+        payload["evidence_by_category"] = {
+            category: [dict(chunk, text=xml_safe_text(chunk["text"]))
+                       if isinstance(chunk, dict) and isinstance(chunk.get("text"), str) else chunk
+                       for chunk in chunks] if isinstance(chunks, list) else chunks
+            for category, chunks in evidence_map.items()}
     if payload.get("context_metadata") is not None:
         return payload
     text = payload.get("candidate_cv_text")
@@ -104,7 +118,7 @@ def prepare_evaluation_context(candidate_id, payload, max_chars=None, *, complet
         "require_claim_support": True})
 
 
-def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=None, sentence_selections=False):
+def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=None, sentence_selections=False, single_cv=False):
     """Bound escaped XML too, with the registry built from exactly what is sent."""
     from app.config import settings
     from app.stage3_evaluation.evidence import build_evidence_registry
@@ -122,7 +136,8 @@ def bounded_evaluation_prompt(candidate_id, jd_profile, payload, *, max_bytes=No
             from app.stage3_evaluation.evidence import sentence_registry
             registry = sentence_registry(registry)
         prompt = build_stage3_user_prompt(candidate_id, jd_profile, prepared, registry=registry,
-                                         compact=True, neutral_sources=True, selection_handles=sentence_selections)
+                                         compact=True, neutral_sources=True, selection_handles=sentence_selections,
+                                         single_cv=single_cv)
         from app.stage3_evaluation.budget import request_budget
         budget = request_budget(prompt, settings.LLM_PROVIDER.lower()) if sentence_selections else None
         if len(prompt.encode("utf-8")) <= limit and (budget is None or budget["fits"]):

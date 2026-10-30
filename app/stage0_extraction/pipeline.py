@@ -7,6 +7,7 @@ from threading import BoundedSemaphore
 import fitz
 
 from app.config import settings
+from app.core.text import xml_safe_text
 
 _ocr_slots = BoundedSemaphore(settings.OCR_CONCURRENCY_LIMIT)
 from app.stage0_extraction.integrity import assess_readable_extraction_integrity
@@ -65,6 +66,8 @@ def ingest_pdf(data: bytes, *, redact: bool = False) -> PDFIngestionResult:
                 if page.rect.width * page.rect.height > 10_000_000:
                     return PDFIngestionResult("failure", "PDF_PAGE_DIMENSIONS")
                 blocks = sort_page_blocks(page.get_text("blocks"))
+                for block in blocks:
+                    block["text"] = xml_safe_text(block["text"])
                 if len(blocks) > 2000:
                     return PDFIngestionResult("failure", "PDF_BLOCK_LIMIT")
                 raw_text = "\n\n".join(block["text"] for block in blocks)
@@ -76,7 +79,7 @@ def ingest_pdf(data: bytes, *, redact: bool = False) -> PDFIngestionResult:
                         return PDFIngestionResult("review", "OCR_PAGE_LIMIT")
                     ocr_count += 1
                     try:
-                        ocr_text = _ocr_page(page)
+                        ocr_text = xml_safe_text(_ocr_page(page))
                     except subprocess.TimeoutExpired:
                         return PDFIngestionResult("review", "OCR_TIMEOUT")
                     except (OSError, RuntimeError, ValueError):

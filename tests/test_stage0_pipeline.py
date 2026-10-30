@@ -41,6 +41,19 @@ def test_pdf_success_full_text_and_provenance(monkeypatch):
     assert registry["EXPERIENCE:1"].source_location.block_index is not None
 
 
+def test_pdf_font_control_character_does_not_poison_stage3_context(monkeypatch):
+    monkeypatch.setattr(pipeline, "assess_readable_extraction_integrity",
+                        lambda text, **kwargs: {"requires_ocr": False, "passed": True})
+    monkeypatch.setattr(pipeline, "sort_page_blocks", lambda blocks: [
+        {"x0": 0, "y0": 0, "x1": 100, "y1": 20,
+         "text": "Engineer\x12\nEXPERIENCE\nBuilt Python APIs."}])
+    result = pipeline.ingest_pdf(make_pdf())
+    assert result.status == "success"
+    assert "\x12" not in result.redacted_text
+    assert "Engineer \nEXPERIENCE" in result.redacted_text
+    assert result.pages[0]["blocks"][0]["text"] == result.redacted_text
+
+
 def test_scan_ocr_only_when_required(monkeypatch):
     seen = []
     monkeypatch.setattr(pipeline, "_ocr_page", lambda page: seen.append(page.number) or "software engineer with experience in python and java systems")

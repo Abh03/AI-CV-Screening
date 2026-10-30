@@ -402,6 +402,7 @@ async def evaluate_single_candidate_async(
     max_retries: int = 2,
     raise_rate_limits: bool = False,
     max_provider_attempts: int = 3,
+    single_cv: bool = False,
 ) -> FinalCandidateEvaluation:
     # Local import avoids the evaluator/client circular dependency.
     from app.stage3_evaluation.evaluator import compute_deterministic_tier
@@ -421,7 +422,7 @@ async def evaluate_single_candidate_async(
     try:
         from app.stage3_evaluation.context import bounded_evaluation_prompt
         candidate_payload, registry, user_prompt = bounded_evaluation_prompt(candidate_id, jd_profile, candidate_payload,
-            sentence_selections=not is_mock and llm_provider is None)
+            sentence_selections=not is_mock and llm_provider is None, single_cv=single_cv)
         jd_text = "\n".join([jd_profile.get("title", ""), *jd_profile.get("jd_category_queries", {}).values()])
         injection_signals = ["JD_INJECTION_SIGNAL"] if scan_for_injection_anomalies(jd_text)["is_flagged"] else []
         if scan_for_injection_anomalies(candidate_id)["is_flagged"]:
@@ -437,14 +438,19 @@ async def evaluate_single_candidate_async(
                 provider_options = ({"max_provider_attempts": max_provider_attempts}
                                     if max_provider_attempts != 3 else {})
                 data = await llm_client.generate_evaluation(
-                    system_prompt=SYSTEM_PROMPT_STAGE3, user_prompt=user_prompt,
+                    system_prompt=SYSTEM_PROMPT_STAGE3 + ("\nFor this single-CV assessment, provide improvement_suggestions as a list of concrete, truthful, JD-specific ways to document stronger evidence. Do not invent qualifications or imply a guaranteed score change." if single_cv else ""), user_prompt=user_prompt,
                     candidate_id=candidate_id, **provider_options
                 )
             else:
                 raw_response = await llm_provider.generate_structured_evaluation(
-                    system_prompt=SYSTEM_PROMPT_STAGE3, user_prompt=user_prompt
+                    system_prompt=SYSTEM_PROMPT_STAGE3 + ("\nReturn improvement_suggestions for this single CV." if single_cv else ""), user_prompt=user_prompt
                 )
                 data = json.loads(raw_response)
+            if single_cv and is_mock:
+                data["improvement_suggestions"] = ["Add specific, verifiable examples that address the JD requirements."]
+            if single_cv and not is_mock and (not isinstance(data.get("improvement_suggestions"), list)
+                    or not any(isinstance(item, str) and item.strip() for item in data["improvement_suggestions"])):
+                return failed_evaluation(candidate_id, "INVALID_LLM_OUTPUT", "Evaluation failed: improvement suggestions were missing.", is_mock=is_mock)
             if is_mock:
                 parsed_output = LLMEvaluationOutput.model_validate(data)
             else:
@@ -469,7 +475,7 @@ async def evaluate_single_candidate_async(
                     candidate_payload, registry, user_prompt = bounded_evaluation_prompt(
                         candidate_id, jd_profile, candidate_payload,
                         max_bytes=max(3000, len(user_prompt.encode("utf-8")) // 2),
-                        sentence_selections=not is_mock and llm_provider is None)
+                        sentence_selections=not is_mock and llm_provider is None, single_cv=single_cv)
                 except (ValueError, TypeError, AttributeError):
                     return failed_evaluation(candidate_id, "PROVIDER_CONTEXT_TOO_LARGE", "Evaluation context exceeds provider capacity.", is_mock=is_mock)
                 continue
