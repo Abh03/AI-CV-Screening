@@ -83,8 +83,11 @@ jobs:
         run: python -m pytest tests/test_phase1.py tests/test_postgres_retrieval.py -q --run-infrastructure
       - name: Start worker and exercise queued run
         run: |
-          celery -A app.workers.celery_app:celery_app worker --loglevel=WARNING --concurrency=1 > /tmp/celery.log 2>&1 &
-          python -m pytest tests/test_worker_integration.py -q --run-infrastructure
+          celery -A app.workers.celery_app:celery_app worker --loglevel=WARNING --concurrency=1 -Q screening > /tmp/celery.log 2>&1 &
+          if ! python -m pytest tests/test_worker_integration.py -q --run-infrastructure; then
+            cat /tmp/celery.log
+            exit 1
+          fi
 
   model_image:
     runs-on: ubuntu-latest
@@ -98,7 +101,7 @@ jobs:
           docker run --rm cv-screening:ci sh -c 'test ! -e /app/.env && test ! -e /app/venv && test ! -e /app/data && test ! -e /app/tests'
           if docker run --rm -e ENVIRONMENT=production cv-screening:ci python -c 'import app.main'; then exit 1; fi
       - name: Model-dependent pipeline tests
-        run: docker run --rm -v "$PWD/tests:/app/tests:ro" -v "$PWD/pytest.ini:/app/pytest.ini:ro" cv-screening:ci python -m pytest tests -q -p no:cacheprovider -m model
+        run: docker run --rm -v "$PWD/tests:/app/tests:ro" -v "$PWD/scripts:/app/scripts:ro" -v "$PWD/pytest.ini:/app/pytest.ini:ro" cv-screening:ci python -m pytest tests -q -p no:cacheprovider -m model
 
   live_provider:
     if: github.event_name == 'workflow_dispatch'
