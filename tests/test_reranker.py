@@ -1,6 +1,9 @@
+import pytest
+
 from app.stage2_retrieval.reranker import rerank_category_chunks
 
 
+@pytest.mark.model
 def test_cross_encoder_reranking_precision():
     query_text = "Senior Python Developer with FastAPI and PostgreSQL microservices experience"
 

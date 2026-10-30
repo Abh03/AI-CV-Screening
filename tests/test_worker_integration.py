@@ -4,10 +4,18 @@ import base64
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
 import fitz
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.models.database import engine
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def dispose_database_pool_between_event_loops():
+    yield
+    await engine.dispose()
 
 
 @pytest.mark.infrastructure

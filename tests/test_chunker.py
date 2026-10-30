@@ -107,6 +107,7 @@ def test_oversized_source_block_keeps_bounds_and_location():
                chunk["source_location"]["block_index"] == 4 for chunk in chunks)
 
 
+@pytest.mark.model
 def test_embedding_generation_vector_dimension():
     sample_texts = [
         "[Section: SKILLS] Python, FastAPI, Docker",

@@ -195,6 +195,7 @@ async def test_health_check_endpoint():
     }
 
 
+@pytest.mark.model
 @pytest.mark.asyncio
 async def test_run_screening_endpoint_valid_payload():
     payload = {

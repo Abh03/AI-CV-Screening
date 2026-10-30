@@ -90,6 +90,7 @@ async def test_postgres_uses_synthetic_project_target(monkeypatch):
     assert chunks[0]["category"] == "PROJECTS"
 
 
+@pytest.mark.model
 def test_full_stage2_evidence_extraction():
     candidate_cv = (
         "PROFESSIONAL SUMMARY\n"

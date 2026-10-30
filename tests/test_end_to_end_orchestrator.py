@@ -52,6 +52,7 @@ async def test_stage1_review_is_provisional_without_changing_stage3_status(monke
     assert result["metrics"]["accounted_candidates"] == 4
 
 
+@pytest.mark.model
 @pytest.mark.asyncio
 async def test_full_pipeline_end_to_end_execution():
     jd_profile = {

@@ -1,3 +1,5 @@
+import pytest
+
 from app.stage2_retrieval.chunker import generate_cv_chunks
 from app.stage2_retrieval.evidence_extractor import (
     extract_candidate_category_evidence,
@@ -32,6 +34,7 @@ def test_structure_aware_chunking_and_category_tagging():
     assert "EDUCATION" in categories
 
 
+@pytest.mark.model
 def test_category_aware_pipeline_and_batch_ranking():
     jd_category_queries = {
         "SKILLS": "Python FastAPI PostgreSQL Kubernetes AWS Redis",

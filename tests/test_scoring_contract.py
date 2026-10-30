@@ -108,6 +108,7 @@ async def test_provider_failure_entry_points_agree(monkeypatch):
     assert "private" not in first.model_dump_json()
 
 
+@pytest.mark.model
 @pytest.mark.asyncio
 async def test_stage1_review_is_preserved(monkeypatch):
     from app import orchestrator

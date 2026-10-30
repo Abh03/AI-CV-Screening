@@ -1,6 +1,6 @@
 # CV Screening Engine: A Plain-Language Architecture Guide
 
-This is a companion to [the detailed engineering report](ENGINEERING_ARCHITECTURE_REPORT.md). It explains the *reason* for each part of the system and follows one fictional application from sign-in to a recruiter's decision. The worked values below are **illustrations**, not the output of an actual run. Code links point to the implementation.
+This guide explains the *reason* for each part of the system and follows one fictional application from sign-in to a recruiter's decision. The worked values below are **illustrations**, not the output of an actual run. Code links point to the implementation.
 
 ## 1. The whole system in one picture
 
@@ -222,11 +222,11 @@ Suppose the recruiter reviews Asha's CV, confirms 5.6 years of relevant employme
 | Docker Compose | Runs API, database, queue and specialized workers together | Makes the service layout reproducible on the target host. |
 | Fernet encryption for PDF storage | Scrambles original/temporary PDF bytes in the database | The server can recover a document when authorized; a database copy alone does not expose readable PDF bytes. Derived CV text remains sensitive. |
 
-These are rationales supported by the code's responsibilities, **not** claims that every alternative was benchmarked and rejected. The [full inventory and implementation tradeoffs](ENGINEERING_ARCHITECTURE_REPORT.md#3-technology-stack-and-tradeoffs) give more detail.
+These are rationales supported by the code's responsibilities, **not** claims that every alternative was benchmarked and rejected.
 
 ## 5. The synthetic demo: what it can and cannot prove
 
-The sibling `CV-Benchmark-Dataset-Generator` project created `output_system_demo`: **1,000 CV PDFs**, **15 layout templates**, **four JDs** (Java, .NET, QA and Data), and therefore **4,000 CV/JD pairs**. It varies role fit, dates, degrees, missing/negated skills, overlaps, and image-only scans. Its three anchor CVs, `CV0001`–`CV0003`, contain applied evidence across all four jobs. They should survive each demo's shortlist as a regression control; production has no special ID-based bypass for them. See the [generator explanation](ENGINEERING_ARCHITECTURE_REPORT.md#7-synthetic-generation-and-benchmark-infrastructure).
+The sibling `CV-Benchmark-Dataset-Generator` project created `output_system_demo`: **1,000 CV PDFs**, **15 layout templates**, **four JDs** (Java, .NET, QA and Data), and therefore **4,000 CV/JD pairs**. It varies role fit, dates, degrees, missing/negated skills, overlaps, and image-only scans. Its three anchor CVs, `CV0001`–`CV0003`, contain applied evidence across all four jobs. They should survive each demo's shortlist as a regression control; production has no special ID-based bypass for them.
 
 | File in `output_system_demo` | Read it as |
 |---|---|
@@ -236,7 +236,7 @@ The sibling `CV-Benchmark-Dataset-Generator` project created `output_system_demo
 | `validation.json` and `manifest.json` | Generation checks and artifact/source hashes. |
 | `cvs.zip` | The uploadable CV PDFs only. |
 
-The generator's Stage 1 expectations run the actual policy code on synthetic facts. Its Stage 2 *oracle* sees every generated source line, so it is a ceiling for what retrieval could find, not proof that embedding search will find it. Stage 3 ranges are expectations, not measured live model outputs or real-world hiring truth. The generator has **11 tests** across its benchmark, scoring and system-demo suites; they cover repeatable profiles/PDFs, scan cases, overlapping tenure, score bounds, scenario expectations, comparison mismatches and checksum refusal. The generated-run [validation record](../../CV-Benchmark-Dataset-Generator/output_system_demo/validation.json) separately records rendered-PDF, extraction/chunking and artifact checks. Comparing production results requires exporting **all** pairs, including failures and cutoff cases. See [the detailed artifact and comparison notes](ENGINEERING_ARCHITECTURE_REPORT.md#74-artifact-contracts).
+The generator's Stage 1 expectations run the actual policy code on synthetic facts. Its Stage 2 *oracle* sees every generated source line, so it is a ceiling for what retrieval could find, not proof that embedding search will find it. Stage 3 ranges are expectations, not measured live model outputs or real-world hiring truth. The generator has **11 tests** across its benchmark, scoring and system-demo suites; they cover repeatable profiles/PDFs, scan cases, overlapping tenure, score bounds, scenario expectations, comparison mismatches and checksum refusal. Comparing production results requires exporting **all** pairs, including failures and cutoff cases.
 
 ## 6. Small glossary and practical lessons
 
@@ -256,6 +256,6 @@ The generator's Stage 1 expectations run the actual policy code on synthetic fac
 | Citation/evidence ID | A reference from an assessment to a known source passage and location. Python checks the reference and attaches the exact text. |
 | Provisional success | Valid Stage 3 evidence and tier with a separate Stage 1 fact still awaiting recruiter verification. |
 
-The measured **61.8% mean input-token reduction** comes from a twelve-case offline before/after report for the current compact prompt. Its old estimated inputs were **7,502–20,045** tokens per CV/JD pair; optimized inputs were **3,352–6,727**. The often remembered **3.8k–7k** range describes successful live v14 *total* usage, not the old baseline. The saving mostly comes from avoiding repeated source sentences, long IDs and model-generated quotes. It does not imply 61.8% lower bills or faster end-to-end campaigns. See [the measurement and its limits](ENGINEERING_ARCHITECTURE_REPORT.md#8-token-optimization-and-engineering-lessons).
+The measured **61.8% mean input-token reduction** comes from a twelve-case offline before/after report for the current compact prompt. Its old estimated inputs were **7,502–20,045** tokens per CV/JD pair; optimized inputs were **3,352–6,727**. The often remembered **3.8k–7k** range describes successful live v14 *total* usage, not the old baseline. The saving mostly comes from avoiding repeated source sentences, long IDs and model-generated quotes. It does not imply 61.8% lower bills or faster end-to-end campaigns.
 
 The operating rules to remember are simple: preserve uncertain cases for review; keep extraction errors separate from low fit; cite exact source text; treat retrieval scores as search/coverage signals; keep the model's interpretation separate from Python's arithmetic and verification; and keep recruiter decisions separate from both. No stage can establish whether a CV's employment claims are true. A human still owns the hiring decision.

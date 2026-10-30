@@ -32,6 +32,7 @@ async def override_get_db():
         yield session
 
 
+@pytest.mark.model
 @pytest.mark.asyncio
 async def test_screening_endpoint_persists_to_db():
     payload = {

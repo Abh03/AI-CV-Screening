@@ -1,3 +1,5 @@
+import pytest
+
 from app.stage2_retrieval.hybrid_search import (
     compute_rrf_score,
     execute_category_hybrid_search
@@ -42,6 +44,7 @@ def test_rrf_disjoint_sets():
     assert fused[0]["rrf_score"] == fused[1]["rrf_score"]
 
 
+@pytest.mark.model
 def test_end_to_end_hybrid_search():
     query_text = "FastAPI PostgreSQL Developer"
     query_vector = generate_single_embedding(query_text)
